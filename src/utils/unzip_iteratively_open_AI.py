@@ -1,5 +1,11 @@
 '''
     Script to iteratively unzip the open-AI data repo
+
+    open-AI has 6142 top level directories (-maxdepth 1)
+
+    Example usage:
+        python unzip_iteratively_open_AI.py -i /home/ravi.samala/DATA/temp/open_AI/ -o /home/ravi.samala/DATA/temp/open_AI_unzip/ -l /home/ravi.samala/DATA/temp/open_AI_unzip/unzip_log.txt
+        python unzip_iteratively_open_AI.py -i /gpfs_projects/ravi.samala/DATA/MIDRC2/open_AI/ -o /gpfs_projects/ravi.samala/DATA/MIDRC2/open_AI_unzip/ -l /gpfs_projects/ravi.samala/DATA/MIDRC2/open_AI_unzip/unzip_log.txt
 '''
 import os
 import argparse
@@ -25,7 +31,7 @@ def unzip_iteratively(in_dir, out_dir, log_file):
     zip_files_list = search_files(in_dir, 'zip')
     
     with open(log_file, 'w') as flog:
-        for each_zip_file in zip_files_list:
+        for countr, each_zip_file in enumerate(zip_files_list):
             try:
                 # # opening the zip file in READ mode
                 with ZipFile(each_zip_file, 'r') as zip:
@@ -39,10 +45,10 @@ def unzip_iteratively(in_dir, out_dir, log_file):
 
                     # # extracting all the files
                     zip.extractall(cur_out_dir)
-                    flog.write('SUCCESS\t' + each_zip_file + '\n')
+                    flog.write(str(countr) + '\tSUCCESS\t' + each_zip_file + '\n')
             except BadZipFile:
                 print('UNZIP failed for: ' + each_zip_file)
-                flog.write('FAILED\t' + each_zip_file + '\n')
+                flog.write(str(countr) + '\tFAILED\t' + each_zip_file + '\n')
 
 
 if __name__ == "__main__":
