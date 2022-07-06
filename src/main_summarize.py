@@ -2,6 +2,8 @@
 	Main program that summarizes all the CXR data repos
 
 	RKS, 05/13/2022
+
+	# of cases in open-AI data repo = 7,534
 '''
 import os
 import argparse
@@ -10,6 +12,7 @@ import pandas as pd
 # #
 num_patients_COVID_19_NY_SBU = 1384
 num_patients_COVID_19_AR = 105
+open_AI_MIDRC_table_path = '../data/open_AI_all_20220624.tsv'
 
 
 def searchthis(location, searchterm):
@@ -157,52 +160,73 @@ def read_COVID_19_AR(in_dir, out_summ_file):
 def read_open_AI(in_dir, out_summ_file):
 	'''
 		function to read the unzipped open-AI data repo
+		use the MIDRC table to get the patient info
 	'''
+	# # get patient info
+	patient_df = pd.read_csv(open_AI_MIDRC_table_path, sep='\t')
+	# # iterate over the dirs
 	patient_dirs = [filename for filename in os.listdir(in_dir) if os.path.isdir(os.path.join(in_dir,filename))]
-	print(patient_dirs)
-	df = pd.DataFrame(columns=['patient_id', 'images_good', 'num_good', 'images_bad', 'num_bad'])
+	df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images', 'repo'])
 	# # Iterate over the patients
 	for ii, each_patient in enumerate(patient_dirs):
 		imgs_good = []
+		imgs_good_info = []
 		imgs_bad = []
 		patient_root_dir = os.path.join(in_dir, each_patient)
-		print('==================================')
-		print(patient_root_dir)
+		patient_submitter_id = ''
 		time_dirs = [filename for filename in os.listdir(patient_root_dir) if os.path.isdir(os.path.join(patient_root_dir,filename))]
 		# # Iterate over different time points
 		for each_time in time_dirs:
-			print('------------------------')
-			print(each_time)
 			time_root_dir = os.path.join(patient_root_dir, each_time)
 			scans_dirs = [filename for filename in os.listdir(time_root_dir) if os.path.isdir(os.path.join(time_root_dir,filename))]
-			# print(scans_dirs)
 			# # Here exclude the scans that are difference images
 			# # 
 			dcm_files = searchthis(time_root_dir, '.dcm')
 			for each_dcm_file in dcm_files:
-				print(each_dcm_file)
 				ds = pydicom.read_file(each_dcm_file)
 				if (0x0008, 0x1030) in ds:
-					# print('(0x0008, 0x1030)')
-					# print(ds[0x0008, 0x1030].value)
-					if 'XR CHEST PA/LATERAL' in ds[0x0008, 0x1030].value:
+					if 'XR CHEST PA/LATERAL' in ds[0x0008, 0x1030].value or \
+						'XR PORT CHEST 1V' in ds[0x0008, 0x1030].value or \
+						'XR CHEST PA AND LATERAL' in ds[0x0008, 0x1030].value:
 						# # this CXR image
-						# print([each_dcm_file, ds[0x0008, 0x1030]])
 						imgs_good += [each_dcm_file]
+						if (0x0010, 0x0020) in ds:
+							patient_specific_id = ds[0x0010, 0x0020].value
+							patient_specific_df = patient_df[patient_df['submitter_id'].str.contains(patient_specific_id)]
+							print(patient_specific_df)
+							# # there should be only 1 row for each patient
+							if len(patient_specific_df.index) != 1:
+								print('ERROR')
+								imgs_good = 'ERROR'
+								break
+							else:
+								if len(patient_submitter_id) == 0:
+									patient_submitter_id = patient_specific_df.iloc[0]['submitter_id']
+								else:
+									# # check if the patient name is the same
+									if patient_submitter_id != patient_specific_df.iloc[0]['submitter_id']:
+										print('ERROR')
+										imgs_good = 'ERROR with patient name within each patient dir'
+							imgs_good_info += [{
+								'modality': ds[0x0008, 0x1030].value, 
+								}]
+							patient_good_info = [{
+								'sex':patient_specific_df.iloc[0]['sex'],
+								'race':patient_specific_df.iloc[0]['race'],
+								'ethnicity':patient_specific_df.iloc[0]['ethnicity'],
+								'COVID_positive':patient_specific_df.iloc[0]['covid19_positive'],
+								'age':patient_specific_df.iloc[0]['age_at_index'],
+								}]
+					else:
+						imgs_bad += [each_dcm_file]
 				else:
 					# # any image other CXR
-					# print([ds.SeriesNumber, ds.AcquisitionNumber])
 					imgs_bad += [each_dcm_file]
-				# break
-			# #
-			# break
-		# print(imgs_good)
-		# print(imgs_bad)
-		df.loc[ii] = [each_patient] + [imgs_good] + [len(imgs_good)] + [imgs_bad] + [len(imgs_bad)]
-		# #
-		# break
-	# print(df)
-	df.to_csv(out_summ_file, sep='\t', index=False)
+		df.loc[ii] = [patient_submitter_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good), ['open_AI']]
+		if ii == 1:
+			break
+	# # save info
+	df.to_json(out_summ_file, indent=4)
 
 
 
