@@ -4,12 +4,21 @@
 	RKS, 05/13/2022
 
 	# of cases in open-AI data repo = 7,534
+
+	# # # DICOM tags of interest
+	# # Sex
+	# # Age
+	# # Body part examined
+	# # Pixel spacing
+	# # View position
+	# #
 '''
 import os
 import argparse
 import pydicom
 import pandas as pd
 # #
+# # Some constants regarding the data repos
 num_patients_COVID_19_NY_SBU = 1384
 num_patients_COVID_19_AR = 105
 open_AI_MIDRC_table_path = '../data/open_AI_all_20220624.tsv'
@@ -166,6 +175,7 @@ def read_open_AI(in_dir, out_summ_file):
 	patient_df = pd.read_csv(open_AI_MIDRC_table_path, sep='\t')
 	# # iterate over the dirs
 	patient_dirs = [filename for filename in os.listdir(in_dir) if os.path.isdir(os.path.join(in_dir,filename))]
+	print('There are %d dirs'.format(len(patient_dirs)))
 	df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images', 'repo'])
 	# # Iterate over the patients
 	for ii, each_patient in enumerate(patient_dirs):
@@ -193,11 +203,11 @@ def read_open_AI(in_dir, out_summ_file):
 						if (0x0010, 0x0020) in ds:
 							patient_specific_id = ds[0x0010, 0x0020].value
 							patient_specific_df = patient_df[patient_df['submitter_id'].str.contains(patient_specific_id)]
-							print(patient_specific_df)
+							# print(patient_specific_df)
 							# # there should be only 1 row for each patient
 							if len(patient_specific_df.index) != 1:
 								print('ERROR')
-								imgs_good = 'ERROR'
+								imgs_good = 'ERROR - patient not found in the clinical file'
 								break
 							else:
 								if len(patient_submitter_id) == 0:
@@ -217,16 +227,20 @@ def read_open_AI(in_dir, out_summ_file):
 								'COVID_positive':patient_specific_df.iloc[0]['covid19_positive'],
 								'age':patient_specific_df.iloc[0]['age_at_index'],
 								}]
+						else:
+							# # 
+							imgs_good = '0x0010, 0x0020 NOT FOUND'
 					else:
 						imgs_bad += [each_dcm_file]
 				else:
 					# # any image other CXR
 					imgs_bad += [each_dcm_file]
-		df.loc[ii] = [patient_submitter_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good), ['open_AI']]
-		if ii == 1:
+		# df.loc[ii] = [patient_submitter_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good), ['open_AI']]
+		df.loc[ii] = [each_patient] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good), ['open_AI']]
+		if ii == 5:
 			break
 	# # save info
-	df.to_json(out_summ_file, indent=4)
+	df.to_json(out_summ_file, indent=4, orient='table', index=False)
 
 
 
