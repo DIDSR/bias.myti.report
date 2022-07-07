@@ -254,8 +254,11 @@ def read_RICORD_1c(in_dir, out_summ_file):
 								'sex':ds[0x0010,0x0040].value,
 								'age':ds[0x0010,0x1010].value,
 							}]
+							# Note: this repo doesn't seem to have pixel spacing info
 							imgs_good_info += [{
-								'modality':ds[0x0008,0x0060].value
+								'modality':ds[0x0008,0x0060].value,
+								'body part examined':ds[0x0018,0x0015].value,
+								'view position':ds[0x0018,0x5101].value
 							}]
 					else:
 						print(ds[0x0008,0x1030].value)
