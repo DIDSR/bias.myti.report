@@ -13,9 +13,8 @@ num_patients_COVID_19_AR = 105
 num_patients_RICORD_1c = 361
 
 # clinical data paths
-RICORD_1c_table_path = "/gpfs_projects/common_data/MIDRC/Release_1c/MIDRC-RICORD-1c Clinical Data Jan 13 2021 .xlsx"
-
-
+RICORD_1c_table_path = "/gpfs_projects/ravi.samala/genDATA/2021_MIDRC/Info_MIDRC_files_dcm.csv"
+RICORD_1c_annotation_path = "/gpfs_projects/ravi.samala/OUT/2021_MIDRC/lists/1c_mdai_rsna_project_MwBeK3Nr_annotations_labelgroup_all_2021-01-08-164102_v3.csv"
 
 def searchthis(location, searchterm):
 	lis_paths = []
@@ -221,8 +220,10 @@ def read_RICORD_1c(in_dir, out_summ_file):
 		print(f'Got {len(patient_dirs)} case, actual should be {num_patients_RICORD_1c}')
 		print('Doing nothing. Returning!')
 		return
-	# get patient info (need to install xlrd or openpyxl to read excel)
-	# patient_df = pd.read_excel(RICORD_1c_table_path)
+	clinical_df = pd.read_csv(RICORD_1c_table_path)
+	annotation_df = pd.read_csv(RICORD_1c_annotation_path)
+	# print(annotation_df.head(10))
+	# print(clinical_df.head(10))
 	# set up dataframe
 	df = pd.DataFrame(columns=['patient_id', 'images','images_info', 'patient_info','repo'])
 	# iterate through patients
@@ -246,26 +247,51 @@ def read_RICORD_1c(in_dir, out_summ_file):
 						# CXR image
 						# TODO - check for other tags that indicate good images
 						imgs_good += [each_dcm_file]
+						# match file to annotation info
+						series_date = ds[0x0008,0x0021].value
+						series_date = series_date[4:6] + '/' +series_date[6:] + '/' + series_date[0:4]
 						if (0x0010, 0x0020) in ds:
 							patient_specific_id = ds[0x0010, 0x0020].value.replace('MIDRC-RICORD-1C-','')
-							# patient_specific_df = patient_df[patient_df['Anon MRN'].str.contains(patient_specific_id)]
-							print(patient_specific_id)
+							patient_specific_df = annotation_df.loc[annotation_df['Anon MRN'] == patient_specific_id]
+							series_specific_df = patient_specific_df.loc[patient_specific_df['Anon TCIA Study Date'] == series_date]
+							class_dict = []
+							grade_dict = []
+							# print(series_specific_df)
+							for index,row in series_specific_df.iterrows():
+								class_dict += [{
+									'reader id':row['Reader_id'],
+									'reader name':row['Reader_name'],
+									'class id':row['CLASS_labelId'],
+									'class label':row['CLASS_label'],
+									'class description':row['CLASS_label_description']
+								}]
+								grade_dict += [{
+									'reader id':row['Reader_id'],
+									'reader name':row['Reader_name'],
+									'grade id':row['GRADE_labelId'],
+									'grade label':row['GRADE_label'],
+									'grade description':row['GRADE_label_description']
+								}]
+							
 							patient_good_info = [{
 								'sex':ds[0x0010,0x0040].value,
 								'age':ds[0x0010,0x1010].value,
+								'COVID_positive':'Yes'
 							}]
 							# Note: this repo doesn't seem to have pixel spacing info
 							imgs_good_info += [{
 								'modality':ds[0x0008,0x0060].value,
 								'body part examined':ds[0x0018,0x0015].value,
-								'view position':ds[0x0018,0x5101].value
+								'view position':ds[0x0018,0x5101].value,
+								'classification':class_dict,
+								'grade':grade_dict
 							}]
 					else:
 						print(ds[0x0008,0x1030].value)
 				else:
 					imgs_bad += [each_dcm_file]
 		df.loc[ii] = [patient_specific_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + ['RICORD-1c']
-		#break
+		# break
 	df.to_json(out_summ_file, indent=4, orient='table', index=False)
 
 
