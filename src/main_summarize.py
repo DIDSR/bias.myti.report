@@ -275,17 +275,25 @@ def read_RICORD_1c(in_dir, out_summ_file):
 							
 							patient_good_info = [{
 								'sex':ds[0x0010,0x0040].value,
-								'age':ds[0x0010,0x1010].value,
+								'age':float(ds[0x0010,0x1010].value.replace('Y','')),
+								'race':'Missing',
+								'ethnicity':'Missing',
 								'COVID_positive':'Yes'
 							}]
-							# Note: this repo doesn't seem to have pixel spacing info
+							# Note: this repo doesn't seem to have pixel spacing or manufacturer info
 							imgs_good_info += [{
 								'modality':ds[0x0008,0x0060].value,
 								'body part examined':ds[0x0018,0x0015].value,
 								'view position':ds[0x0018,0x5101].value,
+								'pixel spacing':'Missing',
+								'study date':ds[0x0008,0x0020].value,
+								'manufacturer':'Missing',
+								'manufacturer model name':'Missing',
+								'image size':ds.pixel_array.shape,
 								'classification':class_dict,
 								'grade':grade_dict
 							}]
+							
 					else:
 						print(ds[0x0008,0x1030].value)
 				else:
@@ -306,7 +314,7 @@ def select_fn(sel_repo):
 	elif sel_repo[0] == 'RICORD_1c':
 		read_RICORD_1c(sel_repo[1], sel_repo[2])
 	else:
-		print('ERROR. Uknown REPO. Nothing to do here.')
+		print('ERROR. Unknown REPO. Nothing to do here.')
 
 
 if __name__ == "__main__":
