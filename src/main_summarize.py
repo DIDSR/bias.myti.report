@@ -175,7 +175,7 @@ def read_open_AI(in_dir, out_summ_file):
 	patient_df = pd.read_csv(open_AI_MIDRC_table_path, sep='\t')
 	# # iterate over the dirs
 	patient_dirs = [filename for filename in os.listdir(in_dir) if os.path.isdir(os.path.join(in_dir,filename))]
-	print('There are %d dirs'.format(len(patient_dirs)))
+	print('There are {:d} dirs'.format(len(patient_dirs)))
 	df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images', 'repo'])
 	# # Iterate over the patients
 	for ii, each_patient in enumerate(patient_dirs):
@@ -183,6 +183,7 @@ def read_open_AI(in_dir, out_summ_file):
 		imgs_good_info = []
 		imgs_bad = []
 		patient_root_dir = os.path.join(in_dir, each_patient)
+		print([ii, patient_root_dir], flush=True)
 		patient_submitter_id = ''
 		time_dirs = [filename for filename in os.listdir(patient_root_dir) if os.path.isdir(os.path.join(patient_root_dir,filename))]
 		# # Iterate over different time points
@@ -218,10 +219,17 @@ def read_open_AI(in_dir, out_summ_file):
 										print('ERROR')
 										imgs_good = 'ERROR with patient name within each patient dir'
 							imgs_good_info += [{
-								'modality': ds[0x0008, 0x1030].value, 
+								'modality': ds[0x0008, 0x0060].value,
+								'body part examined':ds[0x0018,0x0015].value,
+								'view position':ds[0x0018,0x5101].value,
+								'pixel spacing':[ds[0x0018,0x1164].value[0], ds[0x0018,0x1164].value[1]],
+								'study date':ds[0x0008,0x0020].value,
+								'manufacturer':ds[0x0008,0x0070].value,
+								'manufacturer model name':ds[0x0008,0x1090].value,
+								'image size': ds.pixel_array.shape
 								}]
 							patient_good_info = [{
-								'sex':patient_specific_df.iloc[0]['sex'],
+								'sex':"M" if patient_specific_df.iloc[0]['sex'] == "Male" else "F",
 								'race':patient_specific_df.iloc[0]['race'],
 								'ethnicity':patient_specific_df.iloc[0]['ethnicity'],
 								'COVID_positive':patient_specific_df.iloc[0]['covid19_positive'],
@@ -235,13 +243,13 @@ def read_open_AI(in_dir, out_summ_file):
 				else:
 					# # any image other CXR
 					imgs_bad += [each_dcm_file]
-		# df.loc[ii] = [patient_submitter_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good), ['open_AI']]
-		df.loc[ii] = [each_patient] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good), ['open_AI']]
-		if ii == 5:
-			break
+		df.loc[ii] = [patient_submitter_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good), ['open_AI']]
+		# # for debug
+		# if ii == 20:
+		# 	break
+	# #
 	# # save info
 	df.to_json(out_summ_file, indent=4, orient='table', index=False)
-
 
 
 def select_fn(sel_repo):
