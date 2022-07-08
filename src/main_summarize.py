@@ -195,6 +195,7 @@ def read_open_AI(in_dir, out_summ_file):
 			dcm_files = searchthis(time_root_dir, '.dcm')
 			for each_dcm_file in dcm_files:
 				ds = pydicom.read_file(each_dcm_file)
+				# print(ds)
 				if (0x0008, 0x1030) in ds:
 					if 'XR CHEST PA/LATERAL' in ds[0x0008, 0x1030].value or \
 						'XR PORT CHEST 1V' in ds[0x0008, 0x1030].value or \
@@ -221,7 +222,7 @@ def read_open_AI(in_dir, out_summ_file):
 							imgs_good_info += [{
 								'modality': ds[0x0008, 0x0060].value,
 								'body part examined':ds[0x0018,0x0015].value,
-								'view position':ds[0x0018,0x5101].value,
+								'view position':ds[0x0018,0x5101].value if (0x0018,0x5101) in ds else "MISSING",
 								'pixel spacing':[ds[0x0018,0x1164].value[0], ds[0x0018,0x1164].value[1]],
 								'study date':ds[0x0008,0x0020].value,
 								'manufacturer':ds[0x0008,0x0070].value,
