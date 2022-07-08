@@ -220,13 +220,13 @@ def read_open_AI(in_dir, out_summ_file):
 										print('ERROR')
 										imgs_good = 'ERROR with patient name within each patient dir'
 							imgs_good_info += [{
-								'modality': ds[0x0008, 0x0060].value,
-								'body part examined':ds[0x0018,0x0015].value,
+								'modality': ds[0x0008, 0x0060].value if (0x0008, 0x0060) in ds else "MISSING",
+								'body part examined':ds[0x0018,0x0015].value if (0x0018,0x0015) in ds else "MISSING",
 								'view position':ds[0x0018,0x5101].value if (0x0018,0x5101) in ds else "MISSING",
-								'pixel spacing':[ds[0x0018,0x1164].value[0], ds[0x0018,0x1164].value[1]],
-								'study date':ds[0x0008,0x0020].value,
-								'manufacturer':ds[0x0008,0x0070].value,
-								'manufacturer model name':ds[0x0008,0x1090].value,
+								'pixel spacing':[ds[0x0018,0x1164].value[0], ds[0x0018,0x1164].value[1]] if (0x0018,0x1164) in ds else "MISSING",
+								'study date':ds[0x0008,0x0020].value if (0x0008,0x0020) in ds else "MISSING",
+								'manufacturer':ds[0x0008,0x0070].value if (0x0008,0x0070) in ds else "MISSING",
+								'manufacturer model name':ds[0x0008,0x1090].value if (0x0008,0x1090) in ds else "MISSING",
 								'image size': ds.pixel_array.shape
 								}]
 							patient_good_info = [{
