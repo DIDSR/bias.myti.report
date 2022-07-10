@@ -22,6 +22,7 @@ import pandas as pd
 num_patients_COVID_19_NY_SBU = 1384
 num_patients_COVID_19_AR = 105
 open_AI_MIDRC_table_path = '../data/open_AI_all_20220624.tsv'
+open_RI_MIDRC_table_path = '../data/open_RI_all_20220609.tsv'
 
 
 def searchthis(location, searchterm):
@@ -197,6 +198,7 @@ def read_open_AI(in_dir, out_summ_file):
 				ds = pydicom.read_file(each_dcm_file)
 				# print(ds)
 				if (0x0008, 0x1030) in ds:
+					print(ds[0x0008, 0x1030].value)
 					if 'XR CHEST PA/LATERAL' in ds[0x0008, 0x1030].value or \
 						'XR PORT CHEST 1V' in ds[0x0008, 0x1030].value or \
 						'XR CHEST PA AND LATERAL' in ds[0x0008, 0x1030].value:
@@ -204,6 +206,96 @@ def read_open_AI(in_dir, out_summ_file):
 						imgs_good += [each_dcm_file]
 						if (0x0010, 0x0020) in ds:
 							patient_specific_id = ds[0x0010, 0x0020].value
+							patient_specific_df = patient_df[patient_df['submitter_id'].str.contains(patient_specific_id)]
+							print(patient_specific_df)
+							# # there should be only 1 row for each patient
+							if len(patient_specific_df.index) != 1:
+								print('ERROR')
+								imgs_good = 'ERROR - patient not found in the clinical file'
+								break
+							else:
+								if len(patient_submitter_id) == 0:
+									patient_submitter_id = patient_specific_df.iloc[0]['submitter_id']
+								else:
+									# # check if the patient name is the same
+									if patient_submitter_id != patient_specific_df.iloc[0]['submitter_id']:
+										print('ERROR')
+										imgs_good = 'ERROR with patient name within each patient dir'
+							imgs_good_info += [{
+								'modality': ds[0x0008, 0x0060].value if (0x0008, 0x0060) in ds else "MISSING",
+								'body part examined':ds[0x0018,0x0015].value if (0x0018,0x0015) in ds else "MISSING",
+								'view position':ds[0x0018,0x5101].value if (0x0018,0x5101) in ds else "MISSING",
+								'pixel spacing':[ds[0x0018,0x1164].value[0], ds[0x0018,0x1164].value[1]] if (0x0018,0x1164) in ds else "MISSING",
+								'study date':ds[0x0008,0x0020].value if (0x0008,0x0020) in ds else "MISSING",
+								'manufacturer':ds[0x0008,0x0070].value if (0x0008,0x0070) in ds else "MISSING",
+								'manufacturer model name':ds[0x0008,0x1090].value if (0x0008,0x1090) in ds else "MISSING",
+								'image size': ds.pixel_array.shape
+								}]
+							patient_good_info = [{
+								'sex':"M" if patient_specific_df.iloc[0]['sex'] == "Male" else "F",
+								'race':patient_specific_df.iloc[0]['race'],
+								'ethnicity':patient_specific_df.iloc[0]['ethnicity'],
+								'COVID_positive':patient_specific_df.iloc[0]['covid19_positive'],
+								'age':patient_specific_df.iloc[0]['age_at_index'],
+								}]
+						else:
+							# # 
+							imgs_good = '0x0010, 0x0020 NOT FOUND'
+					else:
+						imgs_bad += [each_dcm_file]
+				else:
+					# # any image other CXR
+					imgs_bad += [each_dcm_file]
+		df.loc[ii] = [patient_submitter_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good), ['open_AI']]
+		# # # for debug
+		# if ii == 1:
+		# 	break
+	# #
+	# # save info
+	df.to_json(out_summ_file, indent=4, orient='table', index=False)
+
+
+def read_open_RI(in_dir, out_summ_file):
+	'''
+		function to read the unzipped open-AI data repo
+		use the MIDRC table to get the patient info
+	'''
+	# # get patient info
+	patient_df = pd.read_csv(open_RI_MIDRC_table_path, sep='\t')
+	# # iterate over the dirs
+	patient_dirs = [filename for filename in os.listdir(in_dir) if os.path.isdir(os.path.join(in_dir,filename))]
+	print('There are {:d} dirs'.format(len(patient_dirs)))
+	df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images', 'repo'])
+	# # Iterate over the patients
+	for ii, each_patient in enumerate(patient_dirs):
+		imgs_good = []
+		imgs_good_info = []
+		imgs_bad = []
+		patient_root_dir = os.path.join(in_dir, each_patient)
+		print([ii, patient_root_dir], flush=True)
+		patient_submitter_id = ''
+		time_dirs = [filename for filename in os.listdir(patient_root_dir) if os.path.isdir(os.path.join(patient_root_dir,filename))]
+		# # Iterate over different time points
+		for each_time in time_dirs:
+			time_root_dir = os.path.join(patient_root_dir, each_time)
+			scans_dirs = [filename for filename in os.listdir(time_root_dir) if os.path.isdir(os.path.join(time_root_dir,filename))]
+			# # Here exclude the scans that are difference images
+			# # 
+			dcm_files = searchthis(time_root_dir, '.dcm')
+			for each_dcm_file in dcm_files:
+				ds = pydicom.read_file(each_dcm_file)
+				# print(ds)
+				if (0x0008, 0x1030) in ds:
+					if 'CT' not in ds[0x0008, 0x1030].value:
+						print(ds[0x0008, 0x1030].value)
+					if 'XR CHEST 1 VIEW AP' in ds[0x0008, 0x1030].value or \
+						'XR CHEST 2 VIEWS PA AND LATERAL' in ds[0x0008, 0x1030].value or \
+						'XR CHEST 1 VIEW AP' in ds[0x0008, 0x1030].value:
+						# # this CXR image
+						imgs_good += [each_dcm_file]
+						if (0x0010, 0x0020) in ds:
+							patient_specific_id = ds[0x0010, 0x0020].value
+							# print(patient_specific_id)
 							patient_specific_df = patient_df[patient_df['submitter_id'].str.contains(patient_specific_id)]
 							# print(patient_specific_df)
 							# # there should be only 1 row for each patient
@@ -245,9 +337,9 @@ def read_open_AI(in_dir, out_summ_file):
 					# # any image other CXR
 					imgs_bad += [each_dcm_file]
 		df.loc[ii] = [patient_submitter_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good), ['open_AI']]
-		# # for debug
-		# if ii == 20:
-		# 	break
+		# # # for debug
+		if ii == 20:
+			break
 	# #
 	# # save info
 	df.to_json(out_summ_file, indent=4, orient='table', index=False)
@@ -260,6 +352,8 @@ def select_fn(sel_repo):
 		read_COVID_19_AR(sel_repo[1], sel_repo[2])
 	elif sel_repo[0] == 'open_AI':
 		read_open_AI(sel_repo[1], sel_repo[2])
+	elif sel_repo[0] == 'open_RI':
+		read_open_RI(sel_repo[1], sel_repo[2])
 	else:
 		print('ERROR. Uknown REPO. Nothing to do here.')
 
