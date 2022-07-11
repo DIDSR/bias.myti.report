@@ -41,19 +41,15 @@ def get_dist(in_dir, repo_name, dicom_tags, out_dir):
         ds = pydicom.read_file(each_dcm_file)
         for each_tag in dicom_tags:
             if each_tag in ds:
-                # print(ds[each_tag].name)
                 tag_acc[each_tag] = tag_acc[each_tag] + [ds[each_tag].value.strip()]
-    # print(tag_acc)
     for each_tag in dicom_tags:
         print(ds[each_tag].name.replace)
         out_fig_path_name = os.path.join(out_dir, repo_name + '__' + ds[each_tag].name.replace(' ', '_') + '.png')
         out_json_path_name = os.path.join(out_dir, repo_name + '__' + ds[each_tag].name.replace(' ', '_') + '.json')
-        # pd.Series(tag_acc[each_tag]).value_counts(sort=False).plot(kind='bar')
         hist_pd = pd.Series(tag_acc[each_tag]).value_counts(sort=True)
         hist_pd.plot(kind='bar')
         plt.savefig(out_fig_path_name, dpi=300, bbox_inches="tight")
         print(hist_pd)
-        # hist_df = hist_pd.rename_axis('unique_values').to_frame('counts')
         hist_df = hist_pd.rename_axis('unique_values').reset_index(name='counts')
         print(hist_df)
         hist_df.to_json(out_json_path_name, indent=4, orient='table', index=False)

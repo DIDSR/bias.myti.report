@@ -206,9 +206,9 @@ def read_COVID_19_AR(in_dir, out_summ_file):
 					# # any image other CXR
 					imgs_bad += [each_dcm_file]
 		df.loc[ii] = [each_patient] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] + ['COVID_19_AR']
-		# # # # for debug
-		# if ii == 2:
-		# 	break
+		# # # for debug
+		if ii == 20:
+			break
 	# #
 	# # save info
 	df.to_json(out_summ_file, indent=4, orient='table', index=False)
