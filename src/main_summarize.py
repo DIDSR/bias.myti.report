@@ -394,6 +394,57 @@ def read_open_RI(in_dir, out_summ_file):
 	df.to_json(out_summ_file, indent=4, orient='table', index=False)
 
 
+def extract_RICORD_1c_info(ds, annotation_df):
+	patient_good_info = []
+	imgs_good_info = []
+	# match file to annotation info
+	series_date = ds[0x0008,0x0021].value
+	series_date = series_date[4:6] + '/' +series_date[6:] + '/' + series_date[0:4]
+	if (0x0010, 0x0020) in ds:
+		patient_specific_id = ds[0x0010, 0x0020].value.replace('MIDRC-RICORD-1C-','')
+		patient_specific_df = annotation_df.loc[annotation_df['Anon MRN'] == patient_specific_id]
+		series_specific_df = patient_specific_df.loc[patient_specific_df['Anon TCIA Study Date'] == series_date]
+		class_dict = []
+		grade_dict = []
+		# print(series_specific_df)
+		for index,row in series_specific_df.iterrows():
+			class_dict += [{
+				'reader id':row['Reader_id'],
+				'reader name':row['Reader_name'],
+				'class id':row['CLASS_labelId'],
+				'class label':row['CLASS_label'],
+				'class description':row['CLASS_label_description']
+			}]
+			grade_dict += [{
+				'reader id':row['Reader_id'],
+				'reader name':row['Reader_name'],
+				'grade id':row['GRADE_labelId'],
+				'grade label':row['GRADE_label'],
+				'grade description':row['GRADE_label_description']
+			}]
+		
+		patient_good_info = [{
+			'sex':ds[0x0010,0x0040].value,
+			'age':float(ds[0x0010,0x1010].value.replace('Y','')) if (0x0010,0x1010) in ds else "MISSING",
+			'race':'Missing',
+			'ethnicity':'Missing',
+			'COVID_positive':'Yes'
+		}]
+		imgs_good_info += [{
+			'modality':ds[0x0008,0x0060].value,
+			'body part examined':ds[0x0018,0x0015].value,
+			'view position':ds[0x0018,0x5101].value,
+			'pixel spacing':[ds[0x0028,0x0030].value[0], ds[0x0028,0x0030].value[1]] if (0x0028,0x0030) in ds else "MISSING",
+			'study date':ds[0x0008,0x0020].value,
+			'manufacturer':ds[0x0008,0x0070].value if (0x0008,0x0070) in ds else "MISSING",
+			'manufacturer model name':ds[0x0008,0x1090].value if (0x0008,0x1090) in ds else "MISSING",
+			'image size':ds.pixel_array.shape,
+			'classification':class_dict,
+			'grade':grade_dict
+		}]
+	return patient_specific_id, patient_good_info, imgs_good_info
+
+
 def read_RICORD_1c(in_dir, out_summ_file):
 	# check number of patients (should be 361)
 	patient_dirs = [filename for filename in os.listdir(in_dir) if os.path.isdir(os.path.join(in_dir,filename))]
@@ -427,62 +478,23 @@ def read_RICORD_1c(in_dir, out_summ_file):
 							ds[0x0008,0x1030].value == 'CHEST 1V' or \
 							ds[0x0008,0x1030].value == 'XR CHEST 2 VIEWS PA AND LATERAL':
 						imgs_good += [each_dcm_file]
-						# match file to annotation info
-						series_date = ds[0x0008,0x0021].value
-						series_date = series_date[4:6] + '/' +series_date[6:] + '/' + series_date[0:4]
-						if (0x0010, 0x0020) in ds:
-							patient_specific_id = ds[0x0010, 0x0020].value.replace('MIDRC-RICORD-1C-','')
-							patient_specific_df = annotation_df.loc[annotation_df['Anon MRN'] == patient_specific_id]
-							series_specific_df = patient_specific_df.loc[patient_specific_df['Anon TCIA Study Date'] == series_date]
-							class_dict = []
-							grade_dict = []
-							# print(series_specific_df)
-							for index,row in series_specific_df.iterrows():
-								class_dict += [{
-									'reader id':row['Reader_id'],
-									'reader name':row['Reader_name'],
-									'class id':row['CLASS_labelId'],
-									'class label':row['CLASS_label'],
-									'class description':row['CLASS_label_description']
-								}]
-								grade_dict += [{
-									'reader id':row['Reader_id'],
-									'reader name':row['Reader_name'],
-									'grade id':row['GRADE_labelId'],
-									'grade label':row['GRADE_label'],
-									'grade description':row['GRADE_label_description']
-								}]
-							
-							patient_good_info = [{
-								'sex':ds[0x0010,0x0040].value,
-								'age':float(ds[0x0010,0x1010].value.replace('Y','')),
-								'race':'Missing',
-								'ethnicity':'Missing',
-								'COVID_positive':'Yes'
-							}]
-							# Note: this repo doesn't seem to have pixel spacing or manufacturer info
-							imgs_good_info += [{
-								'modality':ds[0x0008,0x0060].value,
-								'body part examined':ds[0x0018,0x0015].value,
-								'view position':ds[0x0018,0x5101].value,
-								'pixel spacing':[ds[0x0028,0x0030].value[0], ds[0x0028,0x0030].value[1]] if (0x0028,0x0030) in ds else "MISSING",
-								'study date':ds[0x0008,0x0020].value,
-								'manufacturer':ds[0x0008,0x0070].value if (0x0008,0x0070) in ds else "MISSING",
-								'manufacturer model name':ds[0x0008,0x1090].value if (0x0008,0x1090) in ds else "MISSING",
-								'image size':ds.pixel_array.shape,
-								'classification':class_dict,
-								'grade':grade_dict
-							}]
-							
+						patient_specific_id, patient_good_info, imgs_good_info1 = extract_RICORD_1c_info(ds, annotation_df)
+						imgs_good_info += imgs_good_info1
 					else:
 						print(ds[0x0008,0x1030].value)
+				elif ds[0x0008,0x0060].value == 'CR' and ds[0x0008,0x0070].value == 'Agfa' and ds[0x0008,0x1090].value == 'CR 85':
+					imgs_good += [each_dcm_file]
+					patient_specific_id, patient_good_info, imgs_good_info1 = extract_RICORD_1c_info(ds, annotation_df)
+					imgs_good_info += imgs_good_info1
 				else:
 					imgs_bad += [each_dcm_file]
+					# print(ds)
+					# print(each_dcm_file)
+					# break
 		df.loc[ii] = [patient_specific_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] + ['RICORD-1c']
 		# # # # for debug
-		# if ii == 2:
+		# if ii == 10:
 		# 	break
-		# break
 	df.to_json(out_summ_file, indent=4, orient='table', index=False)
 
 
