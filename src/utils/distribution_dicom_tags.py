@@ -35,17 +35,20 @@ def get_dist(in_dir, repo_name, dicom_tags, out_dir):
     dcm_files = searchthis(in_dir, '.dcm')
     print('There are {:d} .dcm files'.format(len(dcm_files)))
     tag_acc = {}
+    tag_names = {}
     for each_tag in dicom_tags:
         tag_acc[each_tag] = []
+        tag_names[each_tag] = []
     for each_dcm_file in dcm_files:
         ds = pydicom.read_file(each_dcm_file)
         for each_tag in dicom_tags:
             if each_tag in ds:
                 tag_acc[each_tag] = tag_acc[each_tag] + [ds[each_tag].value.strip()]
+                if tag_names[each_tag] == []:
+                    tag_names[each_tag] = ds[each_tag].name.strip()
     for each_tag in dicom_tags:
-        print(ds[each_tag].name.replace)
-        out_fig_path_name = os.path.join(out_dir, repo_name + '__' + ds[each_tag].name.replace(' ', '_') + '.png')
-        out_json_path_name = os.path.join(out_dir, repo_name + '__' + ds[each_tag].name.replace(' ', '_') + '.json')
+        out_fig_path_name = os.path.join(out_dir, repo_name + '__' + tag_names[each_tag].replace(' ', '_') + '.png')
+        out_json_path_name = os.path.join(out_dir, repo_name + '__' + tag_names[each_tag].replace(' ', '_') + '.json')
         hist_pd = pd.Series(tag_acc[each_tag]).value_counts(sort=True)
         hist_pd.plot(kind='bar')
         plt.savefig(out_fig_path_name, dpi=300, bbox_inches="tight")
@@ -60,10 +63,10 @@ if __name__ == "__main__":
     # parser.add_argument('-i', '--input_dir', help='Input dir', default='/home/ravi.samala/DATA/temp/open_AI_unzip/')
     # parser.add_argument('-i', '--input_dir', help='Input dir', default='/gpfs_projects/common_data/TCIA/COVID_19_AR/manifest-1594658036421/COVID-19-AR/')
     # parser.add_argument('-i', '--input_dir', help='Input dir', default='/gpfs_projects/common_data/TCIA/COVID_19_NY_SBU/manifest-1628608914773/COVID-19-NY-SBU/')
-    # parser.add_argument('-i', '--input_dir', help='Input dir', default='/gpfs_projects/common_data/MIDRC/Release_1c/manifest-1610656454899/MIDRC-RICORD-1C')
+    parser.add_argument('-i', '--input_dir', help='Input dir', default='/gpfs_projects/common_data/MIDRC/Release_1c/manifest-1610656454899/MIDRC-RICORD-1C')
     # parser.add_argument('-i', '--input_dir', help='Input dir', default='/gpfs_projects/ravi.samala/DATA/MIDRC2/open_AI_unzip/')
-    parser.add_argument('-i', '--input_dir', help='Input dir', default='/gpfs_projects/ravi.samala/DATA/MIDRC2/open_RI_unzip/')
-    parser.add_argument('-r', '--repo_name', help='name of the data repository', default='open_RI')
+    # parser.add_argument('-i', '--input_dir', help='Input dir', default='/gpfs_projects/ravi.samala/DATA/MIDRC2/open_RI_unzip/')
+    parser.add_argument('-r', '--repo_name', help='name of the data repository', default='MIDRC_RICORD_1C')
     parser.add_argument('-d', '--dicom_tags', action='append', help='List of dicom tags to track', default=[(0x0008, 0x1030), (0x0008, 0x0060)])
     parser.add_argument('-o', '--output_dir', action='append', help='Output dir to save figures', default='/gpfs_projects/ravi.samala/OUT/2022_CXR/')
     args = parser.parse_args()
