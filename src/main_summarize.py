@@ -22,16 +22,12 @@ import pandas as pd
 num_patients_COVID_19_NY_SBU = 1384
 num_patients_COVID_19_AR = 105
 num_patients_RICORD_1c = 361
-=======
 open_AI_MIDRC_table_path = '../data/open_AI_all_20220624.tsv'
 open_RI_MIDRC_table_path = '../data/open_RI_all_20220609.tsv'
 COVID_19_NY_SBU_TCIA_table_path = '../data/deidentified_overlap_tcia.csv.cleaned.csv_20210806.csv'
 COVID_19_AR_TCIA_table_path = '../data/COVID_19_AR_ClinicalCorrelates_July202020.xlsx'
+RICORD_1c_annotation_path = "../data/1c_mdai_rsna_project_MwBeK3Nr_annotations_labelgroup_all_2021-01-08-164102_v3.csv"
 
-
-# clinical data paths
-RICORD_1c_table_path = "/gpfs_projects/ravi.samala/genDATA/2021_MIDRC/Info_MIDRC_files_dcm.csv"
-RICORD_1c_annotation_path = "/gpfs_projects/ravi.samala/OUT/2021_MIDRC/lists/1c_mdai_rsna_project_MwBeK3Nr_annotations_labelgroup_all_2021-01-08-164102_v3.csv"
 
 def searchthis(location, searchterm):
 	lis_paths = []
@@ -399,8 +395,6 @@ def read_open_RI(in_dir, out_summ_file):
 
 
 def read_RICORD_1c(in_dir, out_summ_file):
-	print(in_dir)
-	print(out_summ_file)
 	# check number of patients (should be 361)
 	patient_dirs = [filename for filename in os.listdir(in_dir) if os.path.isdir(os.path.join(in_dir,filename))]
 	if len(patient_dirs) != num_patients_RICORD_1c:
@@ -408,32 +402,30 @@ def read_RICORD_1c(in_dir, out_summ_file):
 		print(f'Got {len(patient_dirs)} case, actual should be {num_patients_RICORD_1c}')
 		print('Doing nothing. Returning!')
 		return
-	clinical_df = pd.read_csv(RICORD_1c_table_path)
 	annotation_df = pd.read_csv(RICORD_1c_annotation_path)
-	# print(annotation_df.head(10))
-	# print(clinical_df.head(10))
 	# set up dataframe
-	df = pd.DataFrame(columns=['patient_id', 'images','images_info', 'patient_info','repo'])
+	df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images', 'repo'])
 	# iterate through patients
 	for ii, each_patient in enumerate(patient_dirs):
 		imgs_good = []
 		imgs_good_info = []
 		imgs_bad = []
 		patient_root_dir = os.path.join(in_dir, each_patient)
+		print([ii, patient_root_dir], flush=True)
 		patient_submitter_id = ''
-		# print(patient_root_dir)
 		time_dirs = [filename for filename in os.listdir(patient_root_dir) if os.path.isdir(os.path.join(patient_root_dir, filename))]
-		#print(f'{len(time_dirs)} time directories found')
 		for each_time in time_dirs:
 			time_root_dir = os.path.join(patient_root_dir, each_time)
 			scans_dirs = [filename for filename in os.listdir(time_root_dir) if os.path.isdir(os.path.join(time_root_dir, filename))]
 			dcm_files = searchthis(time_root_dir,'.dcm')
 			for each_dcm_file in dcm_files:
 				ds = pydicom.read_file(each_dcm_file)
+				# print(ds)
+				# break
 				if (0x0008, 0x1030) in ds:
-					if ds[0x0008,0x1030].value == "XR CHEST 1 VIEW AP" or 'CHEST 1V':
-						# CXR image
-						# TODO - check for other tags that indicate good images
+					if ds[0x0008,0x1030].value == "XR CHEST 1 VIEW AP" or \
+							ds[0x0008,0x1030].value == 'CHEST 1V' or \
+							ds[0x0008,0x1030].value == 'XR CHEST 2 VIEWS PA AND LATERAL':
 						imgs_good += [each_dcm_file]
 						# match file to annotation info
 						series_date = ds[0x0008,0x0021].value
@@ -473,10 +465,10 @@ def read_RICORD_1c(in_dir, out_summ_file):
 								'modality':ds[0x0008,0x0060].value,
 								'body part examined':ds[0x0018,0x0015].value,
 								'view position':ds[0x0018,0x5101].value,
-								'pixel spacing':'Missing',
+								'pixel spacing':[ds[0x0028,0x0030].value[0], ds[0x0028,0x0030].value[1]] if (0x0028,0x0030) in ds else "MISSING",
 								'study date':ds[0x0008,0x0020].value,
-								'manufacturer':'Missing',
-								'manufacturer model name':'Missing',
+								'manufacturer':ds[0x0008,0x0070].value if (0x0008,0x0070) in ds else "MISSING",
+								'manufacturer model name':ds[0x0008,0x1090].value if (0x0008,0x1090) in ds else "MISSING",
 								'image size':ds.pixel_array.shape,
 								'classification':class_dict,
 								'grade':grade_dict
@@ -486,10 +478,12 @@ def read_RICORD_1c(in_dir, out_summ_file):
 						print(ds[0x0008,0x1030].value)
 				else:
 					imgs_bad += [each_dcm_file]
-		df.loc[ii] = [patient_specific_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + ['RICORD-1c']
+		df.loc[ii] = [patient_specific_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] + ['RICORD-1c']
+		# # # # for debug
+		# if ii == 2:
+		# 	break
 		# break
 	df.to_json(out_summ_file, indent=4, orient='table', index=False)
-
 
 
 def select_fn(sel_repo):
@@ -499,7 +493,7 @@ def select_fn(sel_repo):
 		read_COVID_19_AR(sel_repo[1], sel_repo[2])
 	elif sel_repo[0] == 'open_AI':
 		read_open_AI(sel_repo[1], sel_repo[2])
-	elif sel_repo[0] == 'RICORD_1c':
+	elif sel_repo[0] == 'MIDRC_RICORD_1C':
 		read_RICORD_1c(sel_repo[1], sel_repo[2])
 	elif sel_repo[0] == 'open_RI':
 		read_open_RI(sel_repo[1], sel_repo[2])
@@ -518,6 +512,3 @@ if __name__ == "__main__":
 	for each_repo in zip(args.names_list, args.input_dir_list, args.output_list):
 		select_fn(each_repo)
 		break
-	
-
-
