@@ -23,6 +23,8 @@ num_patients_COVID_19_NY_SBU = 1384
 num_patients_COVID_19_AR = 105
 open_AI_MIDRC_table_path = '../data/open_AI_all_20220624.tsv'
 open_RI_MIDRC_table_path = '../data/open_RI_all_20220609.tsv'
+COVID_19_NY_SBU_TCIA_table_path = '../data/deidentified_overlap_tcia.csv.cleaned.csv_20210806.csv'
+COVID_19_AR_TCIA_table_path = '../data/COVID_19_AR_ClinicalCorrelates_July202020.xlsx'
 
 
 def searchthis(location, searchterm):
@@ -37,8 +39,6 @@ def searchthis(location, searchterm):
 
 
 def read_COVID_19_NY_SBU(in_dir, out_summ_file):
-	print(in_dir)
-	print(out_summ_file)
 	# # Useful info
 	# # Each patient will have multiple time points
 	# # In each time point, there could be multiple scans
@@ -46,31 +46,30 @@ def read_COVID_19_NY_SBU(in_dir, out_summ_file):
 	# # 
 	# # At the root level, there should be 1384 patients
 	# patient_dirs = os.listdir(in_dir)
+	# #
+	# # get patient info
+	patient_df = pd.read_csv(COVID_19_NY_SBU_TCIA_table_path, sep=',')
+	# # iterate over the dirs
 	patient_dirs = [filename for filename in os.listdir(in_dir) if os.path.isdir(os.path.join(in_dir,filename))]
+	print('There are {:d} dirs'.format(len(patient_dirs)))
 	if len(patient_dirs) != num_patients_COVID_19_NY_SBU:
 		print('ERROR with num. of patients in COVID_19_NY_SBU')
 		print('Got {} case, actual should be {}'.format(len(patient_dirs), num_patients_COVID_19_NY_SBU))
 		print('Doing nothing. Returning!')
 		return
-	df = pd.DataFrame(columns=['patient_id', 'images_good', 'num_good', 'images_bad', 'num_bad'])
+	df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images', 'repo'])
 	# # Iterate over the patients
-	# patient_dirs = ['A002279']	# # for debug
 	for ii, each_patient in enumerate(patient_dirs):
 		imgs_good = []
+		imgs_good_info = []
 		imgs_bad = []
 		patient_root_dir = os.path.join(in_dir, each_patient)
 		print(patient_root_dir)
 		time_dirs = [filename for filename in os.listdir(patient_root_dir) if os.path.isdir(os.path.join(patient_root_dir,filename))]
-		# print(time_dirs)
-		# print(len(time_dirs))
 		# # Iterate over different time points
 		for each_time in time_dirs:
-			# print('==================================')
-			# print(each_time)
 			time_root_dir = os.path.join(patient_root_dir, each_time)
 			scans_dirs = [filename for filename in os.listdir(time_root_dir) if os.path.isdir(os.path.join(time_root_dir,filename))]
-			# print(scans_dirs)
-			# # Here exclude the scans that are difference images
 			# # 
 			dcm_files = searchthis(time_root_dir, '.dcm')
 			for each_dcm_file in dcm_files:
@@ -85,21 +84,47 @@ def read_COVID_19_NY_SBU(in_dir, out_summ_file):
 					# print([ds.SeriesNumber, ds.AcquisitionNumber])
 					if (0x0008, 0x0060) in ds:
 						if ds[0x0008, 0x0060].value == 'CR':
+							patient_specific_id = ds[0x0010, 0x0020].value
+							patient_specific_df = patient_df[patient_df['to_patient_id'].str.contains(patient_specific_id)]
+							# # there should be only 1 row for each patient
+							if len(patient_specific_df.index) != 1:
+								print('ERROR')
+								imgs_good = 'ERROR - patient not found in the clinical file'
+								break
+							else:
+								# # check if the patient name is the same
+								if each_patient != patient_specific_df.iloc[0]['to_patient_id']:
+									print('ERROR')
+									imgs_good = 'ERROR with patient name within each patient dir'
 							imgs_good += [each_dcm_file]
+							imgs_good_info += [{
+								'modality': ds[0x0008, 0x0060].value if (0x0008, 0x0060) in ds else "MISSING",
+								'body part examined':ds[0x0018,0x0015].value if (0x0018,0x0015) in ds else "MISSING",
+								'view position':ds[0x0018,0x5101].value if (0x0018,0x5101) in ds else "MISSING",
+								'pixel spacing':[ds[0x0018,0x1164].value[0], ds[0x0018,0x1164].value[1]] if (0x0018,0x1164) in ds else "MISSING",
+								'study date':ds[0x0008,0x0020].value if (0x0008,0x0020) in ds else "MISSING",
+								'manufacturer':ds[0x0008,0x0070].value if (0x0008,0x0070) in ds else "MISSING",
+								'manufacturer model name':ds[0x0008,0x1090].value if (0x0008,0x1090) in ds else "MISSING",
+								'image size': ds.pixel_array.shape
+								}]
+							patient_good_info = [{
+								'sex':"M" if patient_specific_df.iloc[0]['gender_concept_name'] == "Male" else "F",
+								'race':"MISSING",
+								'ethnicity':"MISSING",
+								'COVID_positive':"Yes" if patient_specific_df.iloc[0]['covid19_statuses'] == "positive" else "No",
+								'age':patient_specific_df.iloc[0]['age.splits'],
+								}]
 						else:
 							imgs_bad += [each_dcm_file]
 					else:
 						imgs_bad += [each_dcm_file]
-				# break
-			# #
-			# break
-		# print(imgs_good)
-		# print(imgs_bad)
-		df.loc[ii] = [each_patient] + [imgs_good] + [len(imgs_good)] + [imgs_bad] + [len(imgs_bad)]
-		# #
-		# break
-	# print(df)
-	df.to_csv(out_summ_file, sep='\t', index=False)
+		df.loc[ii] = [each_patient] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] + ['COVID_19_NY_SBU']
+		# # # for debug
+		if ii == 20:
+			break
+	# #
+	# # save info
+	df.to_json(out_summ_file, indent=4, orient='table', index=False)
 
 
 def read_COVID_19_AR(in_dir, out_summ_file):
@@ -112,59 +137,81 @@ def read_COVID_19_AR(in_dir, out_summ_file):
 	# # 
 	# # At the root level, there should be 1384 patients
 	# patient_dirs = os.listdir(in_dir)
+	# #
+	# # get patient info
+	patient_df = pd.read_excel(COVID_19_AR_TCIA_table_path, header=1)
+	print(patient_df)
+	# #
 	patient_dirs = [filename for filename in os.listdir(in_dir) if os.path.isdir(os.path.join(in_dir,filename))]
 	if len(patient_dirs) != num_patients_COVID_19_AR:
 		print('ERROR with num. of patients in COVID_19_AR')
 		print('Got {} case, actual should be {}'.format(len(patient_dirs), num_patients_COVID_19_NY_SBU))
 		print('Doing nothing. Returning!')
 		return
-	df = pd.DataFrame(columns=['patient_id', 'images_good', 'num_good', 'images_bad', 'num_bad'])
+	print('There are {:d} dirs'.format(len(patient_dirs)))
+	df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images', 'repo'])
 	# # Iterate over the patients
 	for ii, each_patient in enumerate(patient_dirs):
 		imgs_good = []
+		imgs_good_info = []
 		imgs_bad = []
 		patient_root_dir = os.path.join(in_dir, each_patient)
 		print(patient_root_dir)
 		time_dirs = [filename for filename in os.listdir(patient_root_dir) if os.path.isdir(os.path.join(patient_root_dir,filename))]
-		# print(time_dirs)
-		# print(len(time_dirs))
 		# # Iterate over different time points
 		for each_time in time_dirs:
-			# print('==================================')
-			# print(each_time)
 			time_root_dir = os.path.join(patient_root_dir, each_time)
 			scans_dirs = [filename for filename in os.listdir(time_root_dir) if os.path.isdir(os.path.join(time_root_dir,filename))]
-			# print(scans_dirs)
 			# # Here exclude the scans that are difference images
 			# # 
 			dcm_files = searchthis(time_root_dir, '.dcm')
 			for each_dcm_file in dcm_files:
-				# print(each_dcm_file)
 				ds = pydicom.read_file(each_dcm_file)
 				if (0x0008, 0x1030) in ds:
-					# print('(0x0008, 0x1030)')
-					# print(ds[0x0008, 0x1030].value)
 					if 'CXR14' in ds[0x0008, 0x1030].value or \
 					'XR CHEST AP ONLY' in ds[0x0008, 0x1030].value or \
 					'XR CHEST AP PORTABLE' in ds[0x0008, 0x1030].value or \
 					'XR CHEST PA ONLY' in ds[0x0008, 0x1030].value:
-						# # this CXR image
-						# print([each_dcm_file, ds[0x0008, 0x1030]])
+						patient_specific_id = ds[0x0010, 0x0020].value
+						patient_specific_df = patient_df[patient_df['PATIENT_ID'].str.contains(patient_specific_id)]
+						# # there should be only 1 row for each patient
+						if len(patient_specific_df.index) != 1:
+							print('ERROR')
+							imgs_good = 'ERROR - patient not found in the clinical file'
+							break
+						else:
+							# # check if the patient name is the same
+							if each_patient != patient_specific_df.iloc[0]['PATIENT_ID']:
+								print('ERROR')
+								imgs_good = 'ERROR with patient name within each patient dir'
 						imgs_good += [each_dcm_file]
+						imgs_good_info += [{
+							'modality': ds[0x0008, 0x0060].value if (0x0008, 0x0060) in ds else "MISSING",
+							'body part examined':ds[0x0018,0x0015].value if (0x0018,0x0015) in ds else "MISSING",
+							'view position':ds[0x0018,0x5101].value if (0x0018,0x5101) in ds else "MISSING",
+							'pixel spacing':[ds[0x0018,0x1164].value[0], ds[0x0018,0x1164].value[1]] if (0x0018,0x1164) in ds else "MISSING",
+							'study date':ds[0x0008,0x0020].value if (0x0008,0x0020) in ds else "MISSING",
+							'manufacturer':ds[0x0008,0x0070].value if (0x0008,0x0070) in ds else "MISSING",
+							'manufacturer model name':ds[0x0008,0x1090].value if (0x0008,0x1090) in ds else "MISSING",
+							'image size': ds.pixel_array.shape
+							}]
+						patient_good_info = [{
+							'sex':"M" if patient_specific_df.iloc[0]['SEX'] == "Male" else "F",
+							'race':patient_specific_df.iloc[0]['RACE'],
+							'ethnicity':"MISSING",
+							'COVID_positive':"Yes" if patient_specific_df.iloc[0]['COVID TEST POSITIVE'] == "Y" else "No",
+							'age':patient_specific_df.iloc[0]['AGE'],
+							}]
 				else:
 					# # any image other CXR
-					# print([ds.SeriesNumber, ds.AcquisitionNumber])
 					imgs_bad += [each_dcm_file]
-				# break
-			# #
-			# break
-		# print(imgs_good)
-		# print(imgs_bad)
-		df.loc[ii] = [each_patient] + [imgs_good] + [len(imgs_good)] + [imgs_bad] + [len(imgs_bad)]
-		# #
-		# break
-	# print(df)
-	df.to_csv(out_summ_file, sep='\t', index=False)
+		df.loc[ii] = [each_patient] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] + ['COVID_19_AR']
+		# # # # for debug
+		# if ii == 2:
+		# 	break
+	# #
+	# # save info
+	df.to_json(out_summ_file, indent=4, orient='table', index=False)
 
 
 def read_open_AI(in_dir, out_summ_file):
@@ -246,7 +293,7 @@ def read_open_AI(in_dir, out_summ_file):
 				else:
 					# # any image other CXR
 					imgs_bad += [each_dcm_file]
-		df.loc[ii] = [patient_submitter_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good), ['open_AI']]
+		df.loc[ii] = [patient_submitter_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] + ['open_AI']
 		# # # for debug
 		# if ii == 1:
 		# 	break
@@ -336,7 +383,7 @@ def read_open_RI(in_dir, out_summ_file):
 				else:
 					# # any image other CXR
 					imgs_bad += [each_dcm_file]
-		df.loc[ii] = [patient_submitter_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good), ['open_AI']]
+		df.loc[ii] = [patient_submitter_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] + ['open_AI']
 		# # # for debug
 		if ii == 20:
 			break
