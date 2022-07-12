@@ -15,13 +15,17 @@ rcParams['figure.figsize'] = (8,6)
 
 
 # summary json file locations
-RICORD_1c_json_path = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/summary_table_RICORD_1c.json"
+# RICORD_1c_json_path = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/summary_table_RICORD_1c.json"
+RICORD_1c_json_path = "/gpfs_projects/ravi.samala/OUT/2022_CXR/summary_table__MIDRC_RICORD_1C.json"
 open_AI_json_path = "/gpfs_projects/ravi.samala/OUT/2022_CXR/summary_table__open_AI_20patients.json"
+COVID_19_AR_json_path = "/gpfs_projects/ravi.samala/OUT/2022_CXR/summary_table__COVID_19_AR.json"
 # designate repo(s) to summarize
-repo_list = ['RICORD-1c', 'open_AI']
+# repo_list = ['RICORD-1c', 'open_AI', 'COVID_19_AR']
+repo_list = ['COVID_19_AR']
 
 # set save location
-save_loc = "/gpfs_projects/alexis.burgon/OUT/2022_CXR"
+# save_loc = "/gpfs_projects/alexis.burgon/OUT/2022_CXR"
+save_loc = "/gpfs_projects/ravi.samala/OUT/2022_CXR/figs/"
 
 # different characteristic summaries
 def summarize_sex(data, dataframe, repo):
@@ -90,18 +94,27 @@ def summarize_age(data, dataframe, repo):
     return data
 
 def summarize_modality(data, dataframe, repo):
+    num_patients = 0
+    num_images = 0
     for row in dataframe['images_info']:
+        patient_flag = False
         for entry in row:
             if 'modality' in entry:
                 if entry['modality'] == 'CR':
                     data.loc[repo]['CR'] += 1
+                    patient_flag = True
+                    num_images += 1
                 elif entry['modality'] == 'DX':
                     data.loc[repo]['DX'] += 1
+                    patient_flag = True
+                    num_images += 1
                 else:
                     data.loc[repo]['Not Specified'] += 1
             else:
                 data.loc[repo]['Not Specified'] += 1
-    return data
+        if patient_flag:
+            num_patients += 1
+    return num_patients, num_images, data
 
 def summarize_body_part(data, dataframe, repo):
     for row in dataframe['images_info']:
@@ -124,14 +137,17 @@ def pie_label(pct, allvalues):
     return "{:.1f}%\n({:d})".format(pct, absolute)
 
 # different types of outputs
-def pie_chart(data, save_name, include_numbers = True):
+def pie_chart(data, save_name, include_numbers = True, fig_title=None):
     f, ax = plt.subplots(figsize=(8,6))
     data = {i:j for i,j in data.items() if j != 0}
     if include_numbers:
         plt.pie(list(data.values()), labels=list(data.keys()), colors=colors,autopct=lambda pct: pie_label(pct, list(data.values())))
     else:
         plt.pie(list(data.values()), labels=list(data.keys()), colors=colors,autopct='%.0f%%')
-    plt.savefig(os.path.join(save_loc, save_name), dpi=300)
+    if fig_title:
+        plt.title(fig_title, **hfont)
+    plt.axis('equal')
+    plt.savefig(os.path.join(save_loc, save_name), dpi=300, bbox_inches="tight")
 
 def summary_table(data, save_name, figsize=(8,6)):
     f, ax = plt.subplots(figsize=figsize)
@@ -202,13 +218,15 @@ for repo in repo_list:
         df = pd.read_json(RICORD_1c_json_path, orient='table')
     elif repo == 'open_AI':
         df = pd.read_json(open_AI_json_path, orient='table')
+    elif repo == 'COVID_19_AR':
+        df = pd.read_json(COVID_19_AR_json_path, orient='table')
     else:
         print(f'ERROR unknown repository {repo}.')
         break
     # summarize each statistic
     sex_df = summarize_sex(sex_df, df, repo)
     COVID_df = summarize_COVID(COVID_df, df, repo)
-    modality_df = summarize_modality(modality_df, df, repo)
+    num_patients_with_CXR, num_CXR, modality_df = summarize_modality(modality_df, df, repo)
     race_df = summarize_race(race_df, df, repo)
     ethnicity_df = summarize_ethnicity(ethnicity_df, df, repo)
     age_df = summarize_age(age_df, df, repo)
@@ -231,12 +249,12 @@ age_df = age_df[sorted(age_df.columns)]
 if len(repo_list) == 1:
     pie_chart(sex_df.loc['Overall'], f"{repo}_sex_summary_chart.png")
     pie_chart(COVID_df.loc['Overall'], f"{repo}_COVID_summary_chart.png")
-    pie_chart(modality_df.loc['Overall'], f"{repo}_modality_summary_chart.png")
+    pie_chart(modality_df.loc['Overall'], f"{repo}_modality_summary_chart.png", True, str(num_patients_with_CXR) + ' num. of patients with = ' + str(num_CXR) + ' CXR images')
     pie_chart(race_df.loc['Overall'],f"{repo}_race_summary_chart.png")
     pie_chart(ethnicity_df.loc['Overall'],f"{repo}_ethnicity_summary_chart.png")
     overall_bar_chart(age_df.loc['Overall'], f'{repo}_age_bar_chart.png')
-    overall_plot(age_df.loc['Overall'], f'{repo}_age_plot.png')
-    pie_chart(age_df.loc['Overall'],f'{repo}_age_summary_chart.png')
+    # overall_plot(age_df.loc['Overall'], f'{repo}_age_plot.png')
+    # pie_chart(age_df.loc['Overall'],f'{repo}_age_summary_chart.png')
     pie_chart(body_part_df.loc['Overall'],f'{repo}_body_part_summary_chart.png')
 else:
     pie_chart(sex_df.loc['Overall'], "sex_summary_chart.png")
@@ -245,8 +263,8 @@ else:
     pie_chart(race_df.loc['Overall'],"race_summary_chart.png")
     pie_chart(ethnicity_df.loc['Overall'],"ethnicity_summary_chart.png")
     overall_bar_chart(age_df.loc['Overall'],'age_bar_chart.png')
-    overall_plot(age_df.loc['Overall'],"age_plot.png")
-    pie_chart(age_df.loc['Overall'],"age_summary_chart.png")
+    # overall_plot(age_df.loc['Overall'],"age_plot.png")
+    # pie_chart(age_df.loc['Overall'],"age_summary_chart.png")
     pie_chart(body_part_df.loc['Overall'], "body_part_summary_chart.png")
     summary_table(age_df, "age_summary_table.png", figsize=(20,2))
     summary_table(sex_df, "sex_summary_table.png")
