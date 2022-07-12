@@ -5,9 +5,7 @@
     RKS, 06/06/2022
 '''
 import os
-import csv
 import math
-import struct
 import numpy as np
 from array import array
 from PIL import Image
@@ -17,6 +15,7 @@ import argparse
 import pydicom
 from skimage.measure import block_reduce
 import pandas as pd
+
 
 # # Fixed params
 DIV_PIXEL_VALUE = 1
@@ -100,6 +99,18 @@ def read_dcm(imageName, ROI_SIZE):
     return img.astype(np.int32)
 
 
+def select_view_position_images(in_df, view_position):
+    '''
+        select images based on "view position" dicom tag
+    '''
+    imgs_lis = []
+    for row_imgs, row_imgs_info in zip(in_df['images'], in_df['images_info']):
+        for img, img_info in zip(row_imgs, row_imgs_info):
+            if img_info['view position'] == view_position:
+                imgs_lis += [img]
+    return imgs_lis
+
+
 def select_all_images(in_df):
     '''
         By default select all images in the dataframe
@@ -116,7 +127,14 @@ def create_files_from_list(args):
         along the rows
     '''
     df = pd.read_json(args.in_summary_json, orient='table')
+    # #
+    # # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    # #  USE conditions below to customize the selection of images
     imgs_list = select_all_images(df)
+    # imgs_list = select_view_position_images(df, 'PA')
+    # imgs_list = select_view_position_images(df, 'LL')
+    # # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    # #
     print('Num of images in list = ' + str(len(imgs_list)))
     num_splits = int(math.ceil((len(imgs_list)*1)/float(args.max_each_tile)))
     print('There are %d patch files' % len(imgs_list))
