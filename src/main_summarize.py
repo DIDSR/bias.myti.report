@@ -12,6 +12,10 @@
 	# # Pixel spacing
 	# # View position
 	# #
+	# #
+	# # First check by RKS
+	# # - MIDRC_RICORD_1C		361 patients
+	# # - COVID_19_AR			105 patients
 '''
 import os
 import argparse
@@ -84,8 +88,15 @@ def read_COVID_19_NY_SBU(in_dir, out_summ_file):
 				else:
 					# # this image is what we might use
 					# print([ds.SeriesNumber, ds.AcquisitionNumber])
-					if (0x0008, 0x0060) in ds:
-						if ds[0x0008, 0x0060].value == 'CR':
+					if (0x0008, 0x1030) in ds:
+						if 'CHEST AP PORT' in ds[0x0008, 0x1030].value or \
+							'CHEST AP VIEWONLY' in ds[0x0008, 0x1030].value or \
+							'CHEST AP PORTABLE' in ds[0x0008, 0x1030].value or \
+							'CHEST AP VIEW ONLY' in ds[0x0008, 0x1030].value or \
+							'CHEST ROUTINE PA AP AND LATERAL' in ds[0x0008, 0x1030].value or \
+							'CHEST AP CENTRAL LINE PL PORTABLE' in ds[0x0008, 0x1030].value or \
+							'CHEST AP INFANT PORTABLE' in ds[0x0008, 0x1030].value or \
+							'CHEST ROUTINE PA\/AP AND LATERAL' in ds[0x0008, 0x1030].value:
 							patient_specific_id = ds[0x0010, 0x0020].value
 							patient_specific_df = patient_df[patient_df['to_patient_id'].str.contains(patient_specific_id)]
 							# # there should be only 1 row for each patient
@@ -121,17 +132,15 @@ def read_COVID_19_NY_SBU(in_dir, out_summ_file):
 					else:
 						imgs_bad += [each_dcm_file]
 		df.loc[ii] = [each_patient] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] + ['COVID_19_NY_SBU']
-		# # # for debug
-		if ii == 20:
-			break
+		# # # # for debug
+		# if ii == 20:
+		# 	break
 	# #
 	# # save info
 	df.to_json(out_summ_file, indent=4, orient='table', index=False)
 
 
 def read_COVID_19_AR(in_dir, out_summ_file):
-	print(in_dir)
-	print(out_summ_file)
 	# # Useful info
 	# # Each patient will have multiple time points
 	# # In each time point, there could be multiple scans and non-CXR data too
@@ -142,7 +151,6 @@ def read_COVID_19_AR(in_dir, out_summ_file):
 	# #
 	# # get patient info
 	patient_df = pd.read_excel(COVID_19_AR_TCIA_table_path, header=1)
-	print(patient_df)
 	# #
 	patient_dirs = [filename for filename in os.listdir(in_dir) if os.path.isdir(os.path.join(in_dir,filename))]
 	if len(patient_dirs) != num_patients_COVID_19_AR:
@@ -158,7 +166,7 @@ def read_COVID_19_AR(in_dir, out_summ_file):
 		imgs_good_info = []
 		imgs_bad = []
 		patient_root_dir = os.path.join(in_dir, each_patient)
-		print(patient_root_dir)
+		print([ii, patient_root_dir], flush=True)
 		time_dirs = [filename for filename in os.listdir(patient_root_dir) if os.path.isdir(os.path.join(patient_root_dir,filename))]
 		# # Iterate over different time points
 		for each_time in time_dirs:
@@ -170,9 +178,10 @@ def read_COVID_19_AR(in_dir, out_summ_file):
 			for each_dcm_file in dcm_files:
 				ds = pydicom.read_file(each_dcm_file)
 				if (0x0008, 0x1030) in ds:
-					if 'CXR14' in ds[0x0008, 0x1030].value or \
+					if 'XR CHEST AP PORTABLE' in ds[0x0008, 0x1030].value or \
 					'XR CHEST AP ONLY' in ds[0x0008, 0x1030].value or \
-					'XR CHEST AP PORTABLE' in ds[0x0008, 0x1030].value or \
+					'XR CHEST PA AND LATERAL' in ds[0x0008, 0x1030].value or \
+					'XR ACUTE ABDOMINAL SERIES W PA CHEST PORTABLE' in ds[0x0008, 0x1030].value or \
 					'XR CHEST PA ONLY' in ds[0x0008, 0x1030].value:
 						patient_specific_id = ds[0x0010, 0x0020].value
 						patient_specific_df = patient_df[patient_df['PATIENT_ID'].str.contains(patient_specific_id)]
@@ -198,7 +207,7 @@ def read_COVID_19_AR(in_dir, out_summ_file):
 							'image size': ds.pixel_array.shape
 							}]
 						patient_good_info = [{
-							'sex':"M" if patient_specific_df.iloc[0]['SEX'] == "Male" else "F",
+							'sex':patient_specific_df.iloc[0]['SEX'],
 							'race':patient_specific_df.iloc[0]['RACE'],
 							'ethnicity':"MISSING",
 							'COVID_positive':"Yes" if patient_specific_df.iloc[0]['COVID TEST POSITIVE'] == "Y" else "No",
@@ -209,8 +218,8 @@ def read_COVID_19_AR(in_dir, out_summ_file):
 					imgs_bad += [each_dcm_file]
 		df.loc[ii] = [each_patient] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] + ['COVID_19_AR']
 		# # # for debug
-		if ii == 20:
-			break
+		# if ii == 20:
+		# 	break
 	# #
 	# # save info
 	df.to_json(out_summ_file, indent=4, orient='table', index=False)
