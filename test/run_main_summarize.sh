@@ -9,6 +9,7 @@ EXE="../src/main_summarize.py"
 # declare -a IN_Repos=("open_RI" "open_AI" "COVID_19_AR" "COVID_19_NY_SBU")
 # declare -a OUT_summary=("/gpfs_projects/ravi.samala/OUT/2022_CXR/summary_table__open_RI.json" "/gpfs_projects/ravi.samala/OUT/2022_CXR/summary_table__open_AI.json" "/gpfs_projects/ravi.samala/OUT/2022_CXR/summary_table__COVID_19_AR.json" "/gpfs_projects/ravi.samala/OUT/2022_CXR/summary_table__COVID_19_NY_SBU2.json")
 
+# # GPU1
 # declare -a IN_paths=("/gpfs_projects/common_data/TCIA/COVID_19_NY_SBU/manifest-1628608914773/COVID-19-NY-SBU/")
 # declare -a IN_Repos=("COVID_19_NY_SBU")
 # declare -a OUT_summary=("/gpfs_projects/ravi.samala/OUT/2022_CXR/summary_table__COVID_19_NY_SBU.json")
@@ -20,6 +21,8 @@ EXE="../src/main_summarize.py"
 declare -a IN_paths=("/gpfs_projects/common_data/MIDRC/Release_1c/manifest-1610656454899/MIDRC-RICORD-1C/")
 declare -a IN_Repos=("MIDRC_RICORD_1C")
 declare -a OUT_summary=("/gpfs_projects/ravi.samala/OUT/2022_CXR/summary_table__MIDRC_RICORD_1C.json")
+
+# declare -a OUT_summary=("/gpfs_projects/ravi.samala/OUT/2022_CXR/temp.json")
 
 # #
 # #
