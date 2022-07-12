@@ -16,6 +16,14 @@
 	# # First check by RKS
 	# # - MIDRC_RICORD_1C		361 patients
 	# # - COVID_19_AR			105 patients
+	# #
+	# # -----------------------------------------------
+	# # Data cleanup notes
+	# # -----------------------------------------------
+	# # MIDRC_RICORD_1C: initially collected 1257 images
+	# # 	Removing all views with view position (ds[0x0018,0x5101]) == 'LL': removed 64 images
+	# # 	Removing all views with view position (ds[0x0018,0x5101]) == 'PA': removed 102 images
+	# #		Removing above LL and PA resulted in 1091 images
 '''
 import os
 import argparse
@@ -480,8 +488,9 @@ def read_RICORD_1c(in_dir, out_summ_file):
 			dcm_files = searchthis(time_root_dir,'.dcm')
 			for each_dcm_file in dcm_files:
 				ds = pydicom.read_file(each_dcm_file)
-				# print(ds)
-				# break
+				# # Data cleanup
+				if ds[0x0018,0x5101].value == "LL" or ds[0x0018,0x5101].value == "PA":
+					continue
 				if (0x0008, 0x1030) in ds:
 					if ds[0x0008,0x1030].value == "XR CHEST 1 VIEW AP" or \
 							ds[0x0008,0x1030].value == 'CHEST 1V' or \
