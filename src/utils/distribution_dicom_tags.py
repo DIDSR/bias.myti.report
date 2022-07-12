@@ -1,6 +1,11 @@
 '''
     Program that generates distribution of selected dicom tags from a data repo
 
+    started:
+    GPU2: COVID_19_NY_SBU
+    GPU3: open_AI
+    GPU4: open_RI
+
 '''
 import seaborn
 import matplotlib.pyplot as plt
@@ -63,10 +68,10 @@ if __name__ == "__main__":
     # parser.add_argument('-i', '--input_dir', help='Input dir', default='/home/ravi.samala/DATA/temp/open_AI_unzip/')
     # parser.add_argument('-i', '--input_dir', help='Input dir', default='/gpfs_projects/common_data/TCIA/COVID_19_AR/manifest-1594658036421/COVID-19-AR/')
     # parser.add_argument('-i', '--input_dir', help='Input dir', default='/gpfs_projects/common_data/TCIA/COVID_19_NY_SBU/manifest-1628608914773/COVID-19-NY-SBU/')
-    parser.add_argument('-i', '--input_dir', help='Input dir', default='/gpfs_projects/common_data/MIDRC/Release_1c/manifest-1610656454899/MIDRC-RICORD-1C')
+    # parser.add_argument('-i', '--input_dir', help='Input dir', default='/gpfs_projects/common_data/MIDRC/Release_1c/manifest-1610656454899/MIDRC-RICORD-1C')
     # parser.add_argument('-i', '--input_dir', help='Input dir', default='/gpfs_projects/ravi.samala/DATA/MIDRC2/open_AI_unzip/')
-    # parser.add_argument('-i', '--input_dir', help='Input dir', default='/gpfs_projects/ravi.samala/DATA/MIDRC2/open_RI_unzip/')
-    parser.add_argument('-r', '--repo_name', help='name of the data repository', default='MIDRC_RICORD_1C')
+    parser.add_argument('-i', '--input_dir', help='Input dir', default='/gpfs_projects/ravi.samala/DATA/MIDRC2/open_RI_unzip/')
+    parser.add_argument('-r', '--repo_name', help='name of the data repository', default='open_RI')
     parser.add_argument('-d', '--dicom_tags', action='append', help='List of dicom tags to track', default=[(0x0008, 0x1030), (0x0008, 0x0060)])
     parser.add_argument('-o', '--output_dir', action='append', help='Output dir to save figures', default='/gpfs_projects/ravi.samala/OUT/2022_CXR/')
     args = parser.parse_args()
