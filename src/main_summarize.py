@@ -24,6 +24,10 @@
 	# # 	Removing all views with view position (ds[0x0018,0x5101]) == 'LL': removed 64 images
 	# # 	Removing all views with view position (ds[0x0018,0x5101]) == 'PA': removed 102 images
 	# #		Removing above LL and PA resulted in 1091 images
+	# # COVID_19_AR: initially collected 262 images
+	# # 	Removing all images with max pixel values > 10000: removed 59 images
+	# # 	Removing all images with max pixel values < 2000: removed 26 images
+	# #		Manually removed 8 images
 '''
 import os
 import argparse
@@ -39,7 +43,8 @@ open_RI_MIDRC_table_path = '../data/open_RI_all_20220609.tsv'
 COVID_19_NY_SBU_TCIA_table_path = '../data/deidentified_overlap_tcia.csv.cleaned.csv_20210806.csv'
 COVID_19_AR_TCIA_table_path = '../data/COVID_19_AR_ClinicalCorrelates_July202020.xlsx'
 RICORD_1c_annotation_path = "../data/1c_mdai_rsna_project_MwBeK3Nr_annotations_labelgroup_all_2021-01-08-164102_v3.csv"
-
+# files to remove:
+COVID_19_AR_bad_files_path = "../data/COVID_19_AR__manually_deleted_images.txt"
 
 def searchthis(location, searchterm):
 	lis_paths = []
@@ -167,12 +172,16 @@ def read_COVID_19_AR(in_dir, out_summ_file):
 		print('Doing nothing. Returning!')
 		return
 	print('There are {:d} dirs'.format(len(patient_dirs)))
-	df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images', 'repo'])
+	df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images','bad_images', 'bad_images_info', 'repo'])
 	# # Iterate over the patients
 	for ii, each_patient in enumerate(patient_dirs):
 		imgs_good = []
 		imgs_good_info = []
 		imgs_bad = []
+		imgs_bad_info = []
+		#print(os.listdir("../data"))
+		with open(COVID_19_AR_bad_files_path, 'r') as in_file:
+			bad_files = in_file.read().split("\n")
 		patient_root_dir = os.path.join(in_dir, each_patient)
 		print([ii, patient_root_dir], flush=True)
 		time_dirs = [filename for filename in os.listdir(patient_root_dir) if os.path.isdir(os.path.join(patient_root_dir,filename))]
@@ -181,10 +190,25 @@ def read_COVID_19_AR(in_dir, out_summ_file):
 			time_root_dir = os.path.join(patient_root_dir, each_time)
 			scans_dirs = [filename for filename in os.listdir(time_root_dir) if os.path.isdir(os.path.join(time_root_dir,filename))]
 			# # Here exclude the scans that are difference images
-			# # 
+			# #
 			dcm_files = searchthis(time_root_dir, '.dcm')
+			
 			for each_dcm_file in dcm_files:
 				ds = pydicom.read_file(each_dcm_file)
+				
+				if each_dcm_file in bad_files:
+					imgs_bad += [each_dcm_file]
+					imgs_bad_info += [{
+							'modality': ds[0x0008, 0x0060].value if (0x0008, 0x0060) in ds else "MISSING",
+							'body part examined':ds[0x0018,0x0015].value if (0x0018,0x0015) in ds else "MISSING",
+							'view position':ds[0x0018,0x5101].value if (0x0018,0x5101) in ds else "MISSING",
+							'pixel spacing':[ds[0x0018,0x1164].value[0], ds[0x0018,0x1164].value[1]] if (0x0018,0x1164) in ds else "MISSING",
+							'study date':ds[0x0008,0x0020].value if (0x0008,0x0020) in ds else "MISSING",
+							'manufacturer':ds[0x0008,0x0070].value if (0x0008,0x0070) in ds else "MISSING",
+							'manufacturer model name':ds[0x0008,0x1090].value if (0x0008,0x1090) in ds else "MISSING",
+							'image size': ds.pixel_array.shape
+							}]
+				
 				if (0x0008, 0x1030) in ds:
 					if 'XR CHEST AP PORTABLE' in ds[0x0008, 0x1030].value or \
 					'XR CHEST AP ONLY' in ds[0x0008, 0x1030].value or \
@@ -224,7 +248,7 @@ def read_COVID_19_AR(in_dir, out_summ_file):
 				else:
 					# # any image other CXR
 					imgs_bad += [each_dcm_file]
-		df.loc[ii] = [each_patient] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] + ['COVID_19_AR']
+		df.loc[ii] = [each_patient] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] +[imgs_bad] + [imgs_bad_info] + ['COVID_19_AR']
 		# # # for debug
 		# if ii == 20:
 		# 	break
