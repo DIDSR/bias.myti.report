@@ -5,7 +5,7 @@ from pathlib import Path
 PROJECT_DIR = Path(__file__).parent.parent
 # DATA_DIR = Path("/deep/group")
 # DATA_DIR = Path("/gpfs_projects/ravi.samala/DATA")
-DATA_DIR = Path("/gpfs_projects/ravi.samala/OUT/moco/experiments/ravi.samala/r8w1n416_20220715h15_tr_mocov2_20220715-172742/finetune/fine_tune_train__lastFC_epoch20/deploy/valid_with_fake_name")
+DATA_DIR = Path("/gpfs_projects/ravi.samala/OUT/moco/reorg_chexpert/moving_logs/")
 
 # Datasets
 CHEXPERT = "chexpert"
