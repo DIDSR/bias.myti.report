@@ -1,17 +1,14 @@
 #!/bin/bash
-# USER='minhphu'
-# ROOT=/deep/group/${USER}
-# TEMP=${ROOT}/dump
-
-# cp /deep/group/CheXpert/final_ckpts/CheXpert-Ignore/best.pth.tar $TEMP
-# cp /deep/group/CheXpert/final_ckpts/CheXpert-Ignore/args.json $TEMP
-# cd ${ROOT}/aihc-winter19-robustness/chexpert-model/
-python test.py --dataset chexpert \
+# # 
+# # Note:
+# # (1) add the deployed CSV file directly to the data/custom_dataset.py on line 44
+# # (2) there is no way to add output folder, by default the "results" dir will be saved under the checkpoint dir
+# #     for example: /gpfs_projects/ravi.samala/OUT/moco/experiments/ravi.samala/r8w1n416_20220715h15_tr_mocov2_20220715-172742/finetune/fine_tune_train__lastFC_epoch20/results/
+python test.py --dataset custom \
                --together True \
-               --test_csv /gpfs_projects/ravi.samala/OUT/moco/experiments/ravi.samala/r8w1n416_20220715h15_tr_mocov2_20220715-172742/finetune/fine_tune_train__lastFC_epoch20/deploy/valid_with_fake_name/valid.csv \
                --ckpt_path /gpfs_projects/ravi.samala/OUT/moco/experiments/ravi.samala/r8w1n416_20220715h15_tr_mocov2_20220715-172742/finetune/fine_tune_train__lastFC_epoch20/best.pth.tar \
-               --phase train \
-               --save_dir /gpfs_projects/ravi.samala/OUT/moco/experiments/ravi.samala/r8w1n416_20220715h15_tr_mocov2_20220715-172742/finetune/fine_tune_train__lastFC_epoch20/deploy/ \
+               --phase valid \
                --moco False \
+               --inference_only
 
                
