@@ -41,7 +41,10 @@ class CustomDataset(BaseDataset):
             self.csv_path = self.data_args.uncertain_map_path
         elif self.is_val_dataset:
             # self.csv_path = self.data_args.csv_dev
-            self.csv_path = '/gpfs_projects/ravi.samala/OUT/moco/reorg_chexpert/moving_logs/fine_tune_train_log_small.csv'  # # RKS
+            # self.csv_path = '/gpfs_projects/ravi.samala/OUT/moco/reorg_chexpert/moving_logs/fine_tune_train_log_small.csv'  # # RKS
+            self.csv_path = '/gpfs_projects/ravi.samala/OUT/moco/reorg_chexpert/moving_logs/fine_tune_train_log.csv'  # # RKS
+            # self.csv_path = '/gpfs_projects/ravi.samala/OUT/moco/reorg_chexpert/moving_logs/valid_log.csv'  # # RKS
+            # self.csv_path = '/gpfs_projects/ravi.samala/OUT/moco/reorg_chexpert/moving_logs/test_log.csv'  # # RKS
         elif self.is_test_dataset: # Custom test
             if self.data_args.together: # one csv for all of test
                 self.csv_path = self.data_args.test_csv
