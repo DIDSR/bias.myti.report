@@ -20,7 +20,7 @@ def get_plane(img1, img2, img3):
     b = img3 - img1
     a = a.to(torch.float)
     b = b.to(torch.float)
-    a_norm = torch.dot(a.flatten(), b.flatten())
+    a_norm = torch.dot(a.flatten(), a.flatten()).sqrt()
     a = a / a_norm
     first_coef = torch.dot(a.flatten(), b.flatten())
     b_orthog = b - first_coef * a
