@@ -23,7 +23,7 @@ class Evaluator(object):
 
     def evaluate(self, groundtruth, predictions, metric, threshold=0.5):
         """Evaluate a single metric on groundtruth and predictions."""
-        print("Evaluating metric: {}".format(metric))
+        #print("Evaluating metric: {}".format(metric))
         if metric in self.summary_metrics:
             metric_fn = self.summary_metrics[metric]
             value = metric_fn(groundtruth, predictions)
@@ -45,15 +45,17 @@ class Evaluator(object):
         """Compute evaluation metrics and curves on multiple tasks."""
         metrics = {}
         curves = {}
+        tasks = ['CR', 'DX', 'Female', 'Male']
+        
+        
         for task in list(predictions):
-            print("Evaluating task: {}".format(task))
-
+            #print("Evaluating task: {}".format(task))
             task_groundtruth = groundtruth[task]
             task_predictions = predictions[task]
             # filter out those with -1 in groundtruth
-            non_label = task_groundtruth.index[task_groundtruth == -1.0]
-            task_predictions = task_predictions.drop(non_label)
-            task_groundtruth = task_groundtruth.drop(non_label)
+            #non_label = task_groundtruth.index[task_groundtruth == -1.0]
+            #task_predictions = task_predictions.drop(non_label)
+            #task_groundtruth = task_groundtruth.drop(non_label)
 
             metrics.update({f"{task}:{metric}":
                             self.evaluate(task_groundtruth,
@@ -99,7 +101,8 @@ class Evaluator(object):
 
         average_metric = np.mean([metrics[f"{task}:{metric_name}"]
                                   for task in evaluate_tasks])
-
+    
+        
         return average_metric
 
     def set_eval_functions(self):

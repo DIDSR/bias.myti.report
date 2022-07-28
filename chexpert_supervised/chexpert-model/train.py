@@ -58,16 +58,19 @@ def train(args):
             tasks = model_args.__dict__[TASKS]  # TASKS = "tasks"
         print("Tasks: {}".format(tasks))
         model = model_fn(tasks, model_args)
-        model = nn.DataParallel(model, args.gpu_ids)
+        #model = nn.DataParallel(model, args.gpu_ids)
+        model = nn.DataParallel(model, args.gpu_ids).to(args.device)
+        #model = nn.parallel.DistributedDataParallel(model, args.gpu_ids).to(args.device)
 
 
     # Put model on gpu or cpu and put into training mode.
+    print(args.device)
     model = model.to(args.device)
     model.train()
 
     print("========= MODEL ==========")
     print(model)
-
+    print('==========================')
     # Get train and valid loader objects.
     train_loader = get_loader(phase="train",
                              data_args=data_args,
@@ -81,7 +84,7 @@ def train(args):
                               is_training=False,
                               return_info_dict=False,
                               logger=logger)
-
+    
     # Instantiate the predictor class for obtaining model predictions.
     predictor = Predictor(model, args.device)
     # Instantiate the evaluator class for evaluating models.
@@ -161,12 +164,18 @@ def train(args):
                                optimizer=optimizer,
                                device=args.device,
                                metric_val=average_metric)
+                    # make predictions on the entire validation set
+                    import os
+                    print("Predicting on entire validation set...")
+                    predictions, gt = predictor.predict(valid_loader)
+                    predictions.to_csv(os.path.join(saver.save_dir, "validation_predictions.csv"))
+                    gt.to_csv(os.path.join(saver.save_dir, "valitaion_gt.csv"))
 
                 # Step learning rate scheduler.
                 optimizer.step_scheduler(average_metric)
 
             with torch.set_grad_enabled(True):
-                logits, embedding = model(inputs.to(args.device))
+                logits, embedding = model(inputs.to(args.device))                
                 loss = loss_fn(logits, targets.to(args.device))
                 optimizer.log_iter(inputs, logits, targets, loss)
                 optimizer.zero_grad()
@@ -180,6 +189,7 @@ def train(args):
     logger.log('=== Training Complete ===')
 
 if __name__ == '__main__':
+    print("Beginning Training...")
     torch.multiprocessing.set_sharing_strategy('file_system')
     parser = TrainArgParser()
     train(parser.parse_args())

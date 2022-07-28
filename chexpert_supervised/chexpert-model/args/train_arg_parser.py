@@ -91,7 +91,8 @@ class TrainArgParser(BaseArgParser):
                                           'chexpert-competition-log_loss',
                                           'chexpert-competition-AUROC',
                                           'shenzhen-AUROC',
-                                          'chexpert-competition-single-AUROC',),
+                                          'chexpert-competition-single-AUROC',
+                                          'custom-AUROC'),
                                  default='chexpert-competition-AUROC',
                                  help=('Validation metric to optimize.'))
         self.parser.add_argument('--maximize_metric',

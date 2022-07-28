@@ -24,7 +24,8 @@ def get_loader(phase, data_args, transform_args,
         loader: PyTorch DataLoader object
     """
 
-    study_level = not is_training
+    #study_level = not is_training
+    study_level = False
     shuffle = is_training
 
     # TODO: Make this more general
@@ -36,7 +37,7 @@ def get_loader(phase, data_args, transform_args,
         Dataset = CustomDataset
     else:
         raise ValueError(f"Dataset {data_args.dataset} not supported.")
-
+    
     # Get name of csv to load data from.
     # uncertain_map_path will replace this name.
     # need to make this more general!!!

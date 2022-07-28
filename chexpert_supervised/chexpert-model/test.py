@@ -10,6 +10,7 @@ from eval import Evaluator
 from constants import *
 from scripts.get_cams import save_grad_cams
 from dataset import TASK_SEQUENCES
+from decision_boundaries import get_planeloader, plot_decision_boundaries
 
 
 def test(args):
@@ -67,18 +68,31 @@ def test(args):
         # Instantiate the Predictor class for obtaining model predictions.
         predictor = Predictor(model=model, device=args.device)
         # Get phase loader object.
-        return_info_dict = True
+        return_info_dict = False
+        # # ===================== adding planeloader ================
+        '''print("creating planeloader...")
+        loader = get_planeloader(data_args=data_args)
+        print(f"found {len(loader.dataset)} images in the dataset")'''
+        
+        # # =========================================================
+        
         loader = get_loader(phase=data_args.phase,
                             data_args=data_args,
                             transform_args=transform_args,
                             is_training=False,
                             return_info_dict=return_info_dict,
                             logger=logger)
+                            
         # Obtain model predictions.
         if return_info_dict:
             predictions, groundtruth, paths = predictor.predict(loader)
         else:
             predictions, groundtruth = predictor.predict(loader)
+        # ================== Decision Boundaries ==================
+        print('=======================')
+        print(predictions)
+        #plot_decision_boundaries(predictions, loader, loader.dataset.base_labels)
+        return
         # print(predictions[CHEXPERT_COMPETITION_TASKS])
         if model_args.calibrate:
             #open the json file which has the saved parameters

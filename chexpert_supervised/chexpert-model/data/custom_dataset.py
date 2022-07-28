@@ -28,20 +28,20 @@ class CustomDataset(BaseDataset):
         self.data_args = data_args
         self.stability_training = stability_training
 
-        print(self.csv_name)
+        
         self.is_train_dataset = csv_name_check(self.csv_name, 'train.csv', 'special' in data_args.dataset)
         self.is_test_dataset = csv_name_check(self.csv_name, 'test.csv', 'special' in data_args.dataset)
         self.is_val_dataset = csv_name_check(self.csv_name, 'valid.csv', 'special' in data_args.dataset)
         self.is_uncertain_dataset = "uncertain" in self.csv_name
-        print(self.is_val_dataset)
+        
 
         if self.is_train_dataset:
             self.csv_path = self.data_args.csv
         elif self.is_uncertain_dataset:
             self.csv_path = self.data_args.uncertain_map_path
         elif self.is_val_dataset:
-            # self.csv_path = self.data_args.csv_dev
-            self.csv_path = '/gpfs_projects/ravi.samala/OUT/moco/reorg_chexpert/moving_logs/fine_tune_train_log_small.csv'  # # RKS
+            self.csv_path = self.data_args.csv_dev
+            #self.csv_path = '/gpfs_projects/ravi.samala/OUT/moco/reorg_chexpert/moving_logs/fine_tune_train_log_small.csv'  # # RKS
         elif self.is_test_dataset: # Custom test
             if self.data_args.together: # one csv for all of test
                 self.csv_path = self.data_args.test_csv
@@ -52,7 +52,6 @@ class CustomDataset(BaseDataset):
             print("valid", self.csv_path)
 
         df = self.load_df()
-
         self.studies = df[COL_STUDY].drop_duplicates()
 
         if self.toy and csv_name_check(self.csv_name, 'train.csv', 'special' in data_args.dataset):
@@ -81,7 +80,8 @@ class CustomDataset(BaseDataset):
             fill_tasks = NamedTasks[self.data_args.custom_tasks]
         else:
             fill_tasks = DATASET2TASKS[self.data_args.dataset]
-        df[fill_tasks] = df[fill_tasks].fillna(value=0)
+        # don't have any na values
+        # df[fill_tasks] = df[fill_tasks].fillna(value=0)
         return df
 
     def set_study_as_index(self, df):
@@ -142,6 +142,8 @@ class CustomDataset(BaseDataset):
             imgs = [Image.open(path).convert('RGB') for path in img_paths]
 
         imgs = [self.transform(img) for img in imgs]
+        # change max
+        imgs = [img/torch.max(img) for img in imgs]
         imgs = torch.stack(imgs)
 
         if self.return_info_dict:

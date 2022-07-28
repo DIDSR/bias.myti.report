@@ -13,6 +13,7 @@ class Predictor(object):
     def __init__(self, model, device):
 
         self.model = model
+        #self.model = torch.nn.DataParallel(model, device_ids=[2])
         self.device = device
 
     def predict(self, loader):
@@ -30,8 +31,7 @@ class Predictor(object):
                             inputs, targets, info_dict, mask = data
                         else:
                             inputs, targets, mask = data
-
-
+                            #inputs, targets = data
                         # Fuse batch size `b` and study length `s`
                         b, s, c, h, w = inputs.size()
                         inputs = inputs.view(-1, c, h, w)
@@ -57,13 +57,20 @@ class Predictor(object):
                         else:
                             inputs, targets = data
 
-                        batch_logits = self.model(inputs.to(self.device))
+                        batch_logits, unknown_tensor = self.model(inputs.to(self.device))
+                        #print(f'batch logits: {batch_logits}')
 
                     if self.model.module.model_uncertainty:
                         batch_probs =\
                             util.uncertain_logits_to_probs(batch_logits)
                     else:
+                        
                         batch_probs = torch.sigmoid(batch_logits)
+                        
+                        # Decision boundary code uses softmax
+                        #batch_probs = torch.nn.Softmax(dim=1)(batch_logits)
+                        #print(f'batch probs: {batch_probs}')
+                        
 
                 probs.append(batch_probs.cpu())
                 gt.append(targets)
@@ -71,19 +78,19 @@ class Predictor(object):
                     paths.extend(info_dict['paths'])
                 progress_bar.update(targets.size(0))
 
-        concat = np.concatenate(all_embeddings)
-        all_embeddings = concat.reshape(len(concat), -1)
+        # concat = np.concatenate(all_embeddings)
+        # all_embeddings = concat.reshape(len(concat), -1)
+        
         probs_concat = np.concatenate(probs)
         gt_concat = np.concatenate(gt)
-
+        
         with open('cx_res18.npy', 'wb') as f:
             np.save(f, all_embeddings)
             np.save(f, gt_concat)
        
-        print(probs_concat.shape)
-        print(gt_concat.shape)
+        
         tasks = self.model.module.tasks # Tasks decided at self.model.module.tasks. 
-        print(tasks)
+                
         probs_df = pd.DataFrame({task: probs_concat[:, i]
                                  for i, task in enumerate(tasks)})
         gt_df = pd.DataFrame({task: gt_concat[:, i] # Check how gt_df looks like.

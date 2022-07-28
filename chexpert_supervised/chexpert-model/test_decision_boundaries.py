@@ -1,3 +1,4 @@
+import csv
 from decision_boundaries import get_planeloader, plot_decision_boundaries
 from logger import Logger
 from predict import Predictor, EnsemblePredictor
@@ -8,14 +9,27 @@ from constants import *
 from scripts.get_cams import save_grad_cams
 from dataset import TASK_SEQUENCES
 from args import TestArgParser
-import argparse
 import torch
 
-def test(args):
+
+def test(args,
+         db_steps = 200,
+         save_result_images = False,
+         selection_mode = 'class',
+         plane_samples = ['FDX', 'MCR', 'MDX'],
+         csv_input = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/RICORD_1c_training/TCIA_1C_train.csv",
+         plot_save_loc = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/decision_boundaries/TCIA_1C_test.png"):
+    # # ========== Plane Generation Settings ==========
+    #db_steps =  200 # number of steps for linspace, will generate db_steps^2 images
+    #save_result_images = False
+    #selection_mode = 'class'
+    #plane_samples =['FDX','MCR','MDX']
+    #csv_input = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/RICORD_1c_training/TCIA_1C_train.csv"
     # # ========== Decision Boundary Plot Settings ==========
-    db_steps = 100 # number of steps for linspace, will generate db_steps^2 images
-    synthetic_predictions = True # if true, will assign fake prediction results
-    plot_save_loc = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/decision_boundaries/test.png"
+    synthetic_predictions = False # if true, will assign fake prediction results
+    #plot_save_loc = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/decision_boundaries/TCIA_1C_test.png"
+    classes = ['Female-CR', 'Female-DX','Male-CR', 'Male-DX']
+    plot_mode = 'overlap'
     # # =====================================================
     model_args = args.model_args
     data_args = args.data_args
@@ -61,27 +75,54 @@ def test(args):
         
         # TODO JBY: in test moco should never be true.
         model_args.moco = args.model_args.moco
+        
         model, ckpt_info = ModelSaver.load_model(ckpt_path=ckpt_path,
                                                  gpu_ids=args.gpu_ids,
                                                  model_args=model_args,
                                                  is_training=False)
-
+        print(f"Model checkpoint info: {ckpt_info}")
         # Instantiate the Predictor class for obtaining model predictions.
         predictor = Predictor(model=model, device=args.device)
         # Get phase loader object.
         return_info_dict = False
+        # # ===================== Predict on validation set =========
+        '''
+        data_args.csv_dev = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/RICORD_1c_training/TCIA_1C_valid.csv"
+        data_args.metric_name = 'custom-AUROC'
+        data_args.custom_tasks = 'custom-tasks'
+        valid_loader = get_loader(phase = "valid", data_args=data_args, transform_args=transform_args,
+        is_training=False, return_info_dict=False, logger=logger)
+        predictions, gt = predictor.predict(valid_loader)
+        print("validation set predictions (first 10):")
+        print(predictions.head(10))'''
+        # validation predications indicate that the model is being imported properly
+        
         # # ===================== adding planeloader ================
         print("creating planeloader...")
-        loader = get_planeloader(data_args=data_args)
-        print(f"found {len(loader.dataset)} images in the dataset")
+        loader = get_planeloader(data_args=data_args,
+                                 csv_input=csv_input,
+                                 steps=db_steps,
+                                 selection_mode=selection_mode,
+                                 samples=plane_samples,
+                                 data_mode = 'normal',
+                                 save_result_images=save_result_images)
 
+        print(f"found {len(loader.dataset)} images in the dataset")
+        
         # Obtain model predictions.
         if return_info_dict:
             predictions, groundtruth, paths = predictor.predict(loader)
         else:
             predictions, groundtruth = predictor.predict(loader)
+           
         # ================== Decision Boundaries ==================
-        plot_decision_boundaries(predictions, loader, loader.dataset.base_labels, synthetic_predictions, plot_save_loc)
+        plot_decision_boundaries(predictions,
+                                loader,
+                                loader.dataset.basis['labels'],
+                                synthetic_predictions,
+                                classes,
+                                plot_mode,
+                                plot_save_loc)
         print('Done')
         return
 

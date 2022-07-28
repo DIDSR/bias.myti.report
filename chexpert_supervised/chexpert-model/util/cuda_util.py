@@ -17,9 +17,13 @@ def setup_gpus(gpu_ids):
     """
     device = None
     if len(gpu_ids) > 0 and torch.cuda.is_available():
-        torch.cuda.set_device(gpu_ids[0])
+        for i in range(len(gpu_ids)):
+            torch.cuda.set_device(gpu_ids[i])
         cudnn.benchmark = True
-        device = 'cuda'
+        if len(gpu_ids) > 1:
+            device = f'cuda:{gpu_ids[0]}'
+        else:
+            device='cuda'
     else:
         device = 'cpu'
 

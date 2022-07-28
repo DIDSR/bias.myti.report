@@ -91,6 +91,9 @@ CXR14_TASKS = ["Cardiomegaly",
                "Fibrosis",
                "Edema",
                "Consolidation"]
+# CUSTOM TASKS
+CUSTOM_TASKS = ["CR","DX", "Female", "Male"]
+
 CALIBRATION_FILE = "calibration_params.json"
 
 DATASET2TASKS = {CHEXPERT: CHEXPERT_TASKS,
@@ -104,9 +107,11 @@ EVAL_METRIC2TASKS = {'chexpert-log_loss': CHEXPERT_TASKS,
                      'shenzhen-AUROC': SHENZHEN_TASKS,
                      'chexpert-competition-log_loss': CHEXPERT_COMPETITION_TASKS,
                      'chexpert-competition-AUROC': CHEXPERT_COMPETITION_TASKS,
-                     'chexpert-competition-single-AUROC': CHEXPERT_COMPETITION_TASKS}
+                     'chexpert-competition-single-AUROC': CHEXPERT_COMPETITION_TASKS,
+                     'custom-AUROC':CUSTOM_TASKS}
 
 NamedTasks = {'chexpert': CHEXPERT_TASKS,
         'chexpert-competition': CHEXPERT_COMPETITION_TASKS,
-        'pleural-effusion': CHEXPERT_TASKS
+        'pleural-effusion': CHEXPERT_TASKS,
+        'custom-tasks' : CUSTOM_TASKS
         }

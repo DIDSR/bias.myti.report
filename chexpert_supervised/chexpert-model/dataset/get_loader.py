@@ -37,7 +37,7 @@ def get_loader(data_args,
     Return:
         loader: A loader
     """
-
+    
     if is_training:
         study_level=data_args.train_on_studies
 
@@ -74,7 +74,7 @@ def get_loader(data_args,
         dataset = ConcatDataset(datasets)
     else:
         dataset = datasets[0]
-
+    
     # Pick collate function
     if study_level:
         collate_fn = PadCollate(dim=0)
