@@ -11,7 +11,23 @@ import itertools
 import os
 import random
 import csv
-
+# subclass combinations:
+# already complete/in progress (1000 samples):
+    # MDX, MDX, MCR
+    # MDX, MDX, FDX
+    # FDX, FDX, FCR
+# not yet complete:
+    # MCR, MCR, FCR
+    # FCR, FCR, MCR
+    # FDX, FDX, MDX
+    # FCR, FCR, FDX
+    # MCR, MCR, MDX
+    # ------
+    # MDX, MCR, FDX
+    # MDX, MCR, FCR
+    # FDX, FCR, MDX
+    # FDX, FCR, MCR
+    # 
 def test_bulk(args,
               train_or_valid = 'train',
               subclasses =['MDX', 'MDX', 'MCR'],
