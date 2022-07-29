@@ -18,8 +18,9 @@ import csv
     # FDX, FDX, FCR
 # # Ravi's runs
 # # # MCR, MCR, FCR - running
-# # # FCR, FCR, MCR - running
+# #  - running
 # not yet complete:
+    # FCR, FCR, MCR
     # FDX, FDX, MDX
     # FCR, FCR, FDX
     # MCR, MCR, MDX
