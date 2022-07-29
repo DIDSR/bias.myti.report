@@ -32,9 +32,9 @@ import csv
     # 
 def test_bulk(args,
               train_or_valid = 'train',
-              subclasses =['FCR', 'FCR', 'MCR'],
+              subclasses =['MCR', 'MCR', 'FCR'],
               n_samples = 1000,
-              test_name = "FCR_FCR_MCR_100_steps",
+              test_name = "MCR_MCR_FCR_100_steps",
               db_steps=100,
               output_folder = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/decision_boundaries",
               overwrite=False,
