@@ -101,7 +101,7 @@ class plane_dataset(BaseDataset):
             print(f'Unknown selection mode {selection_mode}. Returning')
             return
 
-        print(sample_idx)
+        #print(sample_idx)
         sample_classes = []
         for idx in sample_idx:
             if csv_df.iloc[idx]['Female'] == 1:
@@ -113,7 +113,7 @@ class plane_dataset(BaseDataset):
             elif csv_df.iloc[idx]['DX'] == 1:
                 mod = 'DX'
             sample_classes += [f'{sex}-{mod}']
-        print(sample_classes)
+        #print(sample_classes)
         # load base images ===============
         img_data = ({'path':[csv_df.iloc[i]['Path'] for i in sample_idx],
                     'class':sample_classes})
@@ -178,7 +178,7 @@ class plane_dataset(BaseDataset):
 
         
     def load_df(self):
-        print("loading df")
+        #print("loading df")
         images = []
         for i in range(self.coefs1.shape[0]):
             images += [self.base_img + self.coefs1[i] * self.vec1 + self.coefs2[i] * self.vec2]
@@ -248,11 +248,11 @@ def fudge_data(predictions, planeloader):
 
 def plot_decision_boundaries(predictions,
                             planeloader,
-                            labels,
-                            synthetic_predictions,
                             classes,
-                            plot_mode='max',
-                            save_loc="/gpfs_projects/alexis.burgon/OUT/2022_CXR/decision_boundaries/test.png"):
+                            synthetic_predictions=False,
+                            plot_mode='overlap',
+                            save_loc="/gpfs_projects/alexis.burgon/OUT/2022_CXR/decision_boundaries/test.png",
+                            point_size=2):
     """
     generates a plot of decision boundaries from predictions on a planeloader dataset
     and saves as a png
@@ -290,7 +290,7 @@ def plot_decision_boundaries(predictions,
 
     preds = torch.tensor(predictions.values)
     summ_df = pd.DataFrame({'class':classes, 'occurances':[0]*len(classes), 'percent':[0]*len(classes)})
-
+    
 
     if plot_mode == 'max':
         val = torch.max(preds, dim=1)[0].numpy()
@@ -302,7 +302,7 @@ def plot_decision_boundaries(predictions,
 
         class_pred = np.zeros((preds.size()[0], len(classes)))
         for i in range(len(classes)):
-            print(f'working on {classes[i]}')
+            #print(f'working on {classes[i]}')
             if 'F' in classes[i]:
                 class_pred[:,i] += 1 - sex_pred[:]
             elif 'M' in classes[i]:
@@ -314,13 +314,13 @@ def plot_decision_boundaries(predictions,
         class_pred = np.argmax(class_pred, axis=1)
 
     classes_found, class_counts = np.unique(class_pred, return_counts=True)
-
+    
     for i in range(len(classes_found)):
         class_idx = int(classes_found[i])
         summ_df['occurances'].iloc[class_idx] = class_counts[i]
         summ_df['percent'].iloc[class_idx] = (class_counts[i]/np.sum(class_counts))*100
-
-    print(summ_df)
+        
+    #print(summ_df)
 
     x = planeloader.dataset.coefs1.numpy()
     y = planeloader.dataset.coefs2.numpy()
@@ -330,7 +330,7 @@ def plot_decision_boundaries(predictions,
     
     color_idx = [label_color_dict[label] for label in class_pred]
 
-    scatter = ax.scatter(x,y,c=color_idx, s=2) # original had alpha=val, but alpha needs to be a scalar and val is a tuple
+    scatter = ax.scatter(x,y,c=color_idx, s=point_size) # original had alpha=val, but alpha needs to be a scalar and val is a tuple
 
 
     coords = planeloader.dataset.coords
@@ -357,7 +357,7 @@ def plot_decision_boundaries(predictions,
     plt.title(planeloader.dataset.basis['index'])
     plt.savefig(save_loc, bbox_inches='tight', dpi=300)
     plt.close(fig)
-    return
+    return summ_df
 
 
 
