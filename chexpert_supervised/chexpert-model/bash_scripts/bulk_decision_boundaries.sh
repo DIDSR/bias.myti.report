@@ -6,5 +6,5 @@ python decision_boundaries_bulk.py --dataset custom \
                                     --phase valid \
                                     --moco False \
                                     --inference_only \
-                                    --gpu_ids 3 \
+                                    --gpu_ids 1 \
                                     
