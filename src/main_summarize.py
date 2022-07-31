@@ -24,6 +24,7 @@
 	# # 	Removing all views with view position (ds[0x0018,0x5101]) == 'LL': removed 64 images
 	# # 	Removing all views with view position (ds[0x0018,0x5101]) == 'PA': removed 102 images
 	# #		Removing above LL and PA resulted in 1091 images
+	# #		Manually removed 186 images resulted in 261 patients with 905 images
 	# # COVID_19_AR: initially collected 262 images
 	# # 	Removing all images with max pixel values > 10000: removed 59 images
 	# # 	Removing all images with max pixel values < 2000: removed 26 images
@@ -45,6 +46,7 @@ COVID_19_AR_TCIA_table_path = '../data/COVID_19_AR_ClinicalCorrelates_July202020
 RICORD_1c_annotation_path = "../data/1c_mdai_rsna_project_MwBeK3Nr_annotations_labelgroup_all_2021-01-08-164102_v3.csv"
 # files to remove:
 COVID_19_AR_bad_files_path = "../data/COVID_19_AR__manually_deleted_images.txt"
+RICORD_1c_bad_files_path = "../data/MIDRC_RICORD_1c__manually_deleted_images.txt"
 
 def searchthis(location, searchterm):
 	lis_paths = []
@@ -495,6 +497,9 @@ def read_RICORD_1c(in_dir, out_summ_file):
 		print('Doing nothing. Returning!')
 		return
 	annotation_df = pd.read_csv(RICORD_1c_annotation_path)
+	# # read the file with manually excluded images
+	with open(RICORD_1c_bad_files_path, 'r') as in_file:
+		bad_files = in_file.read().split("\n")
 	# set up dataframe
 	df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images', 'repo'])
 	# iterate through patients
@@ -511,6 +516,9 @@ def read_RICORD_1c(in_dir, out_summ_file):
 			scans_dirs = [filename for filename in os.listdir(time_root_dir) if os.path.isdir(os.path.join(time_root_dir, filename))]
 			dcm_files = searchthis(time_root_dir,'.dcm')
 			for each_dcm_file in dcm_files:
+				if each_dcm_file in bad_files:
+					imgs_bad += [each_dcm_file]
+					continue
 				ds = pydicom.read_file(each_dcm_file)
 				# # Data cleanup
 				if ds[0x0018,0x5101].value == "LL" or ds[0x0018,0x5101].value == "PA":
@@ -530,13 +538,11 @@ def read_RICORD_1c(in_dir, out_summ_file):
 					imgs_good_info += imgs_good_info1
 				else:
 					imgs_bad += [each_dcm_file]
-					# print(ds)
-					# print(each_dcm_file)
-					# break
 		df.loc[ii] = [patient_specific_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] + ['RICORD-1c']
 		# # # # for debug
 		# if ii == 10:
 		# 	break
+	print('Num. of images = {}'.format(len(df.index)))
 	df.to_json(out_summ_file, indent=4, orient='table', index=False)
 
 
