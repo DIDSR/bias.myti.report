@@ -31,19 +31,24 @@
 	# #		Manually removed 8 images
 '''
 import os
+import fnmatch
 import argparse
 import pydicom
 import pandas as pd
+import numpy as np
+from PIL import Image
 # #
 # # Some constants regarding the data repos
 num_patients_COVID_19_NY_SBU = 1384
 num_patients_COVID_19_AR = 105
 num_patients_RICORD_1c = 361
+num_images_COVIDGR_10 = 852
 open_AI_MIDRC_table_path = '../data/open_AI_all_20220624.tsv'
 open_RI_MIDRC_table_path = '../data/open_RI_all_20220609.tsv'
 COVID_19_NY_SBU_TCIA_table_path = '../data/deidentified_overlap_tcia.csv.cleaned.csv_20210806.csv'
 COVID_19_AR_TCIA_table_path = '../data/COVID_19_AR_ClinicalCorrelates_July202020.xlsx'
 RICORD_1c_annotation_path = "../data/1c_mdai_rsna_project_MwBeK3Nr_annotations_labelgroup_all_2021-01-08-164102_v3.csv"
+COVIDGR_10_label_path = "../data/COVIDGR_10_severity.csv"
 # files to remove:
 COVID_19_AR_bad_files_path = "../data/COVID_19_AR__manually_deleted_images.txt"
 RICORD_1c_bad_files_path = "../data/MIDRC_RICORD_1c__manually_deleted_images.txt"
@@ -546,6 +551,115 @@ def read_RICORD_1c(in_dir, out_summ_file):
 	df.to_json(out_summ_file, indent=4, orient='table', index=False)
 
 
+def read_COVIDGR_10(in_dir, out_summ_file):
+	'''
+	in_dir: root dir for the COVIDGR_1.0 where "in_dir"/N and "in_dir"/P will
+			have normal and positive classes
+	Description of repo: Under a close collaboration with an expert radiologist 
+	team of the Hospital Universitario San Cecilio, the COVIDGR-1.0 dataset of patients' 
+	anonymized X-ray images has been built. 754 images have been collected following a 
+	strict labeling protocol. They are categorized into 377 positive cases and 377 negative 
+	cases. Positive images correspond to patients who have been tested positive for COVID-19 
+	using RT-PCR within a time span of at most 24h between the X-ray image and the test. 
+	Every image has been taken using the same type of equipment and with the same 
+	format: only the posterior-anterior view is considered.
+	'''
+	if os.path.exists(os.path.join(in_dir, 'N')) and os.path.exists(os.path.join(in_dir, 'P')):
+		# # proceeed
+		# # get patient info
+		patient_df = pd.read_csv(COVIDGR_10_label_path, sep=',', header=0)
+		print(patient_df)
+		patient_imgs = []
+		for root, dirnames, filenames in os.walk(in_dir):
+			for filename in fnmatch.filter(filenames, '*.jpg'):
+				patient_imgs.append(os.path.join(root, filename))
+		if len(patient_imgs) != num_images_COVIDGR_10:
+			print('ERROR with num. of images in COVIDGR_1.0')
+			print('Got {} case, actual should be {}'.format(len(patient_imgs), num_images_COVIDGR_10))
+			print('Doing nothing. Returning!')
+			return
+		print('There are {:d} images'.format(len(patient_imgs)))
+		df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images','bad_images', 'bad_images_info', 'repo'])
+		imgs_good = []
+		imgs_good_info = []
+		imgs_bad = []
+		imgs_bad_info = []
+		# # Iterate over N patients
+		patient_imgs = []
+		for root, dirnames, filenames in os.walk(os.path.join(in_dir, 'N')):
+			for filename in fnmatch.filter(filenames, '*.jpg'):
+				patient_imgs.append(os.path.join(root, filename))
+		print('Num. of N patients/images = {}'.format(len(patient_imgs)))
+		ii = 0
+		for each_patient in patient_imgs:
+			# # 
+			img = np.asarray(Image.open(each_patient))
+			imgs_good = [each_patient]
+			imgs_good_info = [{
+				'modality': "MISSING",
+				'body part examined':"MISSING",
+				'view position':"PA",
+				'pixel spacing':"MISSING",
+				'study date':"MISSING",
+				'manufacturer':"MISSING",
+				'manufacturer model name':"MISSING",
+				'image size': img.shape
+				}]
+			patient_good_info = [{
+				'sex':"MISSING",
+				'race':"MISSING",
+				'ethnicity':"MISSING",
+				'COVID_positive':"No",
+				'age':"MISSING",
+				}]
+			df.loc[ii] = [os.path.basename(each_patient).split('.')[0]] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] +[imgs_bad] + [imgs_bad_info] + ['COVIDGR_10']
+			ii += 1
+		# # Iterate over P patients
+		patient_imgs = []
+		for root, dirnames, filenames in os.walk(os.path.join(in_dir, 'P')):
+			for filename in fnmatch.filter(filenames, '*.jpg'):
+				patient_imgs.append(os.path.join(root, filename))
+		print('Num. of P patients/images = {}'.format(len(patient_imgs)))
+				# # 
+		for each_patient in patient_imgs:
+			# # 
+			specific_patient_df = patient_df.loc[patient_df['Name'] == os.path.basename(each_patient).split('.')[0]].reset_index()
+			if len(specific_patient_df.index) == 0:
+				print('{} info missing. Skipping image'.format(os.path.basename(each_patient).split('.')[0]))
+				continue
+			# print(os.path.basename(each_patient).split('.')[0])
+			# print(specific_patient_df)
+			img = np.asarray(Image.open(each_patient))
+			imgs_good = [each_patient]
+			imgs_good_info = [{
+				'modality': "MISSING",
+				'body part examined':"MISSING",
+				'view position':"PA",
+				'pixel spacing':"MISSING",
+				'study date':"MISSING",
+				'manufacturer':"MISSING",
+				'manufacturer model name':"MISSING",
+				'image size': img.shape
+				}]
+			patient_good_info = [{
+				'sex':"MISSING",
+				'race':"MISSING",
+				'ethnicity':"MISSING",
+				'COVID_positive':"Yes",
+				'grade label':specific_patient_df.at[0, 'Severity'],
+				'age':"MISSING",
+				}]
+			df.loc[ii] = [os.path.basename(each_patient).split('.')[0]] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] +[imgs_bad] + [imgs_bad_info] + ['COVIDGR_10']
+			ii += 1
+		# # save info
+		df.to_json(out_summ_file, indent=4, orient='table', index=False)
+	else:
+		print('DOES NOT EXIST ERROR: ' + os.path.join(in_dir, 'N'))
+		return
+	
+	
+
+
 def select_fn(sel_repo):
 	if sel_repo[0] == 'COVID_19_NY_SBU':
 		read_COVID_19_NY_SBU(sel_repo[1], sel_repo[2])
@@ -557,6 +671,8 @@ def select_fn(sel_repo):
 		read_RICORD_1c(sel_repo[1], sel_repo[2])
 	elif sel_repo[0] == 'open_RI':
 		read_open_RI(sel_repo[1], sel_repo[2])
+	elif sel_repo[0] == 'COVIDGR_10':
+		read_COVIDGR_10(sel_repo[1], sel_repo[2])
 	else:
 		print('ERROR. Unknown REPO. Nothing to do here.')
 
@@ -571,4 +687,4 @@ if __name__ == "__main__":
 	# # iterate over each data repo
 	for each_repo in zip(args.names_list, args.input_dir_list, args.output_list):
 		select_fn(each_repo)
-		break
+		# break
