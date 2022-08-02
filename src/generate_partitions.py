@@ -35,8 +35,10 @@ def stratified_random_split_default(args):
     df_MCR = df.loc[(df['sex'] == 'M') & (df['modality'] == 'CR')]
     print([len(df_FDX.index), len(df_FCR.index), len(df_MDX.index), len(df_MCR.index)])
     min_subgroup_size = min(len(df_FDX.index), len(df_FCR.index), len(df_MDX.index), len(df_MCR.index)) - 5
+    # # set RANDOM SEED here
     new_df = pd.concat([df_FDX.sample(n=min_subgroup_size), df_FCR.sample(n=min_subgroup_size), 
                         df_MDX.sample(n=min_subgroup_size), df_MCR.sample(n=min_subgroup_size)], axis=0)
+    # # set RANDOM SEED here
     # stratified_sample = train_test_split(new_df, test_size=0.3, random_state=2022, shuffle=True, stratify=new_df[['sex', 'modality', 'repo']])
     stratified_sample = train_test_split(new_df, test_size=0.3, shuffle=True, stratify=new_df[['sex', 'modality', 'repo']])
     for i, each_part in enumerate(stratified_sample):
