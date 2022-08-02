@@ -510,12 +510,13 @@ def read_RICORD_1c(in_dir, out_summ_file):
 	with open(RICORD_1c_bad_files_path, 'r') as in_file:
 		bad_files = in_file.read().split("\n")
 	# set up dataframe
-	df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images', 'repo'])
+	df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images','bad_images', 'bad_images_info', 'repo'])
 	# iterate through patients
 	for ii, each_patient in enumerate(patient_dirs):
 		imgs_good = []
 		imgs_good_info = []
 		imgs_bad = []
+		imgs_bad_info = []
 		patient_root_dir = os.path.join(in_dir, each_patient)
 		print([ii, patient_root_dir], flush=True)
 		patient_submitter_id = ''
@@ -547,7 +548,7 @@ def read_RICORD_1c(in_dir, out_summ_file):
 					imgs_good_info += imgs_good_info1
 				else:
 					imgs_bad += [each_dcm_file]
-		df.loc[ii] = [patient_specific_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] + ['RICORD-1c']
+		df.loc[ii] = [patient_specific_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] +[imgs_bad] + [imgs_bad_info] + ['RICORD-1c']
 		# # # # for debug
 		# if ii == 10:
 		# 	break
