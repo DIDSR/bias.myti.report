@@ -301,8 +301,9 @@ def read_open_AI(in_dir, out_summ_file):
 					if 'XR CHEST PA/LATERAL' in ds[0x0008, 0x1030].value or \
 						'XR PORT CHEST 1V' in ds[0x0008, 0x1030].value or \
 						'XR CHEST PA AND LATERAL' in ds[0x0008, 0x1030].value:
-						if 'LL' in ds[0x0018,0x5101].value:
-							continue
+						if (0x0018,0x5101) in ds:
+							if 'LL' in ds[0x0018,0x5101].value:
+								continue
 						# # this CXR image
 						imgs_good += [each_dcm_file]
 						if (0x0010, 0x0020) in ds:
@@ -390,8 +391,9 @@ def read_open_RI(in_dir, out_summ_file):
 					if 'XR CHEST 1 VIEW AP' in ds[0x0008, 0x1030].value or \
 						'XR CHEST 2 VIEWS PA AND LATERAL' in ds[0x0008, 0x1030].value or \
 						'XR CHEST 1 VIEW AP' in ds[0x0008, 0x1030].value:
-						if 'LL' in ds[0x0018,0x5101].value:
-							continue
+						if (0x0018,0x5101) in ds:
+							if 'LL' in ds[0x0018,0x5101].value:
+								continue
 						# # this CXR image
 						imgs_good += [each_dcm_file]
 						if (0x0010, 0x0020) in ds:
