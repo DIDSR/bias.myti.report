@@ -141,7 +141,7 @@ def read_COVID_19_NY_SBU(in_dir, out_summ_file):
 								'image size': ds.pixel_array.shape
 								}]
 							patient_good_info = [{
-								'sex':"M" if patient_specific_df.iloc[0]['gender_concept_name'] == "Male" else "F",
+								'sex':"M" if patient_specific_df.iloc[0]['gender_concept_name'] == "MALE" else "F",
 								'race':"MISSING",
 								'ethnicity':"MISSING",
 								'COVID_positive':"Yes" if patient_specific_df.iloc[0]['covid19_statuses'] == "positive" else "No",
