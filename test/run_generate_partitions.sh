@@ -15,7 +15,7 @@ declare -a IN_summary=("/gpfs_projects/ravi.samala/OUT/2022_CXR/202208/20220801_
 						"/gpfs_projects/ravi.samala/OUT/2022_CXR/202208/20220801_summary_table__COVID_19_AR.json")
 # declare -a IN_summary=("/gpfs_projects/ravi.samala/OUT/2022_CXR/202208/20220801_summary_table__open_RI.json")
 OUT_dir="/gpfs_projects/ravi.samala/OUT/2022_CXR/partitions/"
-
+RAND_SEED=2050
 
 # #
 # #
@@ -34,4 +34,4 @@ do
 	param_IN_summary="${param_IN_summary} -i ${IN_summary[$i]}"
 done
 # #
-python $EXE $param_IN_summary -o $OUT_dir
+python $EXE $param_IN_summary -o $OUT_dir -r $RAND_SEED

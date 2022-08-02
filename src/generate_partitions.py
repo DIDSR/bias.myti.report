@@ -36,11 +36,13 @@ def stratified_random_split_default(args):
     print([len(df_FDX.index), len(df_FCR.index), len(df_MDX.index), len(df_MCR.index)])
     min_subgroup_size = min(len(df_FDX.index), len(df_FCR.index), len(df_MDX.index), len(df_MCR.index)) - 5
     # # set RANDOM SEED here
-    new_df = pd.concat([df_FDX.sample(n=min_subgroup_size), df_FCR.sample(n=min_subgroup_size), 
-                        df_MDX.sample(n=min_subgroup_size), df_MCR.sample(n=min_subgroup_size)], axis=0)
+    new_df = pd.concat([df_FDX.sample(n=min_subgroup_size, random_state=args.random_seed), 
+                        df_FCR.sample(n=min_subgroup_size, random_state=args.random_seed), 
+                        df_MDX.sample(n=min_subgroup_size, random_state=args.random_seed), 
+                        df_MCR.sample(n=min_subgroup_size, random_state=args.random_seed)], axis=0)
     # # set RANDOM SEED here
-    # stratified_sample = train_test_split(new_df, test_size=0.3, random_state=2022, shuffle=True, stratify=new_df[['sex', 'modality', 'repo']])
-    stratified_sample = train_test_split(new_df, test_size=0.3, shuffle=True, stratify=new_df[['sex', 'modality', 'repo']])
+    stratified_sample = train_test_split(new_df, test_size=0.3, random_state=args.random_seed, shuffle=True, stratify=new_df[['sex', 'modality', 'repo']])
+    # stratified_sample = train_test_split(new_df, test_size=0.3, shuffle=True, stratify=new_df[['sex', 'modality', 'repo']])
     for i, each_part in enumerate(stratified_sample):
         print('\n>>> PARTITION #{} with {} patients'.format(i, each_part.shape[0]))
         print(stratified_sample[i].groupby("sex")['modality'].value_counts())
@@ -52,6 +54,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PyTorch Training')
     parser.add_argument('-i', '--input_list', action='append', help='<Required> List of input summary files', required=True, default=[])
     parser.add_argument('-o', '--output_dir', help='<Required> output dir to save list files', required=True)
+    parser.add_argument('-r', '--random_seed', help='random seed for experiment reproducibility', default=2020, type=int)
     args = parser.parse_args()
     # # call
     stratified_random_split_default(args)
