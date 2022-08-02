@@ -215,6 +215,7 @@ def read_COVID_19_AR(in_dir, out_summ_file):
 							'manufacturer model name':ds[0x0008,0x1090].value if (0x0008,0x1090) in ds else "MISSING",
 							'image size': ds.pixel_array.shape
 							}]
+					continue
 				
 				if (0x0008, 0x1030) in ds:
 					if 'XR CHEST AP PORTABLE' in ds[0x0008, 0x1030].value or \
