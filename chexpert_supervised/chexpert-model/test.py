@@ -69,13 +69,12 @@ def test(args):
         predictor = Predictor(model=model, device=args.device)
         # Get phase loader object.
         return_info_dict = False
-        # # ===================== adding planeloader ================
-        '''print("creating planeloader...")
-        loader = get_planeloader(data_args=data_args)
-        print(f"found {len(loader.dataset)} images in the dataset")'''
+        
         
         # # =========================================================
-        
+        # switching tasks
+        data_args.metric_name = 'custom-AUROC'
+        data_args.custom_tasks = 'custom-tasks'
         loader = get_loader(phase=data_args.phase,
                             data_args=data_args,
                             transform_args=transform_args,
@@ -92,7 +91,7 @@ def test(args):
         print('=======================')
         print(predictions)
         #plot_decision_boundaries(predictions, loader, loader.dataset.base_labels)
-        return
+        
         # print(predictions[CHEXPERT_COMPETITION_TASKS])
         if model_args.calibrate:
             #open the json file which has the saved parameters
@@ -116,15 +115,17 @@ def test(args):
 
     # Log predictions and groundtruth to file in CSV format.
     logger.log_predictions_groundtruth(predictions, groundtruth, paths)
-
+    
     if not args.inference_only:
+        print('evaluating...')
         # Instantiate the evaluator class for evaluating models.
-        evaluator = Evaluator(logger,
-                              operating_points_path=CHEXPERT_RAD_PATH)
+        evaluator = Evaluator(logger)
         # Get model metrics and curves on the phase dataset.
         metrics, curves = evaluator.evaluate_tasks(groundtruth, predictions)
         # Log metrics to stdout and file.
         logger.log_stdout(f"Writing metrics to {logger.metrics_path}.")
+        # change save location of results
+        logger.metrics_csv_path = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/initial_model_results/last_COVIDGR.csv"
         logger.log_metrics(metrics, save_csv=True)
 
     # TODO: make this work with ensemble

@@ -35,9 +35,18 @@ import csv
     # ------
     # MDX, MCR, FDX - Alexis
     # MDX, MCR, FCR
+    # FCR, FCR, MCR
+    # FDX, FDX, MDX
+    # FCR, FCR, FDX
+    # MCR, MCR, MDX  
+# not yet complete:  
+    # MDX, MCR, FCR 
     # FDX, FCR, MDX
-    # FDX, FCR, MCR
-    # 
+    # FDX, FCR, MCR 
+
+
+
+
 def test_bulk(args,
               train_or_valid = 'train',
               subclasses =['FCR', 'FCR', 'FCR'],
@@ -154,3 +163,4 @@ if __name__ == '__main__':
     torch.multiprocessing.set_sharing_strategy('file_system')
     parser = TestArgParser()
     test_bulk(parser.parse_args())
+    
