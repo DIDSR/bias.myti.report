@@ -313,7 +313,7 @@ def read_open_AI(in_dir, out_summ_file):
 							# # there should be only 1 row for each patient
 							if len(patient_specific_df.index) != 1:
 								print('ERROR')
-								imgs_good = 'ERROR - patient not found in the clinical file'
+								imgs_good += ['ERROR - patient not found in the clinical file']
 								break
 							else:
 								if len(patient_submitter_id) == 0:
@@ -322,7 +322,7 @@ def read_open_AI(in_dir, out_summ_file):
 									# # check if the patient name is the same
 									if patient_submitter_id != patient_specific_df.iloc[0]['submitter_id']:
 										print('ERROR')
-										imgs_good = 'ERROR with patient name within each patient dir'
+										imgs_good += ['ERROR with patient name within each patient dir']
 							imgs_good_info += [{
 								'modality': ds[0x0008, 0x0060].value if (0x0008, 0x0060) in ds else "MISSING",
 								'body part examined':ds[0x0018,0x0015].value if (0x0018,0x0015) in ds else "MISSING",
@@ -342,7 +342,7 @@ def read_open_AI(in_dir, out_summ_file):
 								}]
 						else:
 							# # 
-							imgs_good = '0x0010, 0x0020 NOT FOUND'
+							imgs_good += ['0x0010, 0x0020 NOT FOUND']
 					else:
 						imgs_bad += [each_dcm_file]
 				else:
@@ -402,7 +402,7 @@ def read_open_RI(in_dir, out_summ_file):
 							# # there should be only 1 row for each patient
 							if len(patient_specific_df.index) != 1:
 								print('ERROR')
-								imgs_good = 'ERROR - patient not found in the clinical file'
+								imgs_good += ['ERROR - patient not found in the clinical file']
 								break
 							else:
 								if len(patient_submitter_id) == 0:
@@ -411,7 +411,7 @@ def read_open_RI(in_dir, out_summ_file):
 									# # check if the patient name is the same
 									if patient_submitter_id != patient_specific_df.iloc[0]['submitter_id']:
 										print('ERROR')
-										imgs_good = 'ERROR with patient name within each patient dir'
+										imgs_good += ['ERROR with patient name within each patient dir']
 							imgs_good_info += [{
 								'modality': ds[0x0008, 0x0060].value if (0x0008, 0x0060) in ds else "MISSING",
 								'body part examined':ds[0x0018,0x0015].value if (0x0018,0x0015) in ds else "MISSING",
@@ -431,7 +431,7 @@ def read_open_RI(in_dir, out_summ_file):
 								}]
 						else:
 							# # 
-							imgs_good = '0x0010, 0x0020 NOT FOUND'
+							imgs_good += ['0x0010, 0x0020 NOT FOUND']
 					else:
 						imgs_bad += [each_dcm_file]
 				else:
