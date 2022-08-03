@@ -15,6 +15,7 @@ from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 import numpy as np
 import seaborn as sns
+import os
 
 def get_sample_list(subclasses, df):
     output = []
@@ -355,6 +356,8 @@ def plot_decision_boundaries(predictions,
               borderaxespad=2)
     #plt.gca().add_artist(img_legend)
     plt.title(planeloader.dataset.basis['index'])
+    if os.path.isfile(save_loc):
+        os.remove(save_loc)
     plt.savefig(save_loc, bbox_inches='tight', dpi=300)
     plt.close(fig)
     return summ_df

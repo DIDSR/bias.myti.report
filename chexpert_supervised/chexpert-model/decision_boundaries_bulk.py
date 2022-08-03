@@ -17,9 +17,24 @@ import csv
     # MDX, MDX, FDX
     # FDX, FDX, FCR
 # # Ravi's runs
-# # # MCR, MCR, FCR - running
-# #  - running
+# # # MCR, MCR, FCR - Completed 
+# # # 'FCR', 'FCR', 'MCR' - running FCR_FCR_MCR - done
+# # # 'FDX', 'FDX', 'MDX' - running FDX_FDX_MDX - done
+# # # 'FCR', 'FCR', 'FDX' - running FCR_FCR_FDX - 
+# # # 'MCR', 'MCR', 'MDX' - running MCR_MCR_MDX - restarted
+# # # 'MDX', 'MCR', 'FCR' - running - MDX_MCR_FCR
+# # # 'MDX', 'MDX', 'MDX' - running - MDX_MDX_MDX
+# # # 'MCR', 'MCR', 'MCR' - running - MCR_MCR_MCR
+# # # 'FDX', 'FDX', 'FDX' - running - FDX_FDX_FDX
+# # # 'FCR', 'FCR', 'FCR' - running - FCR_FCR_FCR
 # not yet complete:
+    # 
+    # 
+    # 
+    # 
+    # ------
+    # MDX, MCR, FDX - Alexis
+    # MDX, MCR, FCR
     # FCR, FCR, MCR
     # FDX, FDX, MDX
     # FCR, FCR, FDX
@@ -34,9 +49,9 @@ import csv
 
 def test_bulk(args,
               train_or_valid = 'train',
-              subclasses =['MCR', 'MCR', 'FCR'],
+              subclasses =['FCR', 'FCR', 'FCR'],
               n_samples = 1000,
-              test_name = "MCR_MCR_FCR_100_steps",
+              test_name = "FCR_FCR_FCR_100_steps_v1",
               db_steps=100,
               output_folder = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/decision_boundaries",
               overwrite=True,
