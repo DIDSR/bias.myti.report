@@ -7,10 +7,17 @@ import functools
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
+subtract_from_smallest_subgroup = 5
 
-def stratified_random_split_default(args):
+
+def stratified_bootstrapping_default(args):
     '''
         default subgroups: FDX, FCR, MDC, MCR
+        call this funtion repeatedly with different random seed
+        to perform stratified boostrapping
+
+        By default tries to maintain the ratio of these subgroups within
+        the tr or ts: sex, modality, repo
     '''
     dfs = []
     repo_str = ''
@@ -33,8 +40,8 @@ def stratified_random_split_default(args):
     df_FCR = df.loc[(df['sex'] == 'F') & (df['modality'] == 'CR')]
     df_MDX = df.loc[(df['sex'] == 'M') & (df['modality'] == 'DX')]
     df_MCR = df.loc[(df['sex'] == 'M') & (df['modality'] == 'CR')]
-    print([len(df_FDX.index), len(df_FCR.index), len(df_MDX.index), len(df_MCR.index)])
-    min_subgroup_size = min(len(df_FDX.index), len(df_FCR.index), len(df_MDX.index), len(df_MCR.index)) - 5
+    # print([len(df_FDX.index), len(df_FCR.index), len(df_MDX.index), len(df_MCR.index)])
+    min_subgroup_size = min(len(df_FDX.index), len(df_FCR.index), len(df_MDX.index), len(df_MCR.index)) - subtract_from_smallest_subgroup
     # # set RANDOM SEED here
     new_df = pd.concat([df_FDX.sample(n=min_subgroup_size, random_state=args.random_seed), 
                         df_FCR.sample(n=min_subgroup_size, random_state=args.random_seed), 
@@ -42,10 +49,11 @@ def stratified_random_split_default(args):
                         df_MCR.sample(n=min_subgroup_size, random_state=args.random_seed)], axis=0)
     # # set RANDOM SEED here
     stratified_sample = train_test_split(new_df, test_size=0.3, random_state=args.random_seed, shuffle=True, stratify=new_df[['sex', 'modality', 'repo']])
-    # stratified_sample = train_test_split(new_df, test_size=0.3, shuffle=True, stratify=new_df[['sex', 'modality', 'repo']])
     for i, each_part in enumerate(stratified_sample):
         print('\n>>> PARTITION #{} with {} patients'.format(i, each_part.shape[0]))
         print(stratified_sample[i].groupby("sex")['modality'].value_counts())
+        print(stratified_sample[i].groupby("sex")['COVID_positive'].value_counts())
+        print(stratified_sample[i].groupby("sex")['repo'].value_counts())
         out_fname = os.path.join(args.output_dir, str(i) + repo_str + '.json')
         stratified_sample[i].to_json(out_fname, indent=4, orient='table', index=False)
 
@@ -57,4 +65,4 @@ if __name__ == "__main__":
     parser.add_argument('-r', '--random_seed', help='random seed for experiment reproducibility', default=2020, type=int)
     args = parser.parse_args()
     # # call
-    stratified_random_split_default(args)
+    stratified_bootstrapping_default(args)
