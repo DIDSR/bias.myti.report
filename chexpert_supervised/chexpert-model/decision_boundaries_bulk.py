@@ -16,8 +16,10 @@ import csv
     # MDX, MDX, MCR
     # MDX, MDX, FDX
     # FDX, FDX, FCR
+# # Ravi's runs
+# # # MCR, MCR, FCR - running
+# #  - running
 # not yet complete:
-    # MCR, MCR, FCR
     # FCR, FCR, MCR
     # FDX, FDX, MDX
     # FCR, FCR, FDX
@@ -30,9 +32,9 @@ import csv
     # 
 def test_bulk(args,
               train_or_valid = 'train',
-              subclasses =['MDX', 'MDX', 'MCR'],
+              subclasses =['MCR', 'MCR', 'FCR'],
               n_samples = 1000,
-              test_name = "MDX_MDX_MCR_100_steps",
+              test_name = "MCR_MCR_FCR_100_steps",
               db_steps=100,
               output_folder = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/decision_boundaries",
               overwrite=False,
