@@ -28,7 +28,8 @@ def stratified_bootstrapping_default(args):
     # out_file_str = os.path.join(args.output_dir, repo_str)
     df = functools.reduce(lambda left,right: pd.concat([left, right], axis=0),dfs)
     df = df.reset_index()
-    df.drop(['bad_images_info', 'bad_images'], axis=1, inplace=True)
+    print(df.shape)
+    # df.drop(['bad_images_info', 'bad_images'], axis=1, inplace=True)
     df = df[df.num_images > 0]  # # drop rows with 0 images
     df['sex'] = df.apply(lambda row: row.patient_info[0]['sex'], axis = 1)
     df['modality'] = df.apply(lambda row: row.images_info[0]['modality'], axis = 1)
@@ -49,15 +50,37 @@ def stratified_bootstrapping_default(args):
                         df_MDX.sample(n=min_subgroup_size, random_state=RAND_SEED_INITIAL+args.random_seed), 
                         df_MCR.sample(n=min_subgroup_size, random_state=RAND_SEED_INITIAL+args.random_seed)], axis=0)
     # # set RANDOM SEED here
-    stratified_sample = train_test_split(new_df, test_size=0.3, random_state=RAND_SEED_INITIAL+args.random_seed, shuffle=True, stratify=new_df[['sex', 'modality', 'repo']])
-    for i, each_part in enumerate(stratified_sample):
-        print('\n>>> PARTITION #{} with {} patients'.format(i, each_part.shape[0]))
-        print(stratified_sample[i].groupby("sex")['modality'].value_counts())
-        print(stratified_sample[i].groupby("sex")['COVID_positive'].value_counts())
-        print(stratified_sample[i].groupby("sex")['repo'].value_counts())
-        out_fname = os.path.join(args.output_dir, str(i) + repo_str + '.json')
-        stratified_sample[i].to_json(out_fname, indent=4, orient='table', index=False)
+    # stratified_sample = train_test_split(new_df, test_size=0.3, random_state=RAND_SEED_INITIAL+args.random_seed, shuffle=True, stratify=new_df[['sex', 'modality', 'repo']])
+    stratified_sample = train_test_split(new_df, test_size=0.2, random_state=RAND_SEED_INITIAL+args.random_seed, shuffle=True, stratify=new_df[['sex', 'modality']])
+    # for i, each_part in enumerate(stratified_sample):
+    #     print('\n>>> PARTITION #{} with {} patients'.format(i, each_part.shape[0]))
+    #     print(stratified_sample[i].groupby("sex")['modality'].value_counts())
+    #     print(stratified_sample[i].groupby("sex")['COVID_positive'].value_counts())
+    #     print(stratified_sample[i].groupby("sex")['repo'].value_counts())
+    #     out_fname = os.path.join(args.output_dir, str(i) + repo_str + '.json')
+    #     stratified_sample[i].to_json(out_fname, indent=4, orient='table', index=False)
 
+    # # tr partition
+    print('\n>>> PARTITION #{} with {} patients'.format(0, stratified_sample[0].shape[0]))
+    print(stratified_sample[0].groupby("sex")['modality'].value_counts())
+    print(stratified_sample[0].groupby("sex")['COVID_positive'].value_counts())
+    print(stratified_sample[0].groupby("sex")['repo'].value_counts())
+    out_fname = os.path.join(args.output_dir, 'tr' + repo_str + '.json')
+    stratified_sample[0].to_json(out_fname, indent=4, orient='table', index=False)
+    print(stratified_sample[0].shape)
+
+    # # ts partition
+    tr_patient_ids = list(stratified_sample[0]['patient_id'])
+    # print(tr_patient_ids)
+    new_ts_df = df[~df.patient_id.isin(tr_patient_ids)]
+    print('\n>>> PARTITION #{} with {} patients'.format(1, new_ts_df.shape[0]))
+    # print(new_ts_df.shape)
+    print(new_ts_df.groupby("sex")['modality'].value_counts())
+    print(new_ts_df.groupby("sex")['COVID_positive'].value_counts())
+    print(new_ts_df.groupby("sex")['repo'].value_counts())
+    out_fname = os.path.join(args.output_dir, 'ts' + repo_str + '.json')
+    new_ts_df.to_json(out_fname, indent=4, orient='table', index=False)
+    # ts_remaining
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PyTorch Training')
