@@ -40,9 +40,16 @@ class CustomDataset(BaseDataset):
         elif self.is_uncertain_dataset:
             self.csv_path = self.data_args.uncertain_map_path
         elif self.is_val_dataset:
-
+            # default ======
             self.csv_path = self.data_args.csv_dev
-            #self.csv_path = '/gpfs_projects/ravi.samala/OUT/moco/reorg_chexpert/moving_logs/fine_tune_train_log_small.csv'  # # RKS
+            # validation set =====
+            # self.csv_path = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/RICORD_1c_training/TCIA_1C_valid.csv"
+            # other repositories =====
+            # self.csv_path = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/20220801_summary_table__COVID_19_NY_SBU.csv"
+            # self.csv_path = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/20220801_summary_table__COVID_19_AR.csv"
+            # self.csv_path = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/20220801_summary_table__open_AI.csv"
+            # self.csv_path = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/20220801_summary_table__COVIDGR_10.csv"
+            # self.csv_path = 
 
         elif self.is_test_dataset: # Custom test
             if self.data_args.together: # one csv for all of test
@@ -69,6 +76,7 @@ class CustomDataset(BaseDataset):
 
     def load_df(self):
         df = pd.read_csv(self.csv_path)
+        
         df[COL_STUDY] = df[COL_PATH].apply(lambda p: Path(p).parent)
         if self.is_test_dataset and not self.data_args.together: # TODO(canliu): check what 'together' means.
             if self.data_args.custom:
@@ -144,8 +152,6 @@ class CustomDataset(BaseDataset):
             imgs = [Image.open(path).convert('RGB') for path in img_paths]
 
         imgs = [self.transform(img) for img in imgs]
-        # change max
-        imgs = [img/torch.max(img) for img in imgs]
         imgs = torch.stack(imgs)
 
         if self.return_info_dict:
