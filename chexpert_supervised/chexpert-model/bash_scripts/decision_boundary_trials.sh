@@ -11,8 +11,7 @@
 # to change sample # and/or subgroup combinations, look at db_trials trial_setup
 # #
 # the csv for each subgroup (listing percents of FCR, FDX, MCR, MDX for each plot) is updated as each plot is created.
-# the overall summary csv is only updated after all 250 samples of the subgroup are created, but a checkpoint update
-# of the current mean and std is printed every 10 plots made
+# the overall summary csv is updated every 5 samples, this can be adjusted by chaning n_to_update in db_trials.py
 # 
 RAND=0
 echo Beginning Trial
