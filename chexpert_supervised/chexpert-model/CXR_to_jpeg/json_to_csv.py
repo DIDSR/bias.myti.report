@@ -11,6 +11,7 @@ def convert_dicom_to_jpeg(input_file, img_save_loc, csv_save_loc):
     converts json summary files to csv format, if 
     converts dicom image files to jpeg format and saves in a specified folder
     '''
+    
     in_df = pd.read_json(input_file, orient='table')
     #in_df = pd.read_json(input_file)
     out_df = pd.DataFrame(columns=['patient id','dicom file', 'Path', 'CR', 'DX', 'Female', 'Male'])
@@ -63,9 +64,13 @@ def convert_dicom_to_jpeg(input_file, img_save_loc, csv_save_loc):
                 output_file_path = row['images'][i]
                 # set all modalities to CR
                 out_df.loc[idx, 'CR'] = 1
-            else:
-                output_file_path = os.path.join(img_save_loc, f"{row['patient_id']}_{i}.jpeg")
-                out_df.loc[idx, 'dicom file'] = row['images'][i]
+                continue
+                            
+            out_loc = os.path.join(img_save_loc, f"{row['repo']}_jpegs")
+            
+            output_file_path = os.path.join(out_loc, f"{row['patient_id']}_{i}.jpeg")
+            out_df.loc[idx, 'dicom file'] = row['images'][i]
+            
             out_df.loc[idx, 'Path'] = output_file_path
             # convert dicom to jpeg ==========
             if not os.path.exists(output_file_path):
@@ -102,7 +107,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input', help='summary file', required=True)
     parser.add_argument('-j', '--jpeg_loc', required=True)
-    parser.add_argument('-c', '--csv_loc', required=True)
+    parser.add_argument('-c', '--csv_loc', default=None)
     args = parser.parse_args()
 
     
