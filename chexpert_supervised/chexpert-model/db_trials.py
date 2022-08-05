@@ -102,8 +102,8 @@ def conduct_trial(args,
             # in_df = pd.read_csv(input_csv)
             in_df = pd.read_csv(data_csvs[ds])
             # # for too many rows, the itertools.product function runs out of memopry
-            if len(in_df.index > 500):
-                in_df = in_df.sample(n=500)
+            if len(in_df.index) > 1000:
+                in_df = in_df.sample(n=1000)
             possible_samples = get_sample_list(tracking_info['combinations'][str(x)]['subgroups'], in_df)
             all_combinations = list(itertools.product(*possible_samples))
             # remove all combinations that use the same image twice, or already used
