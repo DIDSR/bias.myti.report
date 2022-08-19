@@ -3,6 +3,7 @@
 '''
 import os
 import argparse
+import json
 import functools
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -19,6 +20,8 @@ def stratified_bootstrapping_default(args):
 
         By default tries to maintain the ratio of these subgroups within
         the tr or ts: sex, modality, repo
+
+        Note that this method does not match the number images/patient across subgroups
     '''
     dfs = []
     repo_str = ''
@@ -50,16 +53,7 @@ def stratified_bootstrapping_default(args):
                         df_MDX.sample(n=min_subgroup_size, random_state=RAND_SEED_INITIAL+args.random_seed), 
                         df_MCR.sample(n=min_subgroup_size, random_state=RAND_SEED_INITIAL+args.random_seed)], axis=0)
     # # set RANDOM SEED here
-    # stratified_sample = train_test_split(new_df, test_size=0.3, random_state=RAND_SEED_INITIAL+args.random_seed, shuffle=True, stratify=new_df[['sex', 'modality', 'repo']])
-    stratified_sample = train_test_split(new_df, test_size=0.2, random_state=RAND_SEED_INITIAL+args.random_seed, shuffle=True, stratify=new_df[['sex', 'modality']])
-    # for i, each_part in enumerate(stratified_sample):
-    #     print('\n>>> PARTITION #{} with {} patients'.format(i, each_part.shape[0]))
-    #     print(stratified_sample[i].groupby("sex")['modality'].value_counts())
-    #     print(stratified_sample[i].groupby("sex")['COVID_positive'].value_counts())
-    #     print(stratified_sample[i].groupby("sex")['repo'].value_counts())
-    #     out_fname = os.path.join(args.output_dir, str(i) + repo_str + '.json')
-    #     stratified_sample[i].to_json(out_fname, indent=4, orient='table', index=False)
-
+    stratified_sample = train_test_split(new_df, test_size=args.percent_test_partition, random_state=RAND_SEED_INITIAL+args.random_seed, shuffle=True, stratify=new_df[['sex', 'modality']])
     # # tr partition
     print('\n>>> PARTITION #{} with {} patients'.format(0, stratified_sample[0].shape[0]))
     print(stratified_sample[0].groupby("sex")['modality'].value_counts())
@@ -86,7 +80,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PyTorch Training')
     parser.add_argument('-i', '--input_list', action='append', help='<Required> List of input summary files', required=True, default=[])
     parser.add_argument('-o', '--output_dir', help='<Required> output dir to save list files', required=True)
-    parser.add_argument('-r', '--random_seed', help='random seed for experiment reproducibility', default=2020, type=int)
+    parser.add_argument('-r', '--random_seed', help='random seed for experiment reproducibility (default = 2020)', default=2020, type=int)
+    parser.add_argument('-p', '--percent_test_partition', help='percent test partition (default = 0.2)', default=0.2, type=float)
     args = parser.parse_args()
     # # call
-    stratified_bootstrapping_default(args)
+    output_log_file = os.path.join(args.output_dir, 'log.log')
+    with open(output_log_file, 'w') as fp:
+        json.dump(args.__dict__, fp, indent=2)
+        stratified_bootstrapping_default(args)
