@@ -13,8 +13,12 @@ EXE="../src/generate_partitions.py"
 
 declare -a IN_summary=("/gpfs_projects/ravi.samala/OUT/2022_CXR/202208/20220801_summary_table__MIDRC_RICORD_1C.json")
 # declare -a IN_summary=("/gpfs_projects/ravi.samala/OUT/2022_CXR/202208/20220801_summary_table__open_RI.json")
-OUT_dir="/gpfs_projects/ravi.samala/OUT/2022_CXR/SPIE2023_runs/"
+OUT_dir="/gpfs_projects/ravi.samala/OUT/2022_CXR/SPIE2023_runs/atm3/"
 RAND_SEED=2050
+TEST_PARTITION_PERCENT=0.2
+OPTION=1	# # 0: stratified ['sex', 'modality'] by patient
+			# # 1: stratified ['sex', 'modality'] by patient, with first min N number of images/patient
+MIN_N_IMAGES_PATIENT=1	# # min number of patients per image, ordered by time
 
 # #
 # #
@@ -23,7 +27,8 @@ RAND_SEED=2050
 # # -----------------------------------------------------------------------
 # # -----------------------------------------------------------------------
 # #
-for RAND in 0 1 2 3 4 5 6 7 8 9
+# for RAND in 0 1 2 3 4 5 6 7 8 9
+for RAND in 0
 do
 	# # get length of an array
 	arraylength=${#IN_summary[@]}
@@ -37,5 +42,5 @@ do
 	# #
 	OUT_dir2="${OUT_dir}/RAND_${RAND}"
 	mkdir $OUT_dir2
-	python $EXE $param_IN_summary -o $OUT_dir2 -r $RAND
+	python $EXE $param_IN_summary -o $OUT_dir2 -r $RAND -p $TEST_PARTITION_PERCENT -s $OPTION -m $MIN_N_IMAGES_PATIENT
 done
