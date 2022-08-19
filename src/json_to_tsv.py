@@ -6,7 +6,7 @@ import argparse
 
 def get_repo(args):
     if args.betsy:
-        summary_json = f"/scratch/alexis.burgon/2022_CXR/data_summarization/summary_table__{args.repo}.json"
+        summary_json = f"/scratch/alexis.burgon/2022_CXR/data_summarization/summary_table__{args.repo}_betsy.json"
         img_save_loc = f"/scratch/alexis.burgon/2022_CXR/CXR_jpegs/{args.repo}"
         tsv_save_loc = f"/scratch/alexis.burgon/2022_CXR/data_summarization/summary_table__{args.repo}.tsv"
     else:
