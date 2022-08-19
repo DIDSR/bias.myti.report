@@ -16,11 +16,11 @@ RAND_SEED_INITIAL=2022
 def select_image_per_patient(patient_df, n_images):
     # # iterate by patient, sort by "study date" and select the first n_images
     for index, each_patient in patient_df.iterrows():
-        # num_images = len(each_patient['images_info'])
+        num_images = len(each_patient['images_info'])
         patient_study_dates = [a["study date"] for a in each_patient['images_info']]
         date_seq = [datetime.datetime.strptime(ts, "%Y%m%d") for ts in patient_study_dates]
         sorted_date_index = [sorted(date_seq).index(x) + 1 for x in date_seq]
-        selected_images_index = sorted_date_index[0:n_images]
+        selected_images_index = sorted_date_index[0:min(n_images, num_images)]
         # # update the patient-level info using the selected index of images
         each_patient['images_info'] = [each_patient['images_info'][i-1] for i in selected_images_index]
         each_patient['images'] = [each_patient['images'][i-1] for i in selected_images_index]
