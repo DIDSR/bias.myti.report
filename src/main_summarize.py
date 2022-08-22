@@ -56,19 +56,19 @@ COVIDGR_10_label_path = "../data/COVIDGR_10_severity.csv"
 # files to remove:
 COVID_19_AR_bad_files_path = "../data/COVID_19_AR__manually_deleted_images.txt"
 RICORD_1c_bad_files_path = "../data/MIDRC_RICORD_1c__manually_deleted_images.txt"
+open_RI_bad_files_path = "../data/open_RI_manually_deleted_images.txt"
 open_AI_bad_files_path = "../data/open_AI_manually_deleted_images.txt"
-
 # consistent terminology
-race_lookup_table = {'American Indian or Alaska Native':[],
-			   		'Asian':[],
-			  		'Black or African American': [],
-			   		'Native Hawaiian or other Pacific Islander':[],
-			   		'Not Reported': ['nan'],
-					'Other':[],
-			   		'White':[]}
+race_lookup_table = {'American Indian or Alaska Native':['AMERICAN INDIAN OR ALASKA NATIVE'],
+			   		'Asian':['ASIAN'],
+			  		'Black or African American': ['BLACK OR AFRICAN AMERICAN'],
+			   		'Native Hawaiian or other Pacific Islander':['NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER'],
+			   		'Not Reported': ['nan', 'MISSING', 'Missing'],
+					'Other':['OTHER'],
+			   		'White':['WHITE']}
 ethnicity_lookup_table = {'Hispanic or Latino':[],
 						 'Not Hispanic or Latino':[],
-						 'Not Reported':[]}
+						 'Not Reported':['MISSING', 'Missing']}
 def race_lookup(race_info):
 	race_info = str(race_info)
 	if race_info in race_lookup_table:
@@ -330,6 +330,8 @@ def read_open_AI(in_dir, out_summ_file):
 	print('There are {:d} dirs'.format(len(patient_dirs)))
 	# df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images', 'repo'])
 	df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images','bad_images', 'bad_images_info', 'repo'])
+	with open(open_AI_bad_files_path,'r') as infile:
+		bad_file_list = infile.read().split('\n')
 	# # Iterate over the patients
 	for ii, each_patient in enumerate(patient_dirs):
 		imgs_good = []
@@ -364,6 +366,8 @@ def read_open_AI(in_dir, out_summ_file):
 			# stop if we've found all the CXR files
 			if CXR_count == num_CXR_files:
 				break
+			if dcm in bad_file_list:
+				continue
 			ds = pydicom.read_file(dcm)
 			# remove any not CR or DX
 			if ds[0x0008,0x0060].value != 'CR' and ds[0x0008,0x0060].value != 'DX':
@@ -417,90 +421,8 @@ def read_open_AI(in_dir, out_summ_file):
 	# #
 	# # save info
 	df.to_json(out_summ_file, indent=4, orient='table', index=False)
-		
-	'''
-	patient_submitter_id = ''
-	time_dirs = [filename for filename in os.listdir(patient_root_dir) if os.path.isdir(os.path.join(patient_root_dir,filename))]
-	with open(open_AI_bad_files_path, 'r') as in_file:
-		bad_files = in_file.read().split("\n")
-	# # Iterate over different time points
-	for each_time in time_dirs:
-		time_root_dir = os.path.join(patient_root_dir, each_time)
-		scans_dirs = [filename for filename in os.listdir(time_root_dir) if os.path.isdir(os.path.join(time_root_dir,filename))]
-		# # Here exclude the scans that are difference images
-		# # 
-		dcm_files = searchthis(time_root_dir, '.dcm')
-		for each_dcm_file in dcm_files:
-			ds = pydicom.read_file(each_dcm_file)
-			# if the file is not CR or DX, add to bad_images
-			if ds[0x0008, 0x0060].value != 'CR' and ds[0x0008, 0x0060].value != 'DX':
-				imgs_bad += [each_dcm_file]
-			# check if the image is on the bad images list
-			elif each_dcm_file in bad_files:
-				imgs_bad += [each_dcm_file]
-			elif (0x0008,0x0015) in ds and ds[0x0008,0x0015].value == '':
-				imgs_bad += [each_dcm_file]
-			elif (0x0008, 0x1030) in ds:
-				# print(ds[0x0008, 0x1030].value)
-				if 'XR CHEST PA/LATERAL' in ds[0x0008, 0x1030].value or \
-					'XR PORT CHEST 1V' in ds[0x0008, 0x1030].value or \
-					'XR CHEST PA AND LATERAL' in ds[0x0008, 0x1030].value:
-					if (0x0018,0x5101) in ds:
-						if 'LL' in ds[0x0018,0x5101].value or 'RL' in ds[0x0018,0x5101].value:
-							imgs_bad += [each_dcm_file]
-							continue
-					# # this CXR image
-					imgs_good += [each_dcm_file]
-					if (0x0010, 0x0020) in ds:
-						patient_specific_id = ds[0x0010, 0x0020].value
-						patient_specific_df = patient_df[patient_df['submitter_id'].str.contains(patient_specific_id)]
-						# print(patient_specific_df)
-						# # there should be only 1 row for each patient
-						if len(patient_specific_df.index) != 1:
-							print('ERROR')
-							imgs_good += ['ERROR - patient not found in the clinical file']
-							break
-						else:
-							if len(patient_submitter_id) == 0:
-								patient_submitter_id = patient_specific_df.iloc[0]['submitter_id']
-							else:
-								# # check if the patient name is the same
-								if patient_submitter_id != patient_specific_df.iloc[0]['submitter_id']:
-									print('ERROR')
-									imgs_good += ['ERROR with patient name within each patient dir']
-						imgs_good_info += [{
-							'modality': ds[0x0008, 0x0060].value if (0x0008, 0x0060) in ds else "MISSING",
-							'body part examined':ds[0x0018,0x0015].value if (0x0018,0x0015) in ds else "MISSING",
-							'view position':ds[0x0018,0x5101].value if (0x0018,0x5101) in ds else "MISSING",
-							'pixel spacing':[ds[0x0018,0x1164].value[0], ds[0x0018,0x1164].value[1]] if (0x0018,0x1164) in ds else "MISSING",
-							'study date':ds[0x0008,0x0020].value if (0x0008,0x0020) in ds else "MISSING",
-							'manufacturer':ds[0x0008,0x0070].value if (0x0008,0x0070) in ds else "MISSING",
-							'manufacturer model name':ds[0x0008,0x1090].value if (0x0008,0x1090) in ds else "MISSING",
-							'image size': ds.pixel_array.shape
-							}]
-						patient_good_info = [{
-							'sex':"M" if patient_specific_df.iloc[0]['sex'] == "Male" else "F",
-							'race':patient_specific_df.iloc[0]['race'],
-							'ethnicity':patient_specific_df.iloc[0]['ethnicity'],
-							'COVID_positive':patient_specific_df.iloc[0]['covid19_positive'],
-							'age':patient_specific_df.iloc[0]['age_at_index'],
-							}]
-					else:
-						# # 
-						imgs_good += ['0x0010, 0x0020 NOT FOUND']
-				else:
-					imgs_bad += [each_dcm_file]
-			else:
-				# # any image other CXR
-				imgs_bad += [each_dcm_file]'''
-	#df.loc[len(df)] = [patient_submitter_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] +[imgs_bad] + [imgs_bad_info] + ['open_AI']
-	# # # for debug
-	#print(ii)
 	
-# #
-# # save info
-#df.to_json(out_summ_file, indent=4, orient='table', index=False)
-
+	
 
 def read_open_RI(in_dir, out_summ_file):
 	'''
@@ -527,7 +449,9 @@ def read_open_RI(in_dir, out_summ_file):
 		if (spec_df['_cr_series_file_count'].item() + spec_df['_dx_series_file_count'].item()) == 0:
 			patient_dirs.remove(patient_dir)
 	print(f"There are {len(patient_dirs)} that have CXR images")
-	
+	# get manually removed
+	with open(open_RI_bad_files_path,'r') as infile:
+		bad_file_list = infile.read().split('\n')
 	df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images','bad_images', 'bad_images_info', 'repo'])
 	# # Iterate over the patients
 	for ii, each_patient in enumerate(patient_dirs):
@@ -537,6 +461,7 @@ def read_open_RI(in_dir, out_summ_file):
 		imgs_bad_info = []
 		patient_root_dir = os.path.join(in_dir, each_patient)
 		print('{} of {}: {}'.format(ii, len(patient_dirs), patient_root_dir), flush=True)
+		
 		# get all dcms for patient
 		dcms = get_dcms(patient_root_dir)
 		# get patient id
@@ -562,8 +487,9 @@ def read_open_RI(in_dir, out_summ_file):
 			# otherwise, is a CXR image
 			CXR_count += 1
 			# screen out bad CXR images
-			# TODO: bad file list
-			if (0x0018,0x5101) in ds:
+			if dcm in bad_file_list:
+				imgs_bad.append(dcm)
+			elif (0x0018,0x5101) in ds:
 				if 'LL' in ds[0x0018,0x5101].value:
 					imgs_bad.append(dcm)
 			else:
@@ -611,72 +537,6 @@ def read_open_RI(in_dir, out_summ_file):
 		# # for debug
 		#if ii == 100:
 			#break
-
-		'''patient_submitter_id = ''
-		time_dirs = [filename for filename in os.listdir(patient_root_dir) if os.path.isdir(os.path.join(patient_root_dir,filename))]
-		# # Iterate over different time points
-		for each_time in time_dirs:
-			time_root_dir = os.path.join(patient_root_dir, each_time)
-			scans_dirs = [filename for filename in os.listdir(time_root_dir) if os.path.isdir(os.path.join(time_root_dir,filename))]
-			# # Here exclude the scans that are difference images
-			# # 
-			dcm_files = searchthis(time_root_dir, '.dcm')
-			for each_dcm_file in dcm_files:
-				ds = pydicom.read_file(each_dcm_file)
-				if (0x0008, 0x1030) in ds:
-					if 'XR CHEST 1 VIEW AP' in ds[0x0008, 0x1030].value or \
-						'XR CHEST 2 VIEWS PA AND LATERAL' in ds[0x0008, 0x1030].value or \
-						'XR CHEST 1 VIEW AP' in ds[0x0008, 0x1030].value:
-						if (0x0018,0x5101) in ds:
-							if 'LL' in ds[0x0018,0x5101].value:
-								continue
-						# # this CXR image
-						imgs_good += [each_dcm_file]
-						if (0x0010, 0x0020) in ds:
-							patient_specific_id = ds[0x0010, 0x0020].value
-							patient_specific_df = patient_df[patient_df['submitter_id'].str.contains(patient_specific_id)]
-							# # there should be only 1 row for each patient
-							if len(patient_specific_df.index) != 1:
-								print('ERROR')
-								imgs_good += ['ERROR - patient not found in the clinical file']
-								break
-							else:
-								if len(patient_submitter_id) == 0:
-									patient_submitter_id = patient_specific_df.iloc[0]['submitter_id']
-								else:
-									# # check if the patient name is the same
-									if patient_submitter_id != patient_specific_df.iloc[0]['submitter_id']:
-										print('ERROR')
-										imgs_good += ['ERROR with patient name within each patient dir']
-							imgs_good_info += [{
-								'modality': ds[0x0008, 0x0060].value if (0x0008, 0x0060) in ds else "MISSING",
-								'body part examined':ds[0x0018,0x0015].value if (0x0018,0x0015) in ds else "MISSING",
-								'view position':ds[0x0018,0x5101].value if (0x0018,0x5101) in ds else "MISSING",
-								'pixel spacing':[ds[0x0018,0x1164].value[0], ds[0x0018,0x1164].value[1]] if (0x0018,0x1164) in ds else "MISSING",
-								'study date':ds[0x0008,0x0020].value if (0x0008,0x0020) in ds else "MISSING",
-								'manufacturer':ds[0x0008,0x0070].value if (0x0008,0x0070) in ds else "MISSING",
-								'manufacturer model name':ds[0x0008,0x1090].value if (0x0008,0x1090) in ds else "MISSING",
-								'image size': ds.pixel_array.shape
-								}]
-							patient_good_info = [{
-								'sex':"M" if patient_specific_df.iloc[0]['sex'] == "Male" else "F",
-								'race':patient_specific_df.iloc[0]['race'],
-								'ethnicity':patient_specific_df.iloc[0]['ethnicity'],
-								'COVID_positive':patient_specific_df.iloc[0]['covid19_positive'],
-								'age':patient_specific_df.iloc[0]['age_at_index'],
-								}]
-						else:
-							# # 
-							imgs_good += ['0x0010, 0x0020 NOT FOUND']
-					else:
-						imgs_bad += [each_dcm_file]
-				else:
-					# # any image other CXR
-					imgs_bad += [each_dcm_file]
-		df.loc[ii] = [patient_submitter_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] +[imgs_bad] + [imgs_bad_info] + ['open_RI']
-		# # # for debug
-		# if ii == 20:
-		# 	break'''
 	# #
 	# # save info
 	df.to_json(out_summ_file, indent=4, orient='table', index=False)
