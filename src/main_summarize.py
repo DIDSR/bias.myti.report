@@ -212,6 +212,17 @@ def read_COVID_19_NY_SBU(in_dir, out_summ_file):
 								imgs_bad += [each_dcm_file]
 							else:
 								imgs_good += [each_dcm_file]
+								patient_info = {
+									'sex':"M" if patient_specific_df.iloc[0]['gender_concept_name'] == "MALE" else "F",
+									'race':"MISSING",
+									'ethnicity':"MISSING",
+									'COVID_positive':"Yes" if patient_specific_df.iloc[0]['covid19_statuses'] == "positive" else "No",
+									'age':patient_specific_df.iloc[0]['age.splits'],
+									}
+								# consistent terminology
+								patient_info['race'] = race_lookup(patient_info['race'])
+								patient_info['ethnicity'] = ethnicity_lookup(patient_info['ethnicity'])
+								patient_good_info += [patient_info]
 						else:
 							imgs_bad += [each_dcm_file]
 					else:
@@ -232,17 +243,7 @@ def read_COVID_19_NY_SBU(in_dir, out_summ_file):
 						imgs_bad_info += [img_info]
 					elif each_dcm_file in imgs_good:
 						imgs_good_info += [img_info]
-					patient_info = {
-						'sex':"M" if patient_specific_df.iloc[0]['gender_concept_name'] == "MALE" else "F",
-						'race':"MISSING",
-						'ethnicity':"MISSING",
-						'COVID_positive':"Yes" if patient_specific_df.iloc[0]['covid19_statuses'] == "positive" else "No",
-						'age':patient_specific_df.iloc[0]['age.splits'],
-						}
-					# consistent terminology
-					patient_info['race'] = race_lookup(patient_info['race'])
-					patient_info['ethnicity'] = ethnicity_lookup(patient_info['ethnicity'])
-					patient_good_info += [patient_info]
+					
 		df.loc[ii] = [each_patient] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] + ['COVID_19_NY_SBU']
 		# # # # for debug
 		# if ii == 20:
@@ -297,19 +298,7 @@ def read_COVID_19_AR(in_dir, out_summ_file):
 				
 				if each_dcm_file in bad_files:
 					imgs_bad += [each_dcm_file]
-					imgs_bad_info += [{
-							'modality': ds[0x0008, 0x0060].value if (0x0008, 0x0060) in ds else "MISSING",
-							'body part examined':ds[0x0018,0x0015].value if (0x0018,0x0015) in ds else "MISSING",
-							'view position':ds[0x0018,0x5101].value if (0x0018,0x5101) in ds else "MISSING",
-							'pixel spacing':[ds[0x0018,0x1164].value[0], ds[0x0018,0x1164].value[1]] if (0x0018,0x1164) in ds else "MISSING",
-							'study date':ds[0x0008,0x0020].value if (0x0008,0x0020) in ds else "MISSING",
-							'manufacturer':ds[0x0008,0x0070].value if (0x0008,0x0070) in ds else "MISSING",
-							'manufacturer model name':ds[0x0008,0x1090].value if (0x0008,0x1090) in ds else "MISSING",
-							'image size': ds.pixel_array.shape
-							}]
-					continue
-				
-				if (0x0008, 0x1030) in ds:
+				elif (0x0008, 0x1030) in ds:
 					if 'XR CHEST AP PORTABLE' in ds[0x0008, 0x1030].value or \
 					'XR CHEST AP ONLY' in ds[0x0008, 0x1030].value or \
 					'XR CHEST PA AND LATERAL' in ds[0x0008, 0x1030].value or \
@@ -328,26 +317,37 @@ def read_COVID_19_AR(in_dir, out_summ_file):
 								print('ERROR')
 								imgs_good = 'ERROR with patient name within each patient dir'
 						imgs_good += [each_dcm_file]
-						imgs_good_info += [{
-							'modality': ds[0x0008, 0x0060].value if (0x0008, 0x0060) in ds else "MISSING",
-							'body part examined':ds[0x0018,0x0015].value if (0x0018,0x0015) in ds else "MISSING",
-							'view position':ds[0x0018,0x5101].value if (0x0018,0x5101) in ds else "MISSING",
-							'pixel spacing':[ds[0x0018,0x1164].value[0], ds[0x0018,0x1164].value[1]] if (0x0018,0x1164) in ds else "MISSING",
-							'study date':ds[0x0008,0x0020].value if (0x0008,0x0020) in ds else "MISSING",
-							'manufacturer':ds[0x0008,0x0070].value if (0x0008,0x0070) in ds else "MISSING",
-							'manufacturer model name':ds[0x0008,0x1090].value if (0x0008,0x1090) in ds else "MISSING",
-							'image size': ds.pixel_array.shape
-							}]
-						patient_good_info = [{
+						patient_info = {
 							'sex':patient_specific_df.iloc[0]['SEX'],
 							'race':patient_specific_df.iloc[0]['RACE'],
 							'ethnicity':"MISSING",
 							'COVID_positive':"Yes" if patient_specific_df.iloc[0]['COVID TEST POSITIVE'] == "Y" else "No",
 							'age':patient_specific_df.iloc[0]['AGE'],
-							}]
+							}
+						# consisten terminology
+						patient_info['race'] = race_lookup(patient_info['race'])
+						patient_info['ethnicity'] = ethnicity_lookup(patient_info['ethnicity'])
+						patient_good_info = [patient_info]
 				else:
 					# # any image other CXR
 					imgs_bad += [each_dcm_file]
+				img_info = {
+					'modality': ds[0x0008, 0x0060].value if (0x0008, 0x0060) in ds else "MISSING",
+					'body part examined':ds[0x0018,0x0015].value if (0x0018,0x0015) in ds else "MISSING",
+					'view position':ds[0x0018,0x5101].value if (0x0018,0x5101) in ds else "MISSING",
+					'pixel spacing':[ds[0x0018,0x1164].value[0], ds[0x0018,0x1164].value[1]] if (0x0018,0x1164) in ds else "MISSING",
+					'study date':ds[0x0008,0x0020].value if (0x0008,0x0020) in ds else "MISSING",
+					'manufacturer':ds[0x0008,0x0070].value if (0x0008,0x0070) in ds else "MISSING",
+					'manufacturer model name':ds[0x0008,0x1090].value if (0x0008,0x1090) in ds else "MISSING",
+					'image size': ds.pixel_array.shape
+					}
+				# consistent terminology
+				img_info['manufacturer'] = manufacturer_lookup(img_info['manufacturer'])
+				if each_dcm_file in imgs_bad:
+					imgs_bad_info += [img_info]
+				elif each_dcm_file in imgs_good:
+					imgs_good_info += [img_info]
+				
 		df.loc[ii] = [each_patient] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] +[imgs_bad] + [imgs_bad_info] + ['COVID_19_AR']
 		# # # for debug
 		# if ii == 20:
@@ -442,26 +442,28 @@ def read_open_AI(in_dir, out_summ_file):
 			img_info = {key: ds[img_info_dict[key][0],img_info_dict[key][1]].value if img_info_dict[key] in ds else 'MISSING' for key in img_info_dict}
 			img_info['pixel spacing'] = [ds[0x0018,0x1164].value[0], ds[0x0018,0x1164].value[1]] if (0x0018,0x1164) in ds else 'MISSING'
 			img_info['image size'] = ds.pixel_array.shape
+			# consistent terminology
+			img_info['manufacturer'] = manufacturer_lookup[img_info['manufacturer']]
 			# add to appropriate list
 			if dcm in imgs_bad:
 				imgs_bad_info.append(img_info)
 			elif dcm in imgs_good:
 				imgs_good_info.append(img_info)
 		# get patient info
-		patient_good_info = [{
+		patient_info = {
 							'sex':"M" if patient_specific_df.iloc[0]['sex'] == "Male" else "F",
 							'race':patient_specific_df.iloc[0]['race'],
 							'ethnicity':patient_specific_df.iloc[0]['ethnicity'],
 							'COVID_positive':patient_specific_df.iloc[0]['covid19_positive'],
 							'age':patient_specific_df.iloc[0]['age_at_index'],
-							}]
+							}
 		# make sure that patient race and ethnicity have consistent terminology
-		patient_good_info[0]['race'] = race_lookup(patient_good_info[0]['race'])
-		patient_good_info[0]['ethnicity'] = ethnicity_lookup(patient_good_info[0]['ethnicity'])
+		patient_info['race'] = race_lookup(patient_info['race'])
+		patient_info['ethnicity'] = ethnicity_lookup(patient_info['ethnicity'])
+		patient_good_info = [patient_info]
 		# add to df
 		df.loc[len(df)] = [patient_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] +[imgs_bad] + [imgs_bad_info] + ['open_AI']
 		# # # for debug
-		
 		#if ii == 100:
 			#print(df.head(10))
 			#break
@@ -557,6 +559,8 @@ def read_open_RI(in_dir, out_summ_file):
 			img_info = {key: ds[img_info_dict[key][0],img_info_dict[key][1]].value if img_info_dict[key] in ds else 'MISSING' for key in img_info_dict}
 			img_info['pixel spacing'] = [ds[0x0018,0x1164].value[0], ds[0x0018,0x1164].value[1]] if (0x0018,0x1164) in ds else 'MISSING'
 			img_info['image size'] = ds.pixel_array.shape
+			# consistent terminology
+			img_info['manufacturer'] = manufacturer_lookup(img_info['manufacturer'])
 			# add to appropriate list
 			if dcm in imgs_bad:
 				imgs_bad_info.append(img_info)
@@ -618,14 +622,17 @@ def extract_RICORD_1c_info(ds, annotation_df):
 				'grade description':row['GRADE_label_description']
 			}]
 		
-		patient_good_info = [{
+		patient_info = {
 			'sex':ds[0x0010,0x0040].value,
 			'age':float(ds[0x0010,0x1010].value.replace('Y','')) if (0x0010,0x1010) in ds else "MISSING",
 			'race':'Missing',
 			'ethnicity':'Missing',
 			'COVID_positive':'Yes'
-		}]
-		imgs_good_info += [{
+		}
+		patient_info['race'] = race_lookup(patient_info['race'])
+		patient_info['ethnicity'] = ethnicity_lookup(patient_info['ethnicity'])
+		patient_good_info = [patient_info]
+		imgs_info = {
 			'modality':ds[0x0008,0x0060].value,
 			'body part examined':ds[0x0018,0x0015].value,
 			'view position':ds[0x0018,0x5101].value,
@@ -636,7 +643,9 @@ def extract_RICORD_1c_info(ds, annotation_df):
 			'image size':ds.pixel_array.shape,
 			'classification':class_dict,
 			'grade':grade_dict
-		}]
+		}
+		imgs_info['manufacurter'] = manufacturer_lookup(imgs_info['manufacturer'])
+		imgs_good_info += [imgs_info]
 	return patient_specific_id, patient_good_info, imgs_good_info
 
 
@@ -743,7 +752,7 @@ def read_COVIDGR_10(in_dir, out_summ_file):
 			# # 
 			img = np.asarray(Image.open(each_patient))
 			imgs_good = [each_patient]
-			imgs_good_info = [{
+			imgs_info = {
 				'modality': "MISSING",
 				'body part examined':"MISSING",
 				'view position':"PA",
@@ -752,14 +761,19 @@ def read_COVIDGR_10(in_dir, out_summ_file):
 				'manufacturer':"MISSING",
 				'manufacturer model name':"MISSING",
 				'image size': img.shape
-				}]
-			patient_good_info = [{
+				}
+			imgs_info['manufacturer'] = manufacturer_lookup(imgs_info['manufacturer'])
+			imgs_good_info += [imgs_info]
+			patient_info = {
 				'sex':"MISSING",
 				'race':"MISSING",
 				'ethnicity':"MISSING",
 				'COVID_positive':"No",
 				'age':"MISSING",
-				}]
+				}
+			patient_info['race'] = race_lookup(patient_info['race'])
+			patient_info['ethnicity'] = ethnicity_lookup(patient_info['ethnicity'])
+			patient_good_info = [patient_info]
 			df.loc[ii] = [os.path.basename(each_patient).split('.')[0]] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] +[imgs_bad] + [imgs_bad_info] + ['COVIDGR_10']
 			ii += 1
 		# # Iterate over P patients
@@ -779,7 +793,7 @@ def read_COVIDGR_10(in_dir, out_summ_file):
 			# print(specific_patient_df)
 			img = np.asarray(Image.open(each_patient))
 			imgs_good = [each_patient]
-			imgs_good_info = [{
+			imgs_info = {
 				'modality': "MISSING",
 				'body part examined':"MISSING",
 				'view position':"PA",
@@ -788,15 +802,20 @@ def read_COVIDGR_10(in_dir, out_summ_file):
 				'manufacturer':"MISSING",
 				'manufacturer model name':"MISSING",
 				'image size': img.shape
-				}]
-			patient_good_info = [{
+				}
+			imgs_info['manufacturer'] = manufacturer_lookup(imgs_info['manufacturer'])
+			imgs_good_info = [imgs_info]
+			patient_info = {
 				'sex':"MISSING",
 				'race':"MISSING",
 				'ethnicity':"MISSING",
 				'COVID_positive':"Yes",
 				'grade label':specific_patient_df.at[0, 'Severity'],
 				'age':"MISSING",
-				}]
+				}
+			patient_info['race'] = race_lookup(patient_info['race'])
+			patient_info['ethnicity'] = ethnicity_lookup(patient_info['ethnicity'])
+			patient_good_info = [patient_info]
 			df.loc[ii] = [os.path.basename(each_patient).split('.')[0]] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] +[imgs_bad] + [imgs_bad_info] + ['COVIDGR_10']
 			ii += 1
 		# # save info
