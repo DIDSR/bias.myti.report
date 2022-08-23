@@ -443,7 +443,7 @@ def read_open_AI(in_dir, out_summ_file):
 			img_info['pixel spacing'] = [ds[0x0018,0x1164].value[0], ds[0x0018,0x1164].value[1]] if (0x0018,0x1164) in ds else 'MISSING'
 			img_info['image size'] = ds.pixel_array.shape
 			# consistent terminology
-			img_info['manufacturer'] = manufacturer_lookup[img_info['manufacturer']]
+			img_info['manufacturer'] = manufacturer_lookup(img_info['manufacturer'])
 			# add to appropriate list
 			if dcm in imgs_bad:
 				imgs_bad_info.append(img_info)
