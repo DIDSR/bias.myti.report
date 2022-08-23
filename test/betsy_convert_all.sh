@@ -1,11 +1,11 @@
 #!/bin/bash
 # # to run on besty02:
 # # salloc --partition=cpu_short
-# # ./betsy_convert_small
+# # ./betsy_convert_all
 
-echo Converting 20 dicom to jpeg
+echo Converting dicom to jpeg
 source /home/alexis.burgon/anaconda3/envs/hpc/bin/activate
 python dicom_to_jpeg.py -r COVID_19_AR \
-                        -s 20 \
+                        -s 0 \
                         -b True
 echo Done

@@ -40,7 +40,11 @@ def convert_dicom_to_jpeg(args):
        
     # convert all dicoms (unless stop_at)
     print(f"converting {len(img_info)} image files")
-    print(f"stopping at {args.stop_at}")
+    if args.stop_at == 0 or args.stop_at >= len(img_info):
+        print('converting all images')
+        args.stop_at = len(img_info)
+    else:
+        print(f"stopping at {args.stop_at}")
     for i in img_info:
         if args.stop_at and i >= args.stop_at:
             break
@@ -70,8 +74,9 @@ def convert_dicom_to_jpeg(args):
 if __name__ == '__main__':
     print("Starting dicom to jpeg conversion")
     parser = argparse.ArgumentParser()
-    parser.add_argument('-r', '--repo', required=True)
-    parser.add_argument('-s', '--stop_at',type=int)
-    parser.add_argument('-a','--all_in_repo', default=False)
+    parser.add_argument('-r', '--repo', required=True,
+                        choices=['open_AI','open_RI','MIDRC_RICORD_1C',
+                        'COVID_19_AR','COVID_19_NY_SBU','COVIDGR_10'])
+    parser.add_argument('-s', '--stop_at',type=int, default=0)
     parser.add_argument('-b','--betsy', default=False)
     convert_dicom_to_jpeg(parser.parse_args())
