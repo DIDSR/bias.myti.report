@@ -32,7 +32,10 @@
 	# # open_RI
 	# #		Manually removed 58 images
 	# # open_AI
-	# #		IN PROGRESS
+	# #		Manually removed 509 images
+	# # COVID-19-NY-SBU
+	# # 	Removing all views with view position (ds[0x0018,0x5105]) == 'LATERAL' : removed 9 images
+	# # 	Manually removed 7 images
 '''
 import os
 import fnmatch
@@ -58,17 +61,33 @@ COVID_19_AR_bad_files_path = "../data/COVID_19_AR__manually_deleted_images.txt"
 RICORD_1c_bad_files_path = "../data/MIDRC_RICORD_1c__manually_deleted_images.txt"
 open_RI_bad_files_path = "../data/open_RI_manually_deleted_images.txt"
 open_AI_bad_files_path = "../data/open_AI_manually_deleted_images.txt"
+COVID_19_NY_SBU_bad_files_path = "../data/COVID_19_NY_SBU_manually_deleted_images.txt"
 # consistent terminology
-race_lookup_table = {'American Indian or Alaska Native':['AMERICAN INDIAN OR ALASKA NATIVE'],
-			   		'Asian':['ASIAN'],
-			  		'Black or African American': ['BLACK OR AFRICAN AMERICAN'],
-			   		'Native Hawaiian or other Pacific Islander':['NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER'],
-			   		'Not Reported': ['nan', 'MISSING', 'Missing'],
-					'Other':['OTHER'],
-			   		'White':['WHITE']}
-ethnicity_lookup_table = {'Hispanic or Latino':[],
-						 'Not Hispanic or Latino':[],
-						 'Not Reported':['MISSING', 'Missing']}
+race_lookup_table = {
+	'American Indian or Alaska Native':['AMERICAN INDIAN OR ALASKA NATIVE'],
+	'Asian':['ASIAN'],
+	'Black or African American': ['BLACK OR AFRICAN AMERICAN'],
+	'Native Hawaiian or other Pacific Islander':['NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER'],
+	'Not Reported': ['nan', 'MISSING', 'Missing'],
+	'Other':['OTHER'],
+	'White':['WHITE']}
+ethnicity_lookup_table = {
+	'Hispanic or Latino':[],
+	'Not Hispanic or Latino':[],
+	'Not Reported':['MISSING', 'Missing']}
+manufacturer_lookup_table = {
+	'Not Reported':['MISSING', 'Missing'],
+	'Carestream':['CARESTREAM HEALTH', 'CARESTREAM'],
+	'Philips':['Philips Medical Systems'],
+	'Fujifilm':['FUJIFILM Corporation'],
+	'Konica Minolta':['KONICA MINOLTA'],
+	'GE Healthcare':['"GE Healthcare"','GE MEDICAL SYSTEMS'],
+	'Canon Inc.':[],
+	'Riverain Technologies':[],
+	'Siemens':['SIEMENS'],
+	'Samsung Electronics':[],
+	'Kodak':['KODAK'],
+	'Iray':['IRAY']}
 def race_lookup(race_info):
 	race_info = str(race_info)
 	if race_info in race_lookup_table:
@@ -88,6 +107,16 @@ def ethnicity_lookup(ethnicity_info):
 			return key
 	print(f"ethnicity value {ethnicity_info} not in lookup table")
 	return ethnicity_info
+
+def manufacturer_lookup(manufacturer_info):
+	manufacturer_info = str(manufacturer_info)
+	if manufacturer_info in manufacturer_lookup_table:
+		return manufacturer_info
+	for key in manufacturer_lookup_table:
+		if manufacturer_info in manufacturer_lookup_table[key]:
+			return key
+	print(f"manufacturer value {manufacturer_info} not in lookup table")
+	return manufacturer_info
 
 def get_dcms(file_path):
     dcms = []
@@ -134,6 +163,9 @@ def read_COVID_19_NY_SBU(in_dir, out_summ_file):
 		imgs_good = []
 		imgs_good_info = []
 		imgs_bad = []
+		imgs_bad_info = []
+		with open(COVID_19_NY_SBU_bad_files_path, 'r') as fp:
+			bad_files = fp.read().split("\n")
 		patient_root_dir = os.path.join(in_dir, each_patient)
 		print(patient_root_dir)
 		time_dirs = [filename for filename in os.listdir(patient_root_dir) if os.path.isdir(os.path.join(patient_root_dir,filename))]
@@ -146,7 +178,9 @@ def read_COVID_19_NY_SBU(in_dir, out_summ_file):
 			for each_dcm_file in dcm_files:
 				# print(each_dcm_file)
 				ds = pydicom.read_file(each_dcm_file)
-				if (0x0008, 0x1140) in ds:
+				if each_dcm_file in bad_files:
+					imgs_bad += [each_dcm_file]
+				elif (0x0008, 0x1140) in ds:
 					# # this image could be difference image
 					# print([ds.SeriesNumber, ds.AcquisitionNumber, ds.ReferencedImageSequence])
 					imgs_bad += [each_dcm_file]
@@ -174,28 +208,41 @@ def read_COVID_19_NY_SBU(in_dir, out_summ_file):
 								if each_patient != patient_specific_df.iloc[0]['to_patient_id']:
 									print('ERROR')
 									imgs_good = 'ERROR with patient name within each patient dir'
-							imgs_good += [each_dcm_file]
-							imgs_good_info += [{
-								'modality': ds[0x0008, 0x0060].value if (0x0008, 0x0060) in ds else "MISSING",
-								'body part examined':ds[0x0018,0x0015].value if (0x0018,0x0015) in ds else "MISSING",
-								'view position':ds[0x0018,0x5101].value if (0x0018,0x5101) in ds else "MISSING",
-								'pixel spacing':[ds[0x0018,0x1164].value[0], ds[0x0018,0x1164].value[1]] if (0x0018,0x1164) in ds else "MISSING",
-								'study date':ds[0x0008,0x0020].value if (0x0008,0x0020) in ds else "MISSING",
-								'manufacturer':ds[0x0008,0x0070].value if (0x0008,0x0070) in ds else "MISSING",
-								'manufacturer model name':ds[0x0008,0x1090].value if (0x0008,0x1090) in ds else "MISSING",
-								'image size': ds.pixel_array.shape
-								}]
-							patient_good_info = [{
-								'sex':"M" if patient_specific_df.iloc[0]['gender_concept_name'] == "MALE" else "F",
-								'race':"MISSING",
-								'ethnicity':"MISSING",
-								'COVID_positive':"Yes" if patient_specific_df.iloc[0]['covid19_statuses'] == "positive" else "No",
-								'age':patient_specific_df.iloc[0]['age.splits'],
-								}]
+							if (0x0018, 0x5101) in ds and ds[0x0018,0x5101].value == 'LATERAL':
+								imgs_bad += [each_dcm_file]
+							else:
+								imgs_good += [each_dcm_file]
 						else:
 							imgs_bad += [each_dcm_file]
 					else:
 						imgs_bad += [each_dcm_file]
+					# image information
+					img_info = {
+						'modality': ds[0x0008, 0x0060].value if (0x0008, 0x0060) in ds else "MISSING",
+						'body part examined':ds[0x0018,0x0015].value if (0x0018,0x0015) in ds else "MISSING",
+						'view position':ds[0x0018,0x5101].value if (0x0018,0x5101) in ds else "MISSING",
+						'pixel spacing':[ds[0x0018,0x1164].value[0], ds[0x0018,0x1164].value[1]] if (0x0018,0x1164) in ds else "MISSING",
+						'study date':ds[0x0008,0x0020].value if (0x0008,0x0020) in ds else "MISSING",
+						'manufacturer':ds[0x0008,0x0070].value if (0x0008,0x0070) in ds else "MISSING",
+						'manufacturer model name':ds[0x0008,0x1090].value if (0x0008,0x1090) in ds else "MISSING",
+						'image size': ds.pixel_array.shape
+						}
+					img_info['manufacturer'] = manufacturer_lookup(img_info['manufacturer'])
+					if each_dcm_file in imgs_bad:
+						imgs_bad_info += [img_info]
+					elif each_dcm_file in imgs_good:
+						imgs_good_info += [img_info]
+					patient_info = {
+						'sex':"M" if patient_specific_df.iloc[0]['gender_concept_name'] == "MALE" else "F",
+						'race':"MISSING",
+						'ethnicity':"MISSING",
+						'COVID_positive':"Yes" if patient_specific_df.iloc[0]['covid19_statuses'] == "positive" else "No",
+						'age':patient_specific_df.iloc[0]['age.splits'],
+						}
+					# consistent terminology
+					patient_info['race'] = race_lookup(patient_info['race'])
+					patient_info['ethnicity'] = ethnicity_lookup(patient_info['ethnicity'])
+					patient_good_info += [patient_info]
 		df.loc[ii] = [each_patient] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] + ['COVID_19_NY_SBU']
 		# # # # for debug
 		# if ii == 20:
