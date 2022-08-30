@@ -2,81 +2,78 @@ from ast import arg
 import os
 import pandas as pd
 import argparse
+import sys
 
+out_classes = ['CR', 'DX', 'F', 'M']
+#out_classes = ['CR', 'DX', 'F', 'M', 'Asian', 'Black or African American', 'White']
+by_patient = {'sex':['F', 'M'],
+    'race':['American Indian or Alaska Native', 'Asian', 'Black or African American',
+            'Native Hawaiian or other Pacific Islander', 'Not Reported', 'Other', 'White']}
+by_image = {'modality':['CR', 'DX']}
 
 def get_repo(args):
     if args.betsy:
-        summary_json = f"/scratch/alexis.burgon/2022_CXR/data_summarization/summary_table__{args.repo}_betsy.json"
+        summary_json = f"/scratch/alexis.burgon/2022_CXR/data_summarization/20220823/summary_table__{args.repo}.json"
         img_save_loc = f"/scratch/alexis.burgon/2022_CXR/CXR_jpegs/{args.repo}"
-        tsv_save_loc = f"/scratch/alexis.burgon/2022_CXR/data_summarization/summary_table__{args.repo}.tsv"
+        tsv_save_loc = f"/scratch/alexis.burgon/2022_CXR/data_summarization/20220823/summary_table__{args.repo}.tsv"
     else:
-        summary_json = f"/gpfs_projects/alexis.burgon/OUT/2022_CXR/temp/summary_table__{args.repo}.json"
-        img_save_loc = f"/gpfs_projects/alexis.burgon/OUT/2022_CXR/temp/jpeg_testing{args.repo}"
-        tsv_save_loc = f"/gpfs_projects/alexis.burgon/OUT/2022_CXR/temp/summary_table__{args.repo}.tsv"
+        summary_json = f"/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/20220823/summary_table__{args.repo}.json"
+        img_save_loc = f"/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/20220823/{args.repo}_jpegs"
+        tsv_save_loc = f"/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/20220823/summary_table__{args.repo}.tsv"
     return summary_json, img_save_loc, tsv_save_loc
 
+def get_attributes(df_info, corr_dict):
+    out_dict = {}
+    for out_class in out_classes:
+        for att in corr_dict:
+            if out_class in corr_dict[att]:
+                out_dict[out_class] = 0
+                if df_info[att] == out_class:
+                    out_dict[out_class] += 1
+    return out_dict
+
 def json_to_tsv(args):
-    '''
-    converts the information from the summary_json file and the dicom to jpeg conversion table into
-    a tsv file to be used for generating partitions
-    '''
-    if args.stop_at:
-        print(f"stopping at {args.stop_at} patients")
-    in_df = pd.read_json(args.input, orient='table')
-    conversion_table = os.path.join(args.jpeg_save_loc,'conversion_table.json')
+    summary_json, img_save_loc, tsv_save_loc = get_repo(args)
+    in_df = pd.read_json(summary_json, orient='table')
+    cols = ['patient id', 'dicom file', 'Path'] + out_classes
+    conversion_table = os.path.join(img_save_loc,'conversion_table.json')
     conversion_df = pd.read_json(conversion_table)
-    out_df = pd.DataFrame(columns=['patient_id', 'dicom_file', 'Path', 'CR', 'DX', 'Female', 'Male'])
+    out_df = pd.DataFrame(columns=cols)
     for i, row in in_df.iterrows():
-        if args.stop_at and i >= args.stop_at:
-            break
+        sys.stdout.write(f"\r{i+1}/{len(in_df)} patients complete")
+        # information by patient
         patient_id = row['patient_id']
-        patient_sex = row['patient_info'][0]['sex']
-        if patient_sex == 'F':
-            female = 1
-            male = 0
-        elif patient_sex == 'M':
-            male = 1
-            female = 0
-        else:
-            print(f'unknown patient sex {patient_sex}')
-            return
+        patient_info = get_attributes(row['patient_info'][0], by_patient)
         for ii, img in enumerate(row['images']):
-            print(conversion_df[conversion_df['dicom'] == img]['jpeg'])
-            
-            #jpeg_file = conversion_df[conversion_df['dicom'] == img]['jpeg']
-            #print(type(jpeg_file))
-            
-            jpeg_file = conversion_df[conversion_df['dicom'] == img]['jpeg'].head(1).item()
-            if not os.path.exists(jpeg_file):
-                #print("jpeg file doesn't exists yet! be sure to convert first")
-                #return
+            if ii >= len(row['images_info']):
                 continue
-            # get img information
-            #print(row['images_info'])
-            img_mod = row['images_info'][0]['modality']
-            if img_mod == 'CR':
-                CR = 1
-                DX = 0
-            elif img_mod == 'DX':
-                CR = 0
-                DX = 1
-            else:
-                print(f"unknown modality {img_mod}")
-                return
-            # add to out_df
+            # information by image
+            dicom_file = img
+            jpeg_path = conversion_df[conversion_df['dicom'] == img]['jpeg'].values[0]
+            img_info = get_attributes(row['images_info'][ii], by_image)
+            # add to df
             if out_df.empty:
                 idx = 0
             else:
-                idx = out_df.index.max()+1
-            out_df.loc[idx] = [patient_id, img, jpeg_file, CR, DX, female, male]
-            
-    out_df.to_csv(args.output, sep="\t")
+                idx = len(out_df) 
+            info_list = []
+            for out_class in out_classes:
+                if out_class in patient_info:
+                    info_list.append(patient_info[out_class])
+                elif out_class in img_info:
+                    info_list.append(img_info[out_class])
+            out_df.loc[idx] = [patient_id] + [dicom_file] + [jpeg_path] + info_list
+    out_df.to_csv(tsv_save_loc, sep="\t")
+
     
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser
-    parser.add_argument('-i','--input',action='append', default=[],required=True)
-    parser.add_argument('t','--tsv_output',action='append', default=[],required=True)
-    parser.add_argument('-j','--jpeg_save_locs',action='append', default=[], required=True)
-    parser.add_argument('-s','--stop_at', default=None)
+    parser = argparse.ArgumentParser()
+    #parser.add_argument('-i','--input',action='append', default=[],required=True)
+    #parser.add_argument('-t','--tsv_output',action='append', default=[],required=True)
+    #parser.add_argument('-j','--jpeg_save_locs',action='append', default=[], required=True)
+    #parser.add_argument('-s','--stop_at', default=None)
     parser.add_argument('-b','--betsy', default=False)
+    parser.add_argument('-r','--repo',required=True)
     json_to_tsv(parser.parse_args())
+    print("\nDONE\n")
+    #get_attributes(parser.parse_args())

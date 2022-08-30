@@ -5,7 +5,7 @@
 
 echo Converting 20 dicom to jpeg
 source /home/alexis.burgon/anaconda3/envs/hpc/bin/activate
-python dicom_to_jpeg.py -r COVID_19_AR \
+python dicom_to_jpeg.py -r open_AI \
                         -s 20 \
                         -b True
 echo Done

@@ -4,14 +4,16 @@ import argparse
 import pydicom
 import cv2
 import os
+import sys
+
 
 def get_repo(args):
     if args.betsy:
-        summary_json = f"/scratch/alexis.burgon/2022_CXR/data_summarization/summary_table__{args.repo}.json"
+        summary_json = f"/scratch/alexis.burgon/2022_CXR/data_summarization/20220823/summary_table__{args.repo}.json"
         img_save_loc = f"/scratch/alexis.burgon/2022_CXR/CXR_jpegs/{args.repo}"
     else:
-        summary_json = f"/gpfs_projects/alexis.burgon/OUT/2022_CXR/temp/summary_table__{args.repo}.json"
-        img_save_loc = f"/gpfs_projects/alexis.burgon/OUT/2022_CXR/temp/jpeg_testing/{args.repo}"
+        summary_json = f"/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/20220823/summary_table__{args.repo}.json"
+        img_save_loc = f"/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/20220823/{args.repo}_jpegs"
     return summary_json, img_save_loc
 
 def get_dcms(file_path):
@@ -31,6 +33,9 @@ def convert_dicom_to_jpeg(args):
     '''
     input_file, img_save_loc = get_repo(args)
     print(f"for repository {args.repo} using input {input_file}")
+    if not os.path.exists(input_file):
+        print(f"Input file {input_file} does not exist")
+        return
     img_info = {} # index: [dicom_file_name, jpeg_file_name]
     in_df = pd.read_json(input_file, orient='table')
     for ii, patient in in_df.iterrows():
@@ -39,20 +44,21 @@ def convert_dicom_to_jpeg(args):
             img_info[len(img_info)] = [img, os.path.join(img_save_loc, f"{patient_id}_{ii}.jpg")]
        
     # convert all dicoms (unless stop_at)
-    print(f"converting {len(img_info)} image files")
+    print(f"\nfound {len(img_info)} image files")
     if args.stop_at == 0 or args.stop_at >= len(img_info):
         print('converting all images')
         args.stop_at = len(img_info)
     else:
-        print(f"stopping at {args.stop_at}")
+        print(f"only converting first {args.stop_at}")
     for i in img_info:
         if args.stop_at and i >= args.stop_at:
             break
+        sys.stdout.write(f"\r{i+1}/{args.stop_at} files converted")
+        #print(f"{i+1}/{args.stop_at}")
         img = img_info[i][0]
         jpeg_path = img_info[i][1]
         if os.path.exists(jpeg_path):
             # skip already generated jpegs
-            print('jpeg already made')
             continue
         # convert dicom to jpeg
         dcm = pydicom.dcmread(img)
@@ -69,10 +75,11 @@ def convert_dicom_to_jpeg(args):
     
     # save the conversion information
     conversion_df = pd.DataFrame.from_dict(img_info, orient='index', columns=['dicom','jpeg'])
-    conversion_df.to_json(os.path.join(img_save_loc, 'conversion_table.json'))
+    conversion_table_file = os.path.join(img_save_loc, 'conversion_table.json')
+    conversion_df.to_json(conversion_table_file)
 
 if __name__ == '__main__':
-    print("Starting dicom to jpeg conversion")
+    print("\nStarting dicom to jpeg conversion")
     parser = argparse.ArgumentParser()
     parser.add_argument('-r', '--repo', required=True,
                         choices=['open_AI','open_RI','MIDRC_RICORD_1C',
@@ -80,3 +87,4 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--stop_at',type=int, default=0)
     parser.add_argument('-b','--betsy', default=False)
     convert_dicom_to_jpeg(parser.parse_args())
+    print("\nDONE\n")

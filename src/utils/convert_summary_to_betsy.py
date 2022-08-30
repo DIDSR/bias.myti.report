@@ -13,8 +13,9 @@ def convert_to_betsy(input_summary, out_path):
     for ii, row in df.iterrows():
         for i, img in enumerate(row['images']):
             row['images'][i] = img.replace(original_path, betsy_path)
-        for i, img in enumerate(row['bad_images']):
-            row['bad_images'][i] = img.replace(original_path, betsy_path)
+        if 'bad images' in row:
+            for i, img in enumerate(row['bad_images']):
+                row['bad_images'][i] = img.replace(original_path, betsy_path)
     df.to_json(out_path, orient='table')
     print("DONE")
 
