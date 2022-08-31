@@ -47,15 +47,13 @@ def update_terminology(input_summary_file, output_file=None):
         row['patient_info'][0]['ethnicity'] = ethnicity_lookup(row['patient_info'][0]['ethnicity'])
         for i, img_info in enumerate(row['images_info']):
             row['images_info'][i]['manufacturer'] = manufacturer_lookup(img_info['manufacturer'])
-    '''
+    
     if output_file:
         df.to_json(output_file, indent=4, orient='table')
     else:
-        df.to_json(input_summary_file, indent=4, orient='table')'''
+        df.to_json(input_summary_file, indent=4, orient='table')
     print("\ndone")
- 
 
 if __name__ == '__main__':
     #update_summary("/gpfs_projects/alexis.burgon/OUT/2022_CXR/temp/summary_table__open_AI.json", "/home/alexis.burgon/covid/data/open_AI_manually_deleted_images.txt")
     update_terminology("/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/20220823/summary_table__MIDRC_RICORD_1C.json")
-    
