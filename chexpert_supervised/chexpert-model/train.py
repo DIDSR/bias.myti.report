@@ -1,6 +1,7 @@
 """Entry-point script to train models."""
 import torch
 import torch.nn as nn
+import pandas as pd
 
 import models
 from args import TrainArgParser
@@ -11,6 +12,7 @@ from data import get_loader
 from eval import Evaluator
 from optim import Optimizer
 from constants import *
+
 
 
 def train(args):
@@ -25,7 +27,18 @@ def train(args):
     data_args = args.data_args
     transform_args = args.transform_args
 
+    
 
+
+    # change json to csv if needed
+    # training
+    import os # TODO: figure out why os needs to be imported here for it to actually import?
+    tasks = model_args.__dict__[TASKS]
+    if not os.path.exists(data_args.csv):
+        print(f"training csv {data_args.csv} does not exist!")
+        if os.path.exists(data_args.csv.replace('.csv', '.json')):
+            print("but a json version does! You probably need to run partitions_to_csv")
+        return
     # Get logger.
     print ('Getting logger... log to path: {}'.format(logger_args.log_path))
     logger = Logger(logger_args.log_path, logger_args.save_dir)
@@ -71,6 +84,7 @@ def train(args):
     print("========= MODEL ==========")
     print(model)
     print('==========================')
+    
     # Get train and valid loader objects.
     train_loader = get_loader(phase="train",
                              data_args=data_args,
@@ -92,7 +106,6 @@ def train(args):
     # Get the set of tasks which will be used for saving models
     # and annealing learning rate.
     eval_tasks = EVAL_METRIC2TASKS[optim_args.metric_name]
-
     # Instantiate the saver class for saving model checkpoints.
     saver = ModelSaver(save_dir=logger_args.save_dir,
                        iters_per_save=logger_args.iters_per_save,
@@ -100,14 +113,33 @@ def train(args):
                        metric_name=optim_args.metric_name,
                        maximize_metric=optim_args.maximize_metric,
                        keep_topk=logger_args.keep_topk)
-
+    # get model layers to train
+    if model_args.model == 'ResNet18':
+        model_layers = [name for name,para in model.named_parameters()]
+        #model_layers = [module for module in model.modules() if not isinstance(module, nn.Sequential)]
+        idxs = []
+        for i, lyr in enumerate(model_layers):
+            if lyr.endswith('bias'):
+                if i == len(model_layers)-1:
+                    continue
+                if 'downsample' in model_layers[i+1]:
+                    continue
+                idxs.append(i+1)
+        for ii, idx in enumerate(idxs):
+            if ii == 0:
+                layers = [','.join(model_layers[:idx])]          
+            else:
+                layers += [','.join(model_layers[idxs[ii-1]:idx])] 
+        # the last fully-connected layer doesn't seem to be a part of ResNet, so it needs to be added
+        layers += ["module.fc.weight,module.fc.bias"]
     # TODO: JBY: handle threshold for fine tuning
     if model_args.fine_tuning == 'full': # Fine tune all layers. 
         pass
     else:
+        n_layers = int(model_args.fine_tuning.replace('last_',''))
+        model_args.fine_tuning = ','.join(layers[-n_layers:])
         # Freeze other layers.
         models.PretrainedModel.set_require_grad_for_fine_tuning(model, model_args.fine_tuning.split(','))
-
     # Instantiate the optimizer class for guiding model training.
     optimizer = Optimizer(parameters=model.parameters(),
                           optim_args=optim_args,
@@ -128,7 +160,7 @@ def train(args):
                                     model_uncertainty=model_args.model_uncertainty,
                                     mask_uncertain=True,
                                     device=args.device)
-
+    
     # Run training
     while not optimizer.is_finished_training():
         optimizer.start_epoch()

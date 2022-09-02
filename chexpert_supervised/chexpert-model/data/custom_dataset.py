@@ -34,23 +34,13 @@ class CustomDataset(BaseDataset):
         self.is_val_dataset = csv_name_check(self.csv_name, 'valid.csv', 'special' in data_args.dataset)
         self.is_uncertain_dataset = "uncertain" in self.csv_name
         
-
         if self.is_train_dataset:
             self.csv_path = self.data_args.csv
         elif self.is_uncertain_dataset:
             self.csv_path = self.data_args.uncertain_map_path
         elif self.is_val_dataset:
-            # default ======
             self.csv_path = self.data_args.csv_dev
-            # validation set =====
-            # self.csv_path = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/RICORD_1c_training/TCIA_1C_valid.csv"
-            # other repositories =====
-            # self.csv_path = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/20220801_summary_table__COVID_19_NY_SBU.csv"
-            # self.csv_path = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/20220801_summary_table__COVID_19_AR.csv"
-            # self.csv_path = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/20220801_summary_table__open_AI.csv"
-            # self.csv_path = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/20220801_summary_table__COVIDGR_10.csv"
-            # self.csv_path = 
-
+            
         elif self.is_test_dataset: # Custom test
             if self.data_args.together: # one csv for all of test
                 self.csv_path = self.data_args.test_csv
@@ -75,8 +65,10 @@ class CustomDataset(BaseDataset):
         self.img_paths = self.get_paths(df)
 
     def load_df(self):
-        df = pd.read_csv(self.csv_path)
-        
+        if self.csv_path.endswith(".csv"):
+            df = pd.read_csv(self.csv_path)
+        elif self.csv_path.endswith(".tsv"):
+            df = pd.read_csv(self.csv_path, sep='\t')
         df[COL_STUDY] = df[COL_PATH].apply(lambda p: Path(p).parent)
         if self.is_test_dataset and not self.data_args.together: # TODO(canliu): check what 'together' means.
             if self.data_args.custom:

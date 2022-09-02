@@ -57,7 +57,7 @@ class Logger(object):
                                        COL_VALUE: col_values})
             metrics_df.to_csv(self.metrics_csv_path, index=False)
 
-    def log_stdout(self, *args):
+    def log_stdout(self, *args):        
         print(*args, file=sys.stdout)
         sys.stdout.flush()
 

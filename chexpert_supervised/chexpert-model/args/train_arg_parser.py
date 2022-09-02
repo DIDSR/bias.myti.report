@@ -8,7 +8,7 @@ class TrainArgParser(BaseArgParser):
     def __init__(self):
         super(TrainArgParser, self).__init__()
         self.is_training = True
-
+        
         # Model args
         self.parser.add_argument('--model',
                                  dest='model_args.model',

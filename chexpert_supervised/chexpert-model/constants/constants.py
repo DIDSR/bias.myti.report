@@ -1,6 +1,14 @@
 """Define constants to be used throughout the repository."""
 from pathlib import Path
 
+# Edit custom tasks here
+CUSTOM_TASKS = ["CR","DX", "F", "M"]
+# used to look up the groupings
+CUSTOM_TASK_SUBSETS = {
+        'sex':["F","M"],
+        'image_acquisition_method':["CR","DX"]
+}
+
 # Main directories
 PROJECT_DIR = Path(__file__).parent.parent
 # DATA_DIR = Path("/deep/group")
@@ -91,8 +99,7 @@ CXR14_TASKS = ["Cardiomegaly",
                "Fibrosis",
                "Edema",
                "Consolidation"]
-# CUSTOM TASKS
-CUSTOM_TASKS = ["CR","DX", "Female", "Male"]
+
 
 CALIBRATION_FILE = "calibration_params.json"
 
