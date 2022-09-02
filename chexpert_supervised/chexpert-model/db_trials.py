@@ -13,7 +13,7 @@ from saver import ModelSaver
 
 
 def conduct_trial(args,
-                  save_loc="/gpfs_projects/ravi.samala/OUT/2022_CXR/SPIE2023_runs/atm2/decision_boundaries",
+                  save_loc="/gpfs_projects/ravi.samala/OUT/2022_CXR/SPIE2023_runs/atm2/decision_boundaries_atm2",
                   trial_name = None,
                   input_csv = None):
     print('Loading Model...')
@@ -24,11 +24,14 @@ def conduct_trial(args,
     # FOR SPIE2023 runs =============================================================================
     base_folder = model_args.ckpt_path.replace("/full_MIDRC_RICORD_1C/best.pth.tar", '')
     trial_name = base_folder.split("/")[-1]
-    datasets = ['train', 'validation', 'COVID_19_NY_SBU']
-    data_csvs = {'train':os.path.join(base_folder, 'tr__20220801_summary_table__MIDRC_RICORD_1C.csv'),
-                 'validation':os.path.join(base_folder, 'ts__20220801_summary_table__MIDRC_RICORD_1C.csv'),
-                 'COVID_19_NY_SBU':"/gpfs_projects/ravi.samala/OUT/2022_CXR/202208/20220801_summary_table__COVID_19_NY_SBU.csv"}
-    input_csv = os.path.join(base_folder, 'tr__20220801_summary_table__MIDRC_RICORD_1C.csv')
+    # datasets = ['train', 'validation', 'COVID_19_NY_SBU']
+    # data_csvs = {'train':os.path.join(base_folder, 'tr__20220801_summary_table__MIDRC_RICORD_1C.csv'),
+    #              'validation':os.path.join(base_folder, 'ts__20220801_summary_table__MIDRC_RICORD_1C.csv'),
+    #              'COVID_19_NY_SBU':"/gpfs_projects/ravi.samala/OUT/2022_CXR/202208/20220801_summary_table__COVID_19_NY_SBU.csv"}
+    datasets = ['COVID_19_NY_SBU', 'validation', ]
+    data_csvs = {'COVID_19_NY_SBU':"/gpfs_projects/ravi.samala/OUT/2022_CXR/202208/20220801_summary_table__COVID_19_NY_SBU.csv",
+                 'validation':os.path.join(base_folder, 'ts__20220801_summary_table__MIDRC_RICORD_1C.csv')}
+    # input_csv = os.path.join(base_folder, 'tr__20220801_summary_table__MIDRC_RICORD_1C.csv')
     overall_summ_file = os.path.join(save_loc, f"{trial_name}_summary.csv")
     n_to_update=5
     # ===============================================================================================
@@ -96,7 +99,11 @@ def conduct_trial(args,
                 df = pd.read_csv(combo_summary_csv)
                 used_indexs = df['image indexs'].tolist()
             # find all possible combinations from the input
-            in_df = pd.read_csv(input_csv)
+            # in_df = pd.read_csv(input_csv)
+            in_df = pd.read_csv(data_csvs[ds])
+            # # for too many rows, the itertools.product function runs out of memopry
+            if len(in_df.index) > 1000:
+                in_df = in_df.sample(n=1000)
             possible_samples = get_sample_list(tracking_info['combinations'][str(x)]['subgroups'], in_df)
             all_combinations = list(itertools.product(*possible_samples))
             # remove all combinations that use the same image twice, or already used
@@ -114,7 +121,7 @@ def conduct_trial(args,
                 plot_name = f"{i+1}__({sample_idxs[0]}_{sample_idxs[1]}_{sample_idxs[2]}).png"
                 # create planeloader
                 loader = get_planeloader(data_args=data_args,
-                                    csv_input=input_csv,
+                                    csv_input=data_csvs[ds],
                                     steps=tracking_info['steps'],
                                     selection_mode='index',
                                     samples=sample_idxs,
@@ -168,7 +175,7 @@ def update_overall_df(overall_summary_csv, dataset, subgroup, combo_df):
 def trial_setup(trial_name=None, save_loc=None,
                 subgroups=[('MDX','MDX','MDX'),('MCR','MCR','MCR'),
                            ('FDX', 'FDX', 'FDX'), ('FCR','FCR','FCR')],
-                samples=250,
+                samples=100,
                 steps=100,
                 classes=['FCR', 'FDX', 'MCR', 'MDX'],
                 summary_csv = None,

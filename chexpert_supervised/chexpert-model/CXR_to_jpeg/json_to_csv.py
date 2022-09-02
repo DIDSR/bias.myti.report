@@ -18,6 +18,11 @@ def convert_dicom_to_jpeg(input_file, img_save_loc, csv_save_loc):
 
     for index, row in in_df.iterrows():
         # gather patient and image information ============
+        print([row['patient_id'], len(row['images'])])
+        if len(row['patient_id']) == 0: # # bug in json generation program
+            continue
+        if len(row['images']) > 10: # # potentially non-CXR images
+            continue
         patient_sex = row['patient_info'][0]['sex']
         for i in range(len(row['images'])):
             if not os.path.exists(row['images'][i]):
@@ -69,7 +74,7 @@ def convert_dicom_to_jpeg(input_file, img_save_loc, csv_save_loc):
             out_df.loc[idx, 'Path'] = output_file_path
             # convert dicom to jpeg ==========
             if not os.path.exists(output_file_path):
-                print('converting dicom to jpeg...')
+                # print('converting dicom to jpeg...')
                 # only convert and save image if that image is not already in jpeg format
                 dcm_file = pydicom.dcmread(row['images'][i])
                 raw_image = dcm_file.pixel_array
