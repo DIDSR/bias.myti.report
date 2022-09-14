@@ -13,12 +13,12 @@ import torch
 
 
 def test(args,
-         db_steps = 200,
+         db_steps = 100,
          save_result_images = False,
-         selection_mode = 'class',
-         plane_samples = ['FDX', 'MCR', 'MDX'],
-         csv_input = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/RICORD_1c_training/TCIA_1C_train.csv",
-         plot_save_loc = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/decision_boundaries/TCIA_1C_test.png"):
+         selection_mode = 'index',
+         plane_samples = [323, 347, 79],
+         csv_input ="/gpfs_projects/ravi.samala/OUT/2022_CXR/SPIE2023_runs/atm2/RAND_1/ts__20220801_summary_table__MIDRC_RICORD_1C.csv",
+         plot_save_loc = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/SPIE2023_figures/abstract_decision_boundary_example.png"):
     # # ========== Plane Generation Settings ==========
     #db_steps =  200 # number of steps for linspace, will generate db_steps^2 images
     #save_result_images = False
@@ -116,13 +116,12 @@ def test(args,
             predictions, groundtruth = predictor.predict(loader)
            
         # ================== Decision Boundaries ==================
-        plot_decision_boundaries(predictions,
-                                loader,
-                                loader.dataset.basis['labels'],
-                                synthetic_predictions,
-                                classes,
-                                plot_mode,
-                                plot_save_loc)
+        plot_decision_boundaries(predictions = predictions,
+                                planeloader=loader,
+                                synthetic_predictions=synthetic_predictions,
+                                classes=classes,
+                                plot_mode=plot_mode,
+                                save_loc=plot_save_loc)
         print('Done')
         return
 

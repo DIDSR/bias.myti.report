@@ -2,9 +2,9 @@
 
 python decision_boundaries_bulk.py --dataset custom \
                                     --together True \
-                                    --ckpt_path /gpfs_projects/alexis.burgon/OUT/2022_CXR/RICORD_1c_training/updated_fine_tune_train__full_50_epochs/iter_33600.pth.tar \
+                                    --ckpt_path "/gpfs_projects/ravi.samala/OUT/2022_CXR/SPIE2023_runs/atm2/RAND_0/full_MIDRC_RICORD_1C/best.pth.tar" \
                                     --phase valid \
                                     --moco False \
                                     --inference_only \
-                                    --gpu_ids 0 \
+                                    --gpu_ids 2
                                     

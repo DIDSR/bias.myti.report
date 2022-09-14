@@ -251,9 +251,10 @@ def plot_decision_boundaries(predictions,
                             planeloader,
                             classes,
                             synthetic_predictions=False,
-                            plot_mode='overlap',
+                            #plot_mode='overlap',
                             save_loc="/gpfs_projects/alexis.burgon/OUT/2022_CXR/decision_boundaries/test.png",
-                            point_size=2):
+                            point_size=2,
+                            generate_plot=True):
     """
     generates a plot of decision boundaries from predictions on a planeloader dataset
     and saves as a png
@@ -265,25 +266,6 @@ def plot_decision_boundaries(predictions,
     save_loc: save location of output plot
     """
     
-    # # plot settings ================================================
-    # col_map = cm.get_cmap('tab20')
-    col_palette = sns.color_palette("hls", 14)
-    color_dict = {"F-CR": "#dd75b0",
-                  "F-DX": "#db2b8f",
-                  "M-CR": "#759add",
-                  "M-DX": "#3973dd"}
-    col_palette = sns.color_palette([color_dict['F-CR'],
-                                    color_dict['F-DX'],
-                                    color_dict['M-CR'],
-                                    color_dict['M-DX']])
-    fig, ax = plt.subplots(figsize=(8,6))
-    #ax.axis('tight')
-    ax.tick_params(labelsize=8)
-
-    col_map = ListedColormap(col_palette.as_hex())
-    cmaplist = [col_map(i) for i in range(col_map.N)]
-    cmaplist = cmaplist[:len(classes)]
-    col_map = LinearSegmentedColormap.from_list('custom_colormap', cmaplist,N=len(classes))
 
     if synthetic_predictions:
         print('Generating synthetic predictions ...')
@@ -293,26 +275,23 @@ def plot_decision_boundaries(predictions,
     summ_df = pd.DataFrame({'class':classes, 'occurances':[0]*len(classes), 'percent':[0]*len(classes)})
     
 
-    if plot_mode == 'max':
-        val = torch.max(preds, dim=1)[0].numpy()
-        class_pred = torch.argmax(preds, dim=1).numpy()
-    elif plot_mode =='overlap':
-        # this is pretty much hardcoded for male-DX, male-CR, female-DX, female-CR
-        mod_pred = torch.argmax(preds[:,:2], dim=1).numpy() # CR=0, DX=1
-        sex_pred = torch.argmax(preds[:,2:], dim=1).numpy() # F=0, M=1
+    
+    # this is pretty much hardcoded for male-DX, male-CR, female-DX, female-CR
+    mod_pred = torch.argmax(preds[:,:2], dim=1).numpy() # CR=0, DX=1
+    sex_pred = torch.argmax(preds[:,2:], dim=1).numpy() # F=0, M=1
 
-        class_pred = np.zeros((preds.size()[0], len(classes)))
-        for i in range(len(classes)):
-            #print(f'working on {classes[i]}')
-            if 'F' in classes[i]:
-                class_pred[:,i] += 1 - sex_pred[:]
-            elif 'M' in classes[i]:
-                class_pred[:,i] += sex_pred[:]
-            if 'CR' in classes[i]:
-                class_pred[:,i] +=  1 - mod_pred[:]
-            elif 'DX' in classes[i]:
-                class_pred[:,i] += mod_pred[:]
-        class_pred = np.argmax(class_pred, axis=1)
+    class_pred = np.zeros((preds.size()[0], len(classes)))
+    for i in range(len(classes)):
+        #print(f'working on {classes[i]}')
+        if 'F' in classes[i]:
+            class_pred[:,i] += 1 - sex_pred[:]
+        elif 'M' in classes[i]:
+            class_pred[:,i] += sex_pred[:]
+        if 'CR' in classes[i]:
+            class_pred[:,i] +=  1 - mod_pred[:]
+        elif 'DX' in classes[i]:
+            class_pred[:,i] += mod_pred[:]
+    class_pred = np.argmax(class_pred, axis=1)
 
     classes_found, class_counts = np.unique(class_pred, return_counts=True)
     
@@ -321,45 +300,66 @@ def plot_decision_boundaries(predictions,
         summ_df['occurances'].iloc[class_idx] = class_counts[i]
         summ_df['percent'].iloc[class_idx] = (class_counts[i]/np.sum(class_counts))*100
         
-    #print(summ_df)
+    if generate_plot:
+        # # plot settings ================================================
+        # col_map = cm.get_cmap('tab20')
+        col_palette = sns.color_palette("hls", 14)
+        color_dict = {"F-CR": "#dd75b0",
+                    "F-DX": "#db2b8f",
+                    "M-CR": "#759add",
+                    "M-DX": "#3973dd"}
+        col_palette = sns.color_palette([color_dict['F-CR'],
+                                        color_dict['F-DX'],
+                                        color_dict['M-CR'],
+                                        color_dict['M-DX']])
+        fig, ax = plt.subplots(figsize=(8,6))
+        #ax.axis('tight')
+        ax.tick_params(labelsize=8)
 
-    x = planeloader.dataset.coefs1.numpy()
-    y = planeloader.dataset.coefs2.numpy()
-    #class_dict = {classes[i]:i for i in range(len(classes))}
+        col_map = ListedColormap(col_palette.as_hex())
+        cmaplist = [col_map(i) for i in range(col_map.N)]
+        cmaplist = cmaplist[:len(classes)]
+        col_map = LinearSegmentedColormap.from_list('custom_colormap', cmaplist,N=len(classes))
+        x = planeloader.dataset.coefs1.numpy()
+        y = planeloader.dataset.coefs2.numpy()
+        #class_dict = {classes[i]:i for i in range(len(classes))}
 
-    label_color_dict = dict(zip([*range(len(classes))],cmaplist))
-    
-    color_idx = [label_color_dict[label] for label in class_pred]
+        label_color_dict = dict(zip([*range(len(classes))],cmaplist))
+        
+        color_idx = [label_color_dict[label] for label in class_pred]
 
-    scatter = ax.scatter(x,y,c=color_idx, s=point_size) # original had alpha=val, but alpha needs to be a scalar and val is a tuple
+        scatter = ax.scatter(x,y,c=color_idx, s=point_size) # original had alpha=val, but alpha needs to be a scalar and val is a tuple
 
 
-    coords = planeloader.dataset.coords
-    # # add markers for original 3 images
-    img_markers = [".",".","."]
-    img_points = []
-    for i in range(3):
-        label = planeloader.dataset.basis['labels'][i]
-        img_points.append(ax.scatter(coords[i][0], coords[i][1],s=10, c='black'))
-        # place class label with original 3 points (slight offset to increase legibility)
-        plt.text(coords[i][0]-1500, coords[i][1]+500, planeloader.dataset.basis['labels'][i])
-    #img_legend = plt.legend(img_points, [labels[i] for i in range(len(labels))], bbox_to_anchor=(1.0,1.0), loc='lower left')
-    
-    patch_list = []
-    for i in classes_found:
-        patch_list.append(mpatches.Patch(color=cmaplist[i], label=f'{classes[i]}'))
-    
-    plt.legend(handles=patch_list, 
-              bbox_to_anchor=(0.5, 0),
-              loc='upper center',
-              ncol=len(patch_list),
-              borderaxespad=2)
-    #plt.gca().add_artist(img_legend)
-    plt.title(planeloader.dataset.basis['index'])
-    if os.path.isfile(save_loc):
-        os.remove(save_loc)
-    plt.savefig(save_loc, bbox_inches='tight', dpi=300)
-    plt.close(fig)
+        coords = planeloader.dataset.coords
+        # # add markers for original 3 images
+        img_markers = [".",".","."]
+        img_points = []
+        for i in range(3):
+            label = planeloader.dataset.basis['labels'][i]
+            img_points.append(ax.scatter(coords[i][0], coords[i][1],s=10, c='black'))
+            # place class label with original 3 points (slight offset to increase legibility)
+            plt.text(coords[i][0]-1500, coords[i][1]+500, planeloader.dataset.basis['labels'][i])
+        #img_legend = plt.legend(img_points, [labels[i] for i in range(len(labels))], bbox_to_anchor=(1.0,1.0), loc='lower left')
+        
+        patch_list = []
+        for i in classes_found:
+            patch_list.append(mpatches.Patch(color=cmaplist[i], label=f'{classes[i]}'))
+        # Paper Example Formatting ========================================
+        ax.axis('off')
+        #ax.
+        # ====================================
+        plt.legend(handles=patch_list, 
+                bbox_to_anchor=(0.5, 0),
+                loc='upper center',
+                ncol=len(patch_list),
+                borderaxespad=2)
+        #plt.gca().add_artist(img_legend)
+        plt.title(planeloader.dataset.basis['index'])
+        if os.path.isfile(save_loc):
+            os.remove(save_loc)
+        plt.savefig(save_loc, bbox_inches='tight', dpi=300)
+        plt.close(fig)
     return summ_df
 
 

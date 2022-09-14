@@ -14,6 +14,22 @@ class TestArgParser(BaseArgParser):
                                  action='store_true',
                                  help=('If set, then only do inference. Useful'+
                                        ' when the csv has uncertainty label'))
+        # # Added arguments for bulk testing-AB
+        # folder holding the evaluation datasets
+        self.parser.add_argument('--eval_folder',
+                                 dest='bulk_args.eval_folder',
+                                 default=None)
+        # datasets to be evaluated, if 'all' will evaluate all in evaluation_datasets
+        self.parser.add_argument('--eval_datasets',
+                                 dest='bulk_args.datasets',
+                                 default='validation')
+
+        # Decision Boundary args
+        # number of samples on each db plot
+        self.parser.add_argument('--steps',
+                                 dest='db_args.steps',
+                                 default=1)
+        # ==============================
         # Data args
         self.parser.add_argument('--phase',
                                  dest='data_args.phase',

@@ -89,12 +89,18 @@ class Predictor(object):
             np.save(f, gt_concat)
        
         
-        tasks = self.model.module.tasks # Tasks decided at self.model.module.tasks. 
-                
-        probs_df = pd.DataFrame({task: probs_concat[:, i]
-                                 for i, task in enumerate(tasks)})
-        gt_df = pd.DataFrame({task: gt_concat[:, i] # Check how gt_df looks like.
-                              for i, task in enumerate(tasks)})
+        tasks = self.model.module.tasks # Tasks decided at self.model.module.tasks.
+        probs_dict =  {task: probs_concat[:, i] for i, task in enumerate(tasks)}
+        gt_dict = {task: gt_concat[:, i] for i, task in enumerate(tasks)}
+        if loader.dataset.return_info_dict:
+            probs_dict['Path'] = paths
+            gt_dict['Path'] = paths
+        probs_df = pd.DataFrame(probs_dict)
+        gt_df = pd.DataFrame(gt_dict)
+        # probs_df = pd.DataFrame({task: probs_concat[:, i]
+        #                          for i, task in enumerate(tasks)})
+        # gt_df = pd.DataFrame({task: gt_concat[:, i] # Check how gt_df looks like.
+        #                       for i, task in enumerate(tasks)})
 
         self.model.train()
 

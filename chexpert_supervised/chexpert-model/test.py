@@ -28,6 +28,7 @@ def test(args):
                     logger_args.results_dir)
 
     # Get image paths corresponding to predictions for logging
+    
     paths = None
 
     if model_args.config_path is not None:
@@ -87,6 +88,11 @@ def test(args):
             predictions, groundtruth, paths = predictor.predict(loader)
         else:
             predictions, groundtruth = predictor.predict(loader)
+        # save predictions and ground truth =========
+        r = 1
+        repo = "validation"
+        predictions.to_csv(f"/gpfs_projects/alexis.burgon/OUT/2022_CXR/temp/RAND_{r}_{repo}_predictions.csv")
+        groundtruth.to_csv(f"/gpfs_projects/alexis.burgon/OUT/2022_CXR/temp/RAND_{r}_{repo}_groundtruth.csv")
         # ================== Decision Boundaries ==================
         print('=======================')
         print(predictions)
@@ -109,11 +115,11 @@ def test(args):
                                       (lambda x: sigmoid(x * data[i][0][0][0] \
                                       + data[i][1][0]))
                 i += 1
-        
             # print(predictions[CHEXPERT_COMPETITION_TASKS])
             #run forward on all the predictions in each row of predictions
 
     # Log predictions and groundtruth to file in CSV format.
+    
     logger.log_predictions_groundtruth(predictions, groundtruth, paths)
     
     if not args.inference_only:
@@ -125,7 +131,7 @@ def test(args):
         # Log metrics to stdout and file.
         logger.log_stdout(f"Writing metrics to {logger.metrics_path}.")
         # change save location of results
-        logger.metrics_csv_path = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/initial_model_results/last_COVIDGR.csv"
+        logger.metrics_csv_path = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/temp/RAND_14_COVID_19_NY_SBU_summary.csv"
         logger.log_metrics(metrics, save_csv=True)
 
     # TODO: make this work with ensemble

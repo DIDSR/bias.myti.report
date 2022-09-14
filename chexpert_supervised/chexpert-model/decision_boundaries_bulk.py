@@ -50,10 +50,10 @@ import csv
 def test_bulk(args,
               train_or_valid = 'train',
               subclasses =['FCR', 'FCR', 'FCR'],
-              n_samples = 1000,
-              test_name = "FCR_FCR_FCR_100_steps_v1",
+              n_samples = 1,
+              test_name = "FCR_FCR_FCR_100_steps",
               db_steps=100,
-              output_folder = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/decision_boundaries",
+              output_folder = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/temp",
               overwrite=True,
               point_size=10):
     print(f"===== Beginning test {test_name} ===================================")
@@ -62,9 +62,9 @@ def test_bulk(args,
     # # ===== Config =======================================
     # select csv_file
     if train_or_valid == 'train':
-        csv_file = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/RICORD_1c_training/TCIA_1C_train.csv"
+        csv_file = "/gpfs_projects/ravi.samala/OUT/2022_CXR/SPIE2023_runs/atm2/RAND_0/tr__20220801_summary_table__MIDRC_RICORD_1C.csv"
     elif train_or_valid == 'valid':
-        csv_file = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/RICORD_1c_training/TCIA_1C_valid.csv"
+        csv_file = "/gpfs_projects/ravi.samala/OUT/2022_CXR/SPIE2023_runs/atm2/RAND_0/ts__20220801_summary_table__MIDRC_RICORD_1C.csv"
     # create folder and summary csv file
     save_path = os.path.join(output_folder, test_name)
     if not os.path.exists(save_path):
