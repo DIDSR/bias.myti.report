@@ -1,6 +1,7 @@
 '''
     Program that partitions data based on the input summary json files
 '''
+from decimal import MIN_EMIN
 import os
 import argparse
 import json
@@ -8,10 +9,16 @@ import datetime
 import functools
 import pandas as pd
 from sklearn.model_selection import train_test_split
+import random
+import math
 
 subtract_from_smallest_subgroup = 5
 RAND_SEED_INITIAL=2022
 
+subgroup_dict = {
+    "F,M":["patient_info","sex"],
+    "CR,DX":["images_info","modality"]
+}
 
 def select_image_per_patient(patient_df, n_images):
     # # iterate by patient, sort by "study date" and select the first n_images
@@ -28,7 +35,114 @@ def select_image_per_patient(patient_df, n_images):
         patient_df.loc[index, 'images'] = each_patient['images']
     return patient_df
 
+def bootstrapping(args):
+    if "," in args.split_type: # catch problems with custom split sizes
+        args.split_type = [float(x) for x in args.split_type.split(",")]
+        if len(args.split_type) != args.steps:
+            print(f"Given {len(args.split_type)} split sizes for {args.steps} splits")
+            return
+        elif sum(args.split_type) != 1:
+            print(f"{args.split_type} does not sum to 1")
+            return
+    # import inputs from json files
+    dfs = []
+    repo_str = ''
+    for each_summ_file in args.input_list:
+        dfs += [pd.read_json(each_summ_file, orient='table')]
+        repo_str += '__' + os.path.basename(each_summ_file).split('.')[0]
+    df = functools.reduce(lambda left,right: pd.concat([left, right], axis=0),dfs)
+    df = df.reset_index()
+    df = df[df.num_images > 0]  # # drop rows with 0 images
+    if args.stratify != "True": # no stratifying 
+        split_sizes = get_split_sizes(args, len(df))
+        dfs = sample_steps(args, split_sizes=split_sizes, input_df=df)
+    else: # stratifyng
+        print("stratifying")
+        # TODO: prevent stratifying on last step (validation), instead take all remaining samples of each 
+        # get sub_dfs
+        sub_dfs = {}
+        for s in subgroup_dict.values():
+            sub_dfs[s[1]] = df.apply(lambda row:row[s[0]][0][s[1]], axis=1)
+        args.strat_groups = args.strat_groups.split(",")
+        strat_dfs = {}
+        for strat_group in args.strat_groups:
+            sub_groups = strat_group.split("-")
+            sub_idxs = {sub:None for sub in sub_groups}
+            for sub in sub_groups:
+                for key, val in subgroup_dict.items():
+                    if sub not in key.split(","):
+                        continue
+                    sub_idxs[sub] = sub_dfs[val[1]][sub_dfs[val[1]]==sub].index.tolist()
+            idx = find_overlap(sub_idxs)
+            strat_dfs[strat_group] = df.loc[idx]
 
+        min_subgroup_size = min([len(x) for x in strat_dfs.values()]) - subtract_from_smallest_subgroup
+        # new_dfs = {y:x.sample(n=min_subgroup_size, random_state=RAND_SEED_INITIAL+args.random_seed) for y, x in strat_dfs.items()}
+        # now divide the steps
+        split_sizes = get_split_sizes(args, min_subgroup_size)
+        ss_dfs = {}
+        for s, sdf in strat_dfs.items():
+            ss_dfs[s] = sample_steps(args, split_sizes, sdf)
+        dfs = {}
+        for i in range(args.steps):
+            dfs[f'step {i}'] = pd.concat([ss_dfs[strat][f"step {i}"] for strat in strat_dfs])
+    # image number options
+    if args.select_option == 1:
+        for i in range(args.steps-1): # don't apply image restriction to the test step
+            dfs[f"step {i}"] = select_image_per_patient(dfs[f"step {i}"], args.min_num_image_per_patient)
+    # saving + prining info
+    print(f"\nAccumulate: ", args.accumulate)
+    print(f"Stratify: ", args.stratify)
+    for i in range(args.steps):
+        print(f"Step {i} with {len(dfs[f'step {i}'])} patients")
+        #TODO: print out stratified info (method from stratieifed_bootstrapping doesn't work)
+        out_fname = os.path.join(args.output_dir, f"step_{i}_{repo_str}.json")
+        dfs[f"step {i}"].to_json(out_fname, indent=4, orient='table', index=False)
+    print()
+
+
+def sample_steps(args, split_sizes, input_df):
+    dfs = {}
+    for i in range(args.steps):
+        dfs[f"step {i}"] = input_df.sample(split_sizes[f"step {i}"], random_state=RAND_SEED_INITIAL+args.random_seed)
+        input_df.drop(dfs[f"step {i}"].index, axis=0, inplace=True)
+        if args.accumulate == True and i > 0 and i != args.steps-1:
+            dfs[f"step {i}"] = pd.concat([dfs[f"step {i}"], dfs[f"step {i-1}"]])
+        if args.stratify != "True":
+            print(f"Step {i}: {len(dfs[f'step {i}'])} samples")
+    return dfs
+
+def get_split_sizes(args, total_number):
+    split_sizes = {}
+    print(f"Loaded {total_number} samples \nsplitting into {args.steps} steps with {args.split_type} sizes")
+    if args.split_type == 'equal':
+        for i in range(args.steps):
+            split_sizes[f"step {i}"] = int((1/args.steps) * total_number)
+    elif args.split_type == 'increasing':
+        tot_splits = (args.steps*args.steps + args.steps)/2
+        for i in range(args.steps):
+            split_sizes[f"step {i}"] = int((1/tot_splits)*(i+1)*total_number)   
+    elif args.split_type == 'random':
+        random.seed(RAND_SEED_INITIAL+args.random_seed)
+        x = random.sample(range(1,10), args.steps)
+        y = [z/sum(x) for z in x]
+        for i in range(args.steps):
+            split_sizes[f"step {i}"] = int(y[i]*total_number)
+    elif type(args.split_type) == list:
+        for i in range(args.steps):
+            split_sizes[f"step {i}"] = int(args.split_type[i]*total_number)
+    else:
+        print("unrecognized split_type")
+        return
+    return split_sizes
+
+def find_overlap(sub_idxs):
+    ''' Find the overlap between sub group idxs'''
+    out = list(sub_idxs.values())[0]
+    for i in range(1, len(sub_idxs)):
+        out = [value for value in out if value in list(sub_idxs.values())[i]]
+    return out       
+            
 def stratified_bootstrapping_default(args):
     '''
         default subgroups: FDX, FCR, MDC, MCR
@@ -104,12 +218,19 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--input_list', action='append', help='<Required> List of input summary files', required=True, default=[])
     parser.add_argument('-o', '--output_dir', help='<Required> output dir to save list files', required=True)
     parser.add_argument('-r', '--random_seed', help='random seed for experiment reproducibility (default = 2020)', default=2020, type=int)
-    parser.add_argument('-p', '--percent_test_partition', help='percent test partition (default = 0.2)', default=0.2, type=float)
+    # parser.add_argument('-p', '--percent_test_partition', help='percent test partition (default = 0.2)', default=0.2, type=float)
     parser.add_argument('-s', '--select_option', help='type of partition (default = 0)', default=0, type=int)
     parser.add_argument('-m', '--min_num_image_per_patient', help='min number of images per patient (default = 1)', default=1, type=int)
+
+    parser.add_argument('-strat_groups', default='F-DX,F-CR,M-CR,M-DX')
+    parser.add_argument('-stratify', default=False)
+    parser.add_argument('-steps', default=2, type=int)
+    parser.add_argument('-split_type', default="equal")
+    parser.add_argument("-accumulate", default=False)
     args = parser.parse_args()
     # # call
     output_log_file = os.path.join(args.output_dir, 'log.log')
+    bootstrapping(args)
     with open(output_log_file, 'w') as fp:
         json.dump(args.__dict__, fp, indent=2)
-        stratified_bootstrapping_default(args)
+    #     stratified_bootstrapping_default(args)
