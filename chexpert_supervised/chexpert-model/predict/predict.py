@@ -84,7 +84,8 @@ class Predictor(object):
         probs_concat = np.concatenate(probs)
         gt_concat = np.concatenate(gt)
         
-        with open('cx_res18.npy', 'wb') as f:
+        # with open('cx_res18.npy', 'wb') as f: # # betsy does not like this, have to give absolute path! This needs to be fixed properly!
+        with open('/home/ravi.samala/code/rsync_dirs/mycode/Moco_CXR_decision_boundary/chexpert_supervised/chexpert-model/betsy_scripts/cx_res18.npy', 'wb') as f: # # betsy does not like this, have to give absolute path!
             np.save(f, all_embeddings)
             np.save(f, gt_concat)
        
