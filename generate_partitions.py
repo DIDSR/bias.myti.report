@@ -20,6 +20,10 @@ subgroup_dict = {
     "CR,DX":["images_info","modality"]
 }
 
+
+# TODO: automatic selection by repository
+conversion_file = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/20220823/MIDRC_RICORD_1C_jpegs/conversion_table.json"
+
 def select_image_per_patient(patient_df, n_images):
     # # iterate by patient, sort by "study date" and select the first n_images
     for index, each_patient in patient_df.iterrows():
@@ -77,7 +81,6 @@ def bootstrapping(args):
             strat_dfs[strat_group] = df.loc[idx]
 
         min_subgroup_size = min([len(x) for x in strat_dfs.values()]) - subtract_from_smallest_subgroup
-        # new_dfs = {y:x.sample(n=min_subgroup_size, random_state=RAND_SEED_INITIAL+args.random_seed) for y, x in strat_dfs.items()}
         # now divide the steps
         split_sizes = get_split_sizes(args, min_subgroup_size)
         ss_dfs = {}
@@ -93,13 +96,31 @@ def bootstrapping(args):
     # saving + prining info
     print(f"\nAccumulate: ", args.accumulate)
     print(f"Stratify: ", args.stratify)
+    conversion_table = pd.read_json(conversion_file)
+    tasks = args.tasks.split(",")
     for i in range(args.steps):
         print(f"Step {i} with {len(dfs[f'step {i}'])} patients")
         #TODO: print out stratified info (method from stratieifed_bootstrapping doesn't work)
         out_fname = os.path.join(args.output_dir, f"step_{i}_{repo_str}.json")
         dfs[f"step {i}"].to_json(out_fname, indent=4, orient='table', index=False)
-    print()
-
+        # convert to csv (as the model requires csv input, by image rather than by patient)
+        csv_df = pd.DataFrame(columns=["Path"]+[task for task in tasks])
+        for iii, row in dfs[f"step {i}"].iterrows():
+            for ii, img in enumerate(row['images']):
+                img_info = {}
+                # get the jpeg path
+                img_info["Path"] = conversion_table[conversion_table['dicom']==img]['jpeg'].values[0]
+                
+                for task in tasks:
+                    for key, val in subgroup_dict.items():
+                        if task in key.split(','):
+                           tval = val
+                    if 'patient_info' in tval:
+                        img_info[task] = int(row[tval[0]][0][tval[1]] == task)
+                    else:
+                        img_info[task] = int(row[tval[0]][ii][tval[1]] == task)
+            csv_df.loc[len(csv_df)] = img_info
+        csv_df.to_csv(os.path.join(args.output_dir, f"step_{i}.csv"))
 
 def sample_steps(args, split_sizes, input_df):
     dfs = {}
@@ -226,6 +247,7 @@ if __name__ == "__main__":
     parser.add_argument('-stratify', default=False)
     parser.add_argument('-steps', default=2, type=int)
     parser.add_argument('-split_type', default="equal")
+    parser.add_argument('-tasks', default="F,M,CR,DX")
     parser.add_argument("-accumulate", default=False)
     args = parser.parse_args()
     # # call
