@@ -10,7 +10,8 @@ import functools
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import random
-import math
+from datetime import date
+import numpy as np
 
 subtract_from_smallest_subgroup = 5
 RAND_SEED_INITIAL=2022
@@ -57,17 +58,23 @@ def bootstrapping(args):
     df = functools.reduce(lambda left,right: pd.concat([left, right], axis=0),dfs)
     df = df.reset_index()
     df = df[df.num_images > 0]  # # drop rows with 0 images
+    total_patients = len(df)
+    print(f"\nFound {total_patients} patients from input file(s)")
+    print(f"Splitting into {args.steps} steps")
+    print("Accumulate: ", args.accumulate)
+    print("Stratify: ", args.stratify)
+    print("Select Option:", args.select_option)
+    print("Split Type:", args.split_type, "\n")
+    args.strat_groups = args.strat_groups.split(",")
     if args.stratify != "True": # no stratifying 
         split_sizes = get_split_sizes(args, len(df))
         dfs = sample_steps(args, split_sizes=split_sizes, input_df=df)
     else: # stratifyng
-        print("stratifying")
         # TODO: prevent stratifying on last step (validation), instead take all remaining samples of each 
         # get sub_dfs
         sub_dfs = {}
         for s in subgroup_dict.values():
             sub_dfs[s[1]] = df.apply(lambda row:row[s[0]][0][s[1]], axis=1)
-        args.strat_groups = args.strat_groups.split(",")
         strat_dfs = {}
         for strat_group in args.strat_groups:
             sub_groups = strat_group.split("-")
@@ -93,24 +100,26 @@ def bootstrapping(args):
     if args.select_option == 1:
         for i in range(args.steps-1): # don't apply image restriction to the test step
             dfs[f"step {i}"] = select_image_per_patient(dfs[f"step {i}"], args.min_num_image_per_patient)
-    # saving + prining info
-    print(f"\nAccumulate: ", args.accumulate)
-    print(f"Stratify: ", args.stratify)
+    # saving + printing info
     conversion_table = pd.read_json(conversion_file)
     tasks = args.tasks.split(",")
     for i in range(args.steps):
-        print(f"Step {i} with {len(dfs[f'step {i}'])} patients")
+        if i == args.steps-1:
+            step_id = "validation"
+        else:
+            step_id = f"step_{i}"
+        percent = (len(dfs[f'step {i}']))
+        print(f"Step {i} ({step_id}) [{len(dfs[f'step {i}'])}/{total_patients} patients ({(len(dfs[f'step {i}']))/(total_patients):.2%})]")
         #TODO: print out stratified info (method from stratieifed_bootstrapping doesn't work)
-        out_fname = os.path.join(args.output_dir, f"step_{i}_{repo_str}.json")
+        out_fname = os.path.join(args.output_dir, f"{step_id}_{repo_str}.json")
         dfs[f"step {i}"].to_json(out_fname, indent=4, orient='table', index=False)
         # convert to csv (as the model requires csv input, by image rather than by patient)
         csv_df = pd.DataFrame(columns=["Path"]+[task for task in tasks])
         for iii, row in dfs[f"step {i}"].iterrows():
             for ii, img in enumerate(row['images']):
                 img_info = {}
-                # get the jpeg path
+                # get jpeg path
                 img_info["Path"] = conversion_table[conversion_table['dicom']==img]['jpeg'].values[0]
-                
                 for task in tasks:
                     for key, val in subgroup_dict.items():
                         if task in key.split(','):
@@ -120,22 +129,27 @@ def bootstrapping(args):
                     else:
                         img_info[task] = int(row[tval[0]][ii][tval[1]] == task)
             csv_df.loc[len(csv_df)] = img_info
-        csv_df.to_csv(os.path.join(args.output_dir, f"step_{i}.csv"))
+        csv_df.to_csv(os.path.join(args.output_dir, f"{step_id}.csv"))
+        print("Number of images per subgroup:")
+        for strat_group in args.strat_groups:
+            sub = strat_group.split("-")
+            print(f"\t{strat_group}:", len(csv_df[(csv_df[sub[0]]==1)&(csv_df[sub[1]]==1)]))
+            # print(csv_df.groupby(sub[0]).head(5))
 
 def sample_steps(args, split_sizes, input_df):
     dfs = {}
     for i in range(args.steps):
-        dfs[f"step {i}"] = input_df.sample(split_sizes[f"step {i}"], random_state=RAND_SEED_INITIAL+args.random_seed)
-        input_df.drop(dfs[f"step {i}"].index, axis=0, inplace=True)
+        if i == args.steps-1:
+            dfs[f"step {i}"] = input_df
+        else:
+            dfs[f"step {i}"] = input_df.sample(split_sizes[f"step {i}"], random_state=RAND_SEED_INITIAL+args.random_seed)
+            input_df.drop(dfs[f"step {i}"].index, axis=0, inplace=True)
         if args.accumulate == True and i > 0 and i != args.steps-1:
             dfs[f"step {i}"] = pd.concat([dfs[f"step {i}"], dfs[f"step {i-1}"]])
-        if args.stratify != "True":
-            print(f"Step {i}: {len(dfs[f'step {i}'])} samples")
     return dfs
 
 def get_split_sizes(args, total_number):
     split_sizes = {}
-    print(f"Loaded {total_number} samples \nsplitting into {args.steps} steps with {args.split_type} sizes")
     if args.split_type == 'equal':
         for i in range(args.steps):
             split_sizes[f"step {i}"] = int((1/args.steps) * total_number)
@@ -255,4 +269,5 @@ if __name__ == "__main__":
     bootstrapping(args)
     with open(output_log_file, 'w') as fp:
         json.dump(args.__dict__, fp, indent=2)
+        json.dump({"Generated on":str(date.today())}, fp, indent=2)
     #     stratified_bootstrapping_default(args)
