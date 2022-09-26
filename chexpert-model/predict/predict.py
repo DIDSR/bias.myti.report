@@ -10,11 +10,12 @@ NEG_INF = -1e9
 
 class Predictor(object):
     """Predictor class for a single model."""
-    def __init__(self, model, device):
+    def __init__(self, model, device, code_dir):
 
         self.model = model
         #self.model = torch.nn.DataParallel(model, device_ids=[2])
         self.device = device
+        self.code_dir = code_dir
 
     def predict(self, loader):
         self.model.eval()
@@ -85,9 +86,14 @@ class Predictor(object):
         gt_concat = np.concatenate(gt)
         
         # with open('cx_res18.npy', 'wb') as f: # # betsy does not like this, have to give absolute path! This needs to be fixed properly!
-        with open('/home/ravi.samala/code/rsync_dirs/mycode/Moco_CXR_decision_boundary/chexpert_supervised/chexpert-model/betsy_scripts/cx_res18.npy', 'wb') as f: # # betsy does not like this, have to give absolute path!
-            np.save(f, all_embeddings)
-            np.save(f, gt_concat)
+        if not self.code_dir:
+            with open('cx_res18.npy', 'wb') as f: # # betsy does not like this, have to give absolute path!
+                np.save(f, all_embeddings)
+                np.save(f, gt_concat)
+        else:
+            with open(f'{self.code_dir}/cx_res18.npy', 'wb') as f: # # betsy does not like this, have to give absolute path!
+                np.save(f, all_embeddings)
+                np.save(f, gt_concat)
        
         
         tasks = self.model.module.tasks # Tasks decided at self.model.module.tasks.

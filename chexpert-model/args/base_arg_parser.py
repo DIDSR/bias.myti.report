@@ -12,6 +12,9 @@ class BaseArgParser(object):
     """Base argument parser for args shared between test and train modes."""
     def __init__(self):
         self.parser = argparse.ArgumentParser(description='CXR')
+        # Path fixes
+        self.parser.add_argument("--code_dir",
+                                 default=None)
 
         # Logger args
         self.parser.add_argument('--save_dir',

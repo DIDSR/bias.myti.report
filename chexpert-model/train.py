@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import pandas as pd
 
+
 import models
 from args import TrainArgParser
 from logger import Logger
@@ -12,10 +13,13 @@ from data import get_loader
 from eval import Evaluator
 from optim import Optimizer
 from constants import *
+import json
+from datetime import datetime
 
 
 
 def train(args):
+    import os # Why does os only import properly if in the function?
     """Run model training."""
 
     print("Start Training ...")
@@ -26,25 +30,48 @@ def train(args):
     optim_args = args.optim_args
     data_args = args.data_args
     transform_args = args.transform_args
-
+    # # Changes made for continual_learning_evaluation =============================
     
-
-
-    # change json to csv if needed
-    # training
-    import os # TODO: figure out why os needs to be imported here for it to actually import?
-    tasks = model_args.__dict__[TASKS]
-    if not os.path.exists(data_args.csv):
-        print(f"training csv {data_args.csv} does not exist!")
-        if os.path.exists(data_args.csv.replace('.csv', '.json')):
-            print("but a json version does! You probably need to run partitions_to_csv")
-        return
+    tracking_fp = os.path.join(("/").join(str(logger_args.save_dir).split("/")[:-1]), 'tracking.log')
+    print(tracking_fp)
+    if os.path.exists(tracking_fp):
+        with open(tracking_fp, 'r') as fp:
+            tracking_info = json.load(fp)
+        tracking_info["Models"][logger_args.experiment_name] = {
+            "Training":{
+                "Started":datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+        }
+        tracking_info['Last updated'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(json.dumps(tracking_info,indent=1))
+    else:
+        tracking_info = None
+    
+    # # change json to csv if needed
+    # # training
+    # import os # TODO: figure out why os needs to be imported here for it to actually import?
+    # tasks = model_args.__dict__[TASKS]
+    # if not os.path.exists(data_args.csv):
+    #     print(f"training csv {data_args.csv} does not exist!")
+    #     if os.path.exists(data_args.csv.replace('.csv', '.json')):
+    #         print("but a json version does! You probably need to run partitions_to_csv")
+    #     return
     # Get logger.
     print ('Getting logger... log to path: {}'.format(logger_args.log_path))
     logger = Logger(logger_args.log_path, logger_args.save_dir)
 
     # For conaug, point to the MOCO pretrained weights.
     if model_args.ckpt_path and model_args.ckpt_path != 'None':
+        # # continual learning evaluation setup
+        # get step #
+        step_n =int(data_args.csv.replace(".csv","").split("_")[-1])
+        if step_n != 0:
+            cur_step = "step_"+str(step_n)
+            prev_step = "step_"+str(step_n-1)
+            prev_step_mdl = os.path.join(str(logger_args.save_dir).replace(cur_step, prev_step), "best.pth.tar")
+            model_args.ckpt_path = prev_step_mdl
+            model_args.moco = False
+        # #
         print("pretrained checkpoint specified : {}".format(model_args.ckpt_path))
         # CL-specified args are used to load the model, rather than the
         # ones saved to args.json.
@@ -57,7 +84,9 @@ def train(args):
         
 
         if not model_args.moco:
-            optim_args.start_epoch = ckpt_info['epoch'] + 1
+            # optim_args.start_epoch = ckpt_info['epoch'] + 1
+            # Adapted for continual learning
+            optim_args.start_epoch = 1
         else:
             optim_args.start_epoch = 1
     else:
@@ -100,7 +129,7 @@ def train(args):
                               logger=logger)
     
     # Instantiate the predictor class for obtaining model predictions.
-    predictor = Predictor(model, args.device)
+    predictor = Predictor(model, args.device, args.code_dir)
     # Instantiate the evaluator class for evaluating models.
     evaluator = Evaluator(logger)
     # Get the set of tasks which will be used for saving models
@@ -217,8 +246,19 @@ def train(args):
             optimizer.end_iter()
 
         optimizer.end_epoch(metrics)
+        if tracking_info is not None:
+            tracking_info["Models"][logger_args.experiment_name]["Training"]["Progress"] = f"{optimizer.epoch}/{optimizer.num_epochs}"
+            tracking_info['Last updated'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            with open(tracking_fp, 'w') as fp:
+                json.dump(tracking_info, fp, indent=1)
+        
 
     logger.log('=== Training Complete ===')
+    if tracking_info is not None:
+        tracking_info["Models"][logger_args.experiment_name]["Training"]["Progress"] = "Complete " + datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        tracking_info['Last updated'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with open(tracking_fp, 'w') as fp:
+                json.dump(tracking_info, fp, indent=1)
 
 if __name__ == '__main__':
     print("Beginning Training...")
