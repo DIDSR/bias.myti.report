@@ -106,6 +106,7 @@ def bootstrapping(args):
     print("Stratify: ", args.stratify)
     print("Select Option:", args.select_option)
     print("Split Type:", args.split_type, "\n")
+    args.tasks = args.tasks.split(",")
     # load conversion files
     conversion_tables = {}
     for c, fp in conversion_files.items():
@@ -124,7 +125,9 @@ def bootstrapping(args):
     val_split = df.loc[val_idxs]
     # TODO: convert to valid csv format
     val_split.to_json(os.path.join(args.output_dir, "validation.json"), orient='table', indent=2)
-    args.tasks = args.tasks.split(",")
+    val_csv = convert_to_csv(args, val_split, conversion_tables)
+    val_csv.to_csv(os.path.join(args.output_dir, "validation.csv"))
+    
     step_sizes = get_split_sizes(args, len(tr_sample))
     # print(step_sizes)
     step_dfs = {}
@@ -150,7 +153,7 @@ def bootstrapping(args):
 
 def convert_to_csv(args, df, conversion_tables):
     # converts dataframes to work as csv input for the model (by image rather than by patient)
-    csv_df = pd.DataFrame(columns=["path"]+[task for task in args.tasks])
+    csv_df = pd.DataFrame(columns=["Path"]+[task for task in args.tasks])
     for iii, row in df.iterrows():
         if type(row['images']) == str:
             row['images'] = [row['images']]
