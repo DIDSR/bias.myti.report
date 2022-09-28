@@ -4,38 +4,37 @@
 # # 
 # # 
 # #
-EXE="../generate_partitions.py"
+EXE="../src/generate_partitions.py"
 # declare -a IN_summary=("/gpfs_projects/ravi.samala/OUT/2022_CXR/202208/20220801_summary_table__MIDRC_RICORD_1C.json" \
 # 						"/gpfs_projects/ravi.samala/OUT/2022_CXR/202208/20220801_summary_table__COVID_19_AR.json" \
 #						"/gpfs_projects/ravi.samala/OUT/2022_CXR/202208/20220801_summary_table__COVID_19_NY_SBU.json" \
 #						"/gpfs_projects/ravi.samala/OUT/2022_CXR/202208/20220801_summary_table__open_AI.json" \
 #						"/gpfs_projects/ravi.samala/OUT/2022_CXR/202208/20220801_summary_table__open_RI.json")
 # General options
-declare -a IN_summary=("/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/20220823/summary_table__MIDRC_RICORD_1C.json")
+declare -a IN_summary=("/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/20220823/summary_table__open_RI.json")
 OUT_dir="/gpfs_projects/alexis.burgon/OUT/2022_CXR/temp"
 RAND_SEED=2050
 # split/step options
 N_steps=2
-ACCUMULATE=False	#NOTE: will not accumulate for the last step, which it assumes is a validation split
-SPLIT_TYPE=0.2,0.8 		# # equal: N_steps equal sized splits
+ACCUMULATE=False # True/False, complete accumulation (step n has all of the samples from step n-1)
+PERCENT_TEST_PARTITION=0.2
+SPLIT_TYPE=equal	# Does not include the validation step, which is separated before the split	
+						# # equal: N_steps equal sized splits
 				   		# # increasing: each step is larger than the last
 						# # random: random step sizes (adding up to 100% of input)
 						# # custom (ex. 0.2,0.8): set the split sizes, asumes that each size is separated by just a comma, 
 							# # that the number of sizes is equal to N_steps, and that the values add to 1
 
 # control # images per patient (NOTE: will not apply to final step, which it assumes is a validation split)
-OPTION=1	# # 0: all images/patient
+OPTION=0	# # 0: all images/patient
 			# # 1: first min N number of images/patient
 MIN_N_IMAGES_PATIENT=1	# # min number of patients per image, ordered by time
 
-STRATIFY=True
+STRATIFY=sex,modality	# TO see the exact groups, see subgroup_dict in generate_partitions.py
 
-STRAT_GROUPS=F-DX,F-CR,M-CR,M-DX
+TASKS="F,M,CR,DX,Asian,Black_or_African_American,White" # see supported values in subgroup_dict in generate_partitions.py
+															# # Separate values with commas, if a value has spaces, replace with underscore
 
-
-# #
-# #
-# #
 # # -----------------------------------------------------------------------
 # # -----------------------------------------------------------------------
 # # -----------------------------------------------------------------------
@@ -53,7 +52,7 @@ do
 		param_IN_summary="${param_IN_summary} -i ${IN_summary[$i]}"
 	done
 	# #
-	OUT_dir2="${OUT_dir}/RAND_${RAND}"
+	OUT_dir2="${OUT_dir}/RAND_${RAND}_OPTION_${OPTION}_equal_acc"
 	mkdir $OUT_dir2
 	python $EXE $param_IN_summary -o $OUT_dir2 \
 								  -r $RAND  \
@@ -63,5 +62,6 @@ do
 								  -split_type $SPLIT_TYPE \
 								  -accumulate $ACCUMULATE \
 								  -stratify $STRATIFY \
-								  -strat_groups $STRAT_GROUPS
+								  -tasks $TASKS \
+								  -p $PERCENT_TEST_PARTITION
 done
