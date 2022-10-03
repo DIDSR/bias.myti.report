@@ -123,10 +123,20 @@ def bootstrapping(args):
     tr_idxs = tr_sample.index.tolist()
     val_idxs =[idx for idx in df.index.tolist() if idx not in tr_idxs]
     val_split = df.loc[val_idxs]
-    # TODO: convert to valid csv format
-    val_split.to_json(os.path.join(args.output_dir, "validation.json"), orient='table', indent=2)
-    val_csv = convert_to_csv(args, val_split, conversion_tables)
-    val_csv.to_csv(os.path.join(args.output_dir, "validation.csv"))
+    # validation bootstrapping:
+    # TODO: allow unequal steps (?)
+    val_n = int(len(val_split)/args.steps)
+    print("overall val len", len(val_split))
+    for n in range(args.steps):
+        step_val = val_split.sample(n=val_n, random_state=RAND_SEED_INITIAL+args.random_seed)
+        step_val.to_json(os.path.join(args.output_dir, f"step_{n}_validation.json"), orient='table', indent=2)
+        step_csv = convert_to_csv(args, step_val, conversion_tables)
+        step_csv.to_csv(os.path.join(args.output_dir, f"step_{n}_validation.csv"))
+        print("step", n, len(step_val))
+
+    # val_split.to_json(os.path.join(args.output_dir, "validation.json"), orient='table', indent=2)
+    # val_csv = convert_to_csv(args, val_split, conversion_tables)
+    # val_csv.to_csv(os.path.join(args.output_dir, "validation.csv"))
     
     step_sizes = get_split_sizes(args, len(tr_sample))
     # print(step_sizes)
@@ -142,9 +152,15 @@ def bootstrapping(args):
                 _, step_dfs[n] = train_test_split(tr_sample, test_size = step_sizes[n], random_state=RAND_SEED_INITIAL+args.random_seed, shuffle=True)
             # step_dfs[n] = tr_sample.sample(n=step_sizes[n], random_state=RAND_SEED_INITIAL+args.random_seed)
             tr_sample.drop(step_dfs[n].index, axis=0, inplace=True)
-        # TODO: accumulate
-        if args.accumulate == "True" and n >0:
-            step_dfs[n] = pd.concat([step_dfs[n-1], step_dfs[n]])
+        if args.accumulate != "False" and n > 0:
+            if args.accumulate == "True": #complete accumulation
+                step_dfs[n] = pd.concat([step_dfs[n-1], step_dfs[n]])
+            else: # partial accumulation
+                args.accumulate = float(args.accumulate)
+                n_acc = round(args.accumulate*len(step_dfs[n-1]))
+                acc_samples = step_dfs[n-1].sample(n=n_acc, random_state=RAND_SEED_INITIAL+args.random_seed)
+                step_dfs[n] = pd.concat([step_dfs[n],acc_samples])
+
         # save
         step_dfs[n].to_json(os.path.join(args.output_dir, f"step_{n}.json"), orient='table', indent=2)
         step_csv = convert_to_csv(args, step_dfs[n], conversion_tables)
@@ -182,17 +198,17 @@ def convert_to_csv(args, df, conversion_tables):
             csv_df.loc[len(csv_df)] = img_info
     return csv_df
 
-def sample_steps(args, split_sizes, input_df):
-    dfs = {}
-    for i in range(args.steps):
-        if i == args.steps-1:
-            dfs[f"step {i}"] = input_df
-        else:
-            dfs[f"step {i}"] = input_df.sample(split_sizes[f"step {i}"], random_state=RAND_SEED_INITIAL+args.random_seed)
-            input_df.drop(dfs[f"step {i}"].index, axis=0, inplace=True)
-        if args.accumulate == True and i > 0 and i != args.steps-1:
-            dfs[f"step {i}"] = pd.concat([dfs[f"step {i}"], dfs[f"step {i-1}"]])
-    return dfs
+# def sample_steps(args, split_sizes, input_df):
+#     dfs = {}
+#     for i in range(args.steps):
+#         if i == args.steps-1:
+#             dfs[f"step {i}"] = input_df
+#         else:
+#             dfs[f"step {i}"] = input_df.sample(split_sizes[f"step {i}"], random_state=RAND_SEED_INITIAL+args.random_seed)
+#             input_df.drop(dfs[f"step {i}"].index, axis=0, inplace=True)
+#         if args.accumulate == True and i > 0 and i != args.steps-1:
+#             dfs[f"step {i}"] = pd.concat([dfs[f"step {i}"], dfs[f"step {i-1}"]])
+#     return dfs
 
 def get_split_sizes(args, total_number):
     split_sizes = [0 for i in range(args.steps)]
