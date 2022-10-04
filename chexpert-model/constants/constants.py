@@ -2,11 +2,13 @@
 from pathlib import Path
 
 # Edit custom tasks here
-CUSTOM_TASKS = ["CR","DX", "F", "M"]
+CUSTOM_TASKS = ["CR","DX", "F", "M", "Yes", "No", "Asian", "Black_or_African_American", "White"]
 # used to look up the groupings
 CUSTOM_TASK_SUBSETS = {
         'sex':["F","M"],
-        'image_acquisition_method':["CR","DX"]
+        'image_acquisition_method':["CR","DX"],
+        'COVID_positive':["Yes","No"],
+        "race":["Asian", "Black_or_African_American", "White"]
 }
 
 # Main directories
