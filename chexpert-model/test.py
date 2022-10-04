@@ -197,9 +197,8 @@ def test(args):
         for ds, dic in All_AUROCs.items():
             overall_summ.loc[ds] = dic
         print(overall_summ)
-        # overall_summ.to_csv(os.path.join(logger_args.save_dir, "AUROC_summary.csv"))
-        # debug
-        overall_summ.to_csv(os.path.join(logger_args.save_dir, "temp_summary.csv"))
+        overall_summ.to_csv(os.path.join(logger_args.save_dir, "AUROC_summary.csv"))
+        
         
     #     # save predictions and ground truth ========= # TODO
     #     r = 1
