@@ -16,6 +16,7 @@ import os
 import pandas as pd
 import sklearn.metrics as sk_metrics
 import numpy as np
+import json
 
 
 def test(args):
@@ -30,11 +31,40 @@ def test(args):
     eval_datasets= bulk_args.datasets.split(",")
     print(eval_datasets)
     eval_files = {}
-    for eval_ds in eval_datasets:
-        if eval_ds == 'validation':
-            eval_files[eval_ds] = os.path.join("/".join(str(logger_args.save_dir).split("/")[:-1]), 'validation.csv')
-        else:
-            eval_files[eval_ds] = os.path.join(bulk_args.eval_folder, f"summary_table__{eval_ds}.tsv")
+    # get step #
+    logger_dir_list = str(logger_args.save_dir).split("/")[-1].split("_")
+    step_num = int(logger_dir_list[logger_dir_list.index("step") + 1])
+    # get total steps from tracking information
+    tracking_file = os.path.join("/".join(str(logger_args.save_dir).split("/")[:-1]), "tracking.log")
+    with open(tracking_file, 'rb') as fp:
+        tracking_info = json.load(fp)
+    total_steps = int(tracking_info['Partition']['steps'])
+    for eval_ds in eval_datasets: # get the file paths for the locations of the different datasets to be tested on
+        if eval_ds == 'validation': # find validation file (check for indivual step, if not, general)
+            indiv_val = os.path.join("/".join(str(logger_args.save_dir).split("/")[:-1]), f'step_{step_num}_validation.csv')
+            if not os.path.exists(indiv_val):
+                print("no individual step validation file found, assuming general validation file")
+                eval_files[eval_ds] = os.path.join("/".join(str(logger_args.save_dir).split("/")[:-1]), 'validation.csv')
+            else:
+                eval_files[eval_ds] = indiv_val
+        elif eval_ds == 'backward-train': # inference on previous step's training data
+            if step_num == 0:
+                continue
+            eval_files[eval_ds] = os.path.join("/".join(str(logger_args.save_dir).split("/")[:-1]), f'step_{step_num-1}.csv')            
+        elif eval_ds == 'backward-test': # inference on previous step's testing data
+            if step_num == 0:
+                continue
+            eval_files[eval_ds] = os.path.join("/".join(str(logger_args.save_dir).split("/")[:-1]), f'step_{step_num-1}_validation.csv') 
+        elif eval_ds == 'forward-train': # inference on the next step's training data
+            if step_num == total_steps-1:
+                continue
+            eval_files[eval_ds] = os.path.join("/".join(str(logger_args.save_dir).split("/")[:-1]), f'step_{step_num+1}.csv')
+        elif eval_ds == 'forward-test': # inference on the next step's testing data
+            if step_num == total_steps-1:
+                continue
+            eval_files[eval_ds] = os.path.join("/".join(str(logger_args.save_dir).split("/")[:-1]), f'step_{step_num-1}_validation.csv')
+        else: # independet test data set -> eval folder
+            eval_files[eval_ds] = os.path.join(bulk_args.eval_folder, f"{eval_ds}.csv")
         if not os.path.exists(eval_files[eval_ds]):
             print(f"Could not find an existing summary file for {eval_ds}")
             return
@@ -124,25 +154,29 @@ def test(args):
             # get AUROCs
             AUROC_dict = {}
             for task in model_args.__dict__[TASKS]:
+                # don't use rows with missing values (-1)
+                task_gt = groundtruth[groundtruth[task] >= 0]
+                task_pred = predictions[groundtruth[task] >= 0]
+                if len(task_gt) <= 1:
+                    continue
                 # get overall AUROC
-                #print(f"Overall {task}")
-                if sum(groundtruth[task]) == 0:
+                if sum(task_gt[task]) == 0:
                     # AUROC_dict[f'{task} (overall)'] = "none in gt"
                     AUROC_dict[f'{task} (overall)'] = nan
-                elif sum(groundtruth[task]) == len(groundtruth):
+                elif sum(task_gt[task]) == len(groundtruth):
                     # AUROC_dict[f'{task} (overall)'] = "all gt"
                     AUROC_dict[f'{task} (overall)'] = inf
                 else:
-                    AUROC_dict[f'{task} (overall)'] = sk_metrics.roc_auc_score(y_true=groundtruth[task], y_score=predictions[task])
+                    AUROC_dict[f'{task} (overall)'] = sk_metrics.roc_auc_score(y_true=task_gt[task], y_score=task_pred[task])
                 for key, vals in CUSTOM_TASK_SUBSETS.items():
                     if task in vals:
                         continue
                     for val in vals:
                         #print(f"{task}/{val}")
                         # get only samples where gt val=1
-                        val_idxs = groundtruth.index[groundtruth[val] == 1].tolist()
-                        val_gt = groundtruth.loc[val_idxs]
-                        val_pred = predictions.loc[val_idxs]
+                        val_idxs = task_gt.index[task_gt[val] == 1].tolist()
+                        val_gt = task_gt.loc[val_idxs]
+                        val_pred = task_pred.loc[val_idxs]
                         if sum(val_gt[task]) == 0:
                             # AUROC_dict[f"{task} (within {val})"] = "none in gt"
                             AUROC_dict[f"{task} (within {val})"] = np.NaN
@@ -152,10 +186,10 @@ def test(args):
                         else:   
                             AUROC_dict[f"{task} (within {val})"] = sk_metrics.roc_auc_score(y_true=val_gt[task], y_score=val_pred[task])
             
-            print("============")
-            print(ds)
-            print(AUROC_dict)
-            print("============")
+            # print("============")
+            # print(ds)
+            # print(AUROC_dict)
+            # print("============")
             # update overall summary
             All_AUROCs[ds] = AUROC_dict
         # create summary df
@@ -163,8 +197,9 @@ def test(args):
         for ds, dic in All_AUROCs.items():
             overall_summ.loc[ds] = dic
         print(overall_summ)
-        overall_summ.to_csv(os.path.join(logger_args.save_dir, "AUROC_summary.csv"))
-
+        # overall_summ.to_csv(os.path.join(logger_args.save_dir, "AUROC_summary.csv"))
+        # debug
+        overall_summ.to_csv(os.path.join(logger_args.save_dir, "temp_summary.csv"))
         
     #     # save predictions and ground truth ========= # TODO
     #     r = 1
