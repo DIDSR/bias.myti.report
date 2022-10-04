@@ -126,13 +126,11 @@ def bootstrapping(args):
     # validation bootstrapping:
     # TODO: allow unequal steps (?)
     val_n = int(len(val_split)/args.steps)
-    print("overall val len", len(val_split))
     for n in range(args.steps):
         step_val = val_split.sample(n=val_n, random_state=RAND_SEED_INITIAL+args.random_seed)
         step_val.to_json(os.path.join(args.output_dir, f"step_{n}_validation.json"), orient='table', indent=2)
         step_csv = convert_to_csv(args, step_val, conversion_tables)
         step_csv.to_csv(os.path.join(args.output_dir, f"step_{n}_validation.csv"))
-        print("step", n, len(step_val))
 
     # val_split.to_json(os.path.join(args.output_dir, "validation.json"), orient='table', indent=2)
     # val_csv = convert_to_csv(args, val_split, conversion_tables)
