@@ -33,7 +33,7 @@ def train(args):
     # # Changes made for continual_learning_evaluation =============================
     
     tracking_fp = os.path.join(("/").join(str(logger_args.save_dir).split("/")[:-1]), 'tracking.log')
-    print(tracking_fp)
+    # print(tracking_fp)
     if os.path.exists(tracking_fp):
         with open(tracking_fp, 'r') as fp:
             tracking_info = json.load(fp)
@@ -47,15 +47,6 @@ def train(args):
     else:
         tracking_info = None
     
-    # # change json to csv if needed
-    # # training
-    # import os # TODO: figure out why os needs to be imported here for it to actually import?
-    # tasks = model_args.__dict__[TASKS]
-    # if not os.path.exists(data_args.csv):
-    #     print(f"training csv {data_args.csv} does not exist!")
-    #     if os.path.exists(data_args.csv.replace('.csv', '.json')):
-    #         print("but a json version does! You probably need to run partitions_to_csv")
-    #     return
     # Get logger.
     print ('Getting logger... log to path: {}'.format(logger_args.log_path))
     logger = Logger(logger_args.log_path, logger_args.save_dir)
@@ -214,6 +205,7 @@ def train(args):
                 average_metric = evaluator.evaluate_average_metric(metrics,
                                                       eval_tasks,
                                                       optim_args.metric_name)
+                print(f"AVG METRIC: {average_metric}")
 
                 if optimizer.global_step % logger_args.iters_per_save == 0:
                     # Only save every iters_per_save examples directly
