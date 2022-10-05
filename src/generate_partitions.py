@@ -14,6 +14,7 @@ from datetime import date
 import numpy as np
 import itertools
 
+
 subtract_from_smallest_subgroup = 5
 RAND_SEED_INITIAL=2022
 
@@ -125,16 +126,23 @@ def bootstrapping(args):
     val_split = df.loc[val_idxs]
     # validation bootstrapping:
     # TODO: allow unequal steps (?)
-    val_n = int(len(val_split)/args.steps)
+    if args.add_joint_validation != "True":
+        val_n = int(len(val_split)/args.steps)
+    else:
+        val_n = int(len(val_split)/(args.steps+1))
     for n in range(args.steps):
         step_val = val_split.sample(n=val_n, random_state=RAND_SEED_INITIAL+args.random_seed)
+        val_split.drop(step_val.index, axis=0, inplace=True)
         step_val.to_json(os.path.join(args.output_dir, f"step_{n}_validation.json"), orient='table', indent=2)
         step_csv = convert_to_csv(args, step_val, conversion_tables)
         step_csv.to_csv(os.path.join(args.output_dir, f"step_{n}_validation.csv"))
+        # print(f"step {n} val:", len(step_val))
 
-    # val_split.to_json(os.path.join(args.output_dir, "validation.json"), orient='table', indent=2)
-    # val_csv = convert_to_csv(args, val_split, conversion_tables)
-    # val_csv.to_csv(os.path.join(args.output_dir, "validation.csv"))
+    if args.add_joint_validation == "True":
+        val_split.to_json(os.path.join(args.output_dir, "joint_validation.json"), orient='table', indent=2)
+        val_csv = convert_to_csv(args, val_split, conversion_tables)
+        val_csv.to_csv(os.path.join(args.output_dir,"joint_validation.csv"))
+        # print("joint val:", len(val_split))
     
     step_sizes = get_split_sizes(args, len(tr_sample))
     # print(step_sizes)
@@ -196,18 +204,6 @@ def convert_to_csv(args, df, conversion_tables):
             csv_df.loc[len(csv_df)] = img_info
     return csv_df
 
-# def sample_steps(args, split_sizes, input_df):
-#     dfs = {}
-#     for i in range(args.steps):
-#         if i == args.steps-1:
-#             dfs[f"step {i}"] = input_df
-#         else:
-#             dfs[f"step {i}"] = input_df.sample(split_sizes[f"step {i}"], random_state=RAND_SEED_INITIAL+args.random_seed)
-#             input_df.drop(dfs[f"step {i}"].index, axis=0, inplace=True)
-#         if args.accumulate == True and i > 0 and i != args.steps-1:
-#             dfs[f"step {i}"] = pd.concat([dfs[f"step {i}"], dfs[f"step {i-1}"]])
-#     return dfs
-
 def get_split_sizes(args, total_number):
     split_sizes = [0 for i in range(args.steps)]
     if args.split_type == 'equal':
@@ -255,6 +251,7 @@ if __name__ == "__main__":
     parser.add_argument('-tasks', default="F,M,CR,DX")
     # parser.add_argument('-tasks', default="auto")
     parser.add_argument("-accumulate", default=False)
+    parser.add_argument("-add_joint_validation", default=False)
     args = parser.parse_args()
     # # call
     output_log_file = os.path.join(args.output_dir, 'tracking.log')

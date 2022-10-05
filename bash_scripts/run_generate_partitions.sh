@@ -11,13 +11,14 @@ EXE="../src/generate_partitions.py"
 #						"/gpfs_projects/ravi.samala/OUT/2022_CXR/202208/20220801_summary_table__open_AI.json" \
 #						"/gpfs_projects/ravi.samala/OUT/2022_CXR/202208/20220801_summary_table__open_RI.json")
 # General options
-declare -a IN_summary=("/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/20220823/summary_table__open_RI.json")
-OUT_dir="/gpfs_projects/alexis.burgon/OUT/2022_CXR/model_runs/open_RI_scenario_1"
+declare -a IN_summary=("/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/20220823/summary_table__open_AI.json")
+OUT_dir="/gpfs_projects/alexis.burgon/OUT/2022_CXR/model_runs/open_AI_scenario_1_v2"
 RAND_SEED=2050
 # split/step options
 N_steps=4
 ACCUMULATE=False # True/False, complete accumulation (step n has all of the samples from step n-1)
 PERCENT_TEST_PARTITION=0.2
+ADD_JOINT_VAL=True
 SPLIT_TYPE=equal	# Does not include the validation step, which is separated before the split	
 						# # equal: N_steps equal sized splits
 				   		# # increasing: each step is larger than the last
@@ -31,8 +32,8 @@ OPTION=0	# # 0: all images/patient
 MIN_N_IMAGES_PATIENT=1	# # min number of patients per image, ordered by time
 
 STRATIFY=False	# TO see the exact groups, see subgroup_dict in generate_partitions.py
-
-TASKS="F,M,CR,DX,Asian,Black_or_African_American,White" # see supported values in subgroup_dict in generate_partitions.py
+# TASKS="F,M,DC,DX"
+TASKS="F,M,CR,DX,Yes,No,Asian,Black_or_African_American,White" # see supported values in subgroup_dict in generate_partitions.py
 															# # Separate values with commas, if a value has spaces, replace with underscore
 
 # # -----------------------------------------------------------------------
@@ -63,5 +64,6 @@ do
 								  -accumulate $ACCUMULATE \
 								  -stratify $STRATIFY \
 								  -tasks $TASKS \
-								  -p $PERCENT_TEST_PARTITION
+								  -p $PERCENT_TEST_PARTITION \
+								  -add_joint_validation $ADD_JOINT_VAL
 done
