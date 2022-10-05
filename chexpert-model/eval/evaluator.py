@@ -45,7 +45,6 @@ class Evaluator(object):
         """Compute evaluation metrics and curves on multiple tasks."""
         metrics = {}
         curves = {}
-        tasks = ['CR', 'DX', 'Female', 'Male']
         
         
         for task in list(predictions):
@@ -53,9 +52,10 @@ class Evaluator(object):
             task_groundtruth = groundtruth[task]
             task_predictions = predictions[task]
             # filter out those with -1 in groundtruth
-            #non_label = task_groundtruth.index[task_groundtruth == -1.0]
-            #task_predictions = task_predictions.drop(non_label)
-            #task_groundtruth = task_groundtruth.drop(non_label)
+            non_label = task_groundtruth.index[task_groundtruth == -1.0]
+            task_predictions = task_predictions.drop(non_label)
+            task_groundtruth = task_groundtruth.drop(non_label)
+
 
             metrics.update({f"{task}:{metric}":
                             self.evaluate(task_groundtruth,
@@ -99,8 +99,10 @@ class Evaluator(object):
         # All provided names must be of the form "...-{metric_name}"
         metric_name = average_metric_name.split("-")[-1]
 
+        # average_metric = np.mean([metrics[f"{task}:{metric_name}"]
+        #                           for task in evaluate_tasks])
         average_metric = np.mean([metrics[f"{task}:{metric_name}"]
-                                  for task in evaluate_tasks])
+                                  for task in evaluate_tasks if str(metrics[f"{task}:{metric_name}"]) not in ['nan', 'inf']])
     
         
         return average_metric
@@ -112,7 +114,7 @@ class Evaluator(object):
                 return func(x, y)
             except Exception:
                 return np.nan
-
+        
         # Functions that take probs as input
         self.summary_metrics = {
             'AUPRC': lambda x, y: undefined_catcher(sk_metrics.average_precision_score, x, y),
