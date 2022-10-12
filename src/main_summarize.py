@@ -38,12 +38,14 @@
 	# # 	Manually removed 7 images
 '''
 import os
+import glob
 import fnmatch
 import argparse
 import pydicom
 import pandas as pd
 import numpy as np
 from PIL import Image
+import datetime
 # #
 # # Some constants regarding the data repos
 num_patients_COVID_19_NY_SBU = 1384
@@ -56,6 +58,9 @@ COVID_19_NY_SBU_TCIA_table_path = '../data/deidentified_overlap_tcia.csv.cleaned
 COVID_19_AR_TCIA_table_path = '../data/COVID_19_AR_ClinicalCorrelates_July202020.xlsx'
 RICORD_1c_annotation_path = "../data/1c_mdai_rsna_project_MwBeK3Nr_annotations_labelgroup_all_2021-01-08-164102_v3.csv"
 COVIDGR_10_label_path = "../data/COVIDGR_10_severity.csv"
+open_A1_Cases = "../data/20221010_open_A1_all_Cases.tsv"
+open_A1_Imaging_Studies = "../data/20221010_open_A1_all_Imaging_Studies.tsv"
+open_A1_Imaging_Series = "../data/20221010_open_A1_all_Imaging_Series.tsv"
 # files to remove:
 COVID_19_AR_bad_files_path = "../data/COVID_19_AR__manually_deleted_images.txt"
 RICORD_1c_bad_files_path = "../data/MIDRC_RICORD_1c__manually_deleted_images.txt"
@@ -76,18 +81,26 @@ ethnicity_lookup_table = {
 	'Not Hispanic or Latino':[],
 	'Not Reported':['MISSING', 'Missing']}
 manufacturer_lookup_table = {
-	'Not Reported':['MISSING', 'Missing'],
-	'Carestream':['CARESTREAM HEALTH', 'CARESTREAM'],
+	'Not Reported':['MISSING', 'Missing', ''],
+	'Carestream':['CARESTREAM HEALTH', 'CARESTREAM', 'Carestream Health'],
 	'Philips':['Philips Medical Systems'],
 	'Fujifilm':['FUJIFILM Corporation'],
 	'Konica Minolta':['KONICA MINOLTA'],
 	'GE Healthcare':['"GE Healthcare"','GE MEDICAL SYSTEMS'],
-	'Canon Inc.':[],
-	'Riverain Technologies':[],
+	'Canon Inc.':['Canon Inc.'],
+	'Riverain Technologies':['Riverain Technologies'],
 	'Siemens':['SIEMENS'],
-	'Samsung Electronics':[],
+	'Samsung Electronics':['Samsung Electronics'],
 	'Kodak':['KODAK'],
-	'Iray':['IRAY']}
+	'Iray':['IRAY'],
+	'ACME': ['ACME'],
+	'Agfa': ['Agfa'],
+	'Konica Minolta': ['KONICA MINOLTA'],
+	'Rayence': ['Rayence'],
+	'Toshiba': ['Toshiba'],
+	}
+modality_choices = ['CR', 'DX']
+
 def race_lookup(race_info):
 	race_info = str(race_info)
 	if race_info in race_lookup_table:
@@ -825,6 +838,113 @@ def read_COVIDGR_10(in_dir, out_summ_file):
 		return
 	
 	
+def read_open_A1_20221010(in_dir, out_summ_file):
+	'''
+	using the imaging data and the associated MIDRC tsv files downloaded on 20221010
+
+	Info on supporting files:
+		../data/20221010_open_A1_all_Cases.tsv: get patient-level info (submitter_id, sex, age, race, COVID_status)
+		../data/20221010_open_A1_all_Imaging_Studies.tsv: for a submitter_id (case_ids_0), use the study_modality_0
+			identify the study_uid which is the subdirectory name. However, sometimes, the study_uid is the main directory
+	'''
+	# information to gather (pixel spacing and img size done separately)
+	img_info_dict = {
+		'modality':(0x0008,0x0060),
+		'body part examined':(0x0018,0x0015),
+		'view position':(0x0018,0x5101),
+		'study date':(0x0008,0x0020),
+		'manufacturer':(0x0008,0x0070),
+		'manufacturer model name':(0x0008,0x1090)}
+	# # get patient info
+	patient_df = pd.read_csv(open_A1_Cases, sep='\t')
+	# img_study_df = pd.read_csv(open_A1_Imaging_Studies, sep='\t')
+	img_series_df = pd.read_csv(open_A1_Imaging_Series, sep='\t')
+	df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images','bad_images', 'bad_images_info', 'repo'])
+	print('There are {} patients'.format(len(patient_df.index)))
+	# # iterate over the patient-id
+	num_patients_to_json = 0
+	num_images_to_json = 0
+	num_series_to_json = 0
+	num_missing_images = 0
+	for idx, patient_row in patient_df.iterrows():
+		if num_patients_to_json > 0 and num_patients_to_json % 1000 == 0:
+				print('Processed {} patients with {} series and {} images so far...'.format(num_patients_to_json, num_series_to_json, num_images_to_json))
+		imgs_good = []
+		imgs_good_info = []
+		imgs_bad = []
+		imgs_bad_info = []
+		patient_skip = True
+		# #
+		patient_id = patient_row['submitter_id']
+		# # identify the dir/sub-dir based on the Imaging_Studies file
+		df_patient = img_series_df.loc[img_series_df['case_ids_0'] == patient_id]
+		for study_idx, study_row in df_patient.iterrows():
+			if study_row['modality'] in modality_choices:
+				# print([patient_id, study_row['case_ids_0'], study_row['study_uid']])
+				patient_study_path = None
+				patient_study_path1 = os.path.join(in_dir, study_row['case_ids_0'], study_row['study_uid_0'], study_row['series_uid'])
+				patient_study_path2 = os.path.join(in_dir, study_row['study_uid_0'], study_row['series_uid'])
+				if os.path.exists(patient_study_path1):
+					patient_study_path = patient_study_path1
+				elif os.path.exists(patient_study_path2):
+					patient_study_path = patient_study_path2
+				else:
+					num_missing_images += 1
+				if patient_study_path is not None and study_row['modality'] in modality_choices:
+					patient_skip = False
+					# # get the dicom info here
+					# # there should be at least 1 dicom file in this folder
+					dcm_files = glob.glob(os.path.join(patient_study_path, '*.dcm'))
+					num_images_to_json += len(dcm_files)
+					num_series_to_json += 1
+					for each_dcm in dcm_files:
+						ds = pydicom.read_file(each_dcm)
+						imgs_good.append(each_dcm)
+						# get img info:
+						img_info = {key: ds[img_info_dict[key][0],img_info_dict[key][1]].value if img_info_dict[key] in ds else 'MISSING' for key in img_info_dict}
+						img_info['pixel spacing'] = [ds[0x0018,0x1164].value[0], ds[0x0018,0x1164].value[1]] if (0x0018,0x1164) in ds else 'MISSING'
+						img_info['image size'] = ds.pixel_array.shape
+						img_info['manufacturer'] = manufacturer_lookup(img_info['manufacturer'])
+						imgs_good_info.append(img_info)
+
+		# # create patient-level info
+		patient_info = {
+							'sex':"M" if patient_row['sex'] == "Male" else "F" if patient_row['sex'] == "Female" else "Unknown",
+							'race':race_lookup(patient_row['race']),
+							'ethnicity':ethnicity_lookup(patient_row['ethnicity']),
+							'COVID_positive':patient_row['covid19_positive'],
+							'age':patient_row['age_at_index'],
+							}
+		patient_good_info = [patient_info]
+		# add to df
+		if not patient_skip:
+			df.loc[len(df)] = [patient_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] +[imgs_bad] + [imgs_bad_info] + ['open_A1']
+			num_patients_to_json += 1
+		# # # for debug
+		# if num_patients_to_json == 10:
+		# 	# print(df.head(10))
+		# 	break
+		# break
+	# #
+	# # save info
+	print('Saving {} patients to json'.format(num_patients_to_json))
+	print('Saving {} images to json'.format(num_images_to_json))
+	print('Saving {} series to json'.format(num_series_to_json))
+	print('Missing {} images to json'.format(num_missing_images))
+	df.to_json(out_summ_file, indent=4, orient='table', index=False)
+	pre, ext = os.path.splitext(out_summ_file)
+	out_log_file = pre + '.log'
+	print('Log file saved at: ' + out_log_file)
+	print('json file saved at: ' + out_summ_file)
+	with open(out_log_file, 'w') as fp:
+		fp.write(str(datetime.datetime.now()) + '\n')
+		fp.write('Saved {} patients in json\n'.format(num_patients_to_json))
+		fp.write('Saved {} images in json\n'.format(num_images_to_json))
+		fp.write('Saved {} series in json\n'.format(num_series_to_json))
+		fp.write('Missed {} images in json\n'.format(num_missing_images))
+	# df.to_csv(out_summ_file + '.tsv', sep = '\t', index=False)
+
+
 
 
 def select_fn(sel_repo):
@@ -833,11 +953,12 @@ def select_fn(sel_repo):
 		read_COVID_19_NY_SBU(sel_repo[1], sel_repo[2])
 	elif sel_repo[0] == 'COVID_19_AR':
 		read_COVID_19_AR(sel_repo[1], sel_repo[2])
-	elif sel_repo[0] == 'open_AI':
-		read_open_AI(sel_repo[1], sel_repo[2])
+	elif sel_repo[0] == 'open_A1':
+		# read_open_AI(sel_repo[1], sel_repo[2])
+		read_open_A1_20221010(sel_repo[1], sel_repo[2])
 	elif sel_repo[0] == 'MIDRC_RICORD_1C':
 		read_RICORD_1c(sel_repo[1], sel_repo[2])
-	elif sel_repo[0] == 'open_RI':
+	elif sel_repo[0] == 'open_R1':
 		read_open_RI(sel_repo[1], sel_repo[2])
 	elif sel_repo[0] == 'COVIDGR_10':
 		read_COVIDGR_10(sel_repo[1], sel_repo[2])
