@@ -173,6 +173,7 @@ def read_COVID_19_NY_SBU(in_dir, out_summ_file):
 	df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images', 'repo'])
 	# # Iterate over the patients
 	for ii, each_patient in enumerate(patient_dirs):
+		print(f"{ii+1}/{len(patient_dirs)}")
 		imgs_good = []
 		imgs_good_info = []
 		imgs_bad = []
@@ -180,7 +181,7 @@ def read_COVID_19_NY_SBU(in_dir, out_summ_file):
 		with open(COVID_19_NY_SBU_bad_files_path, 'r') as fp:
 			bad_files = fp.read().split("\n")
 		patient_root_dir = os.path.join(in_dir, each_patient)
-		print(patient_root_dir)
+		#print(patient_root_dir)
 		time_dirs = [filename for filename in os.listdir(patient_root_dir) if os.path.isdir(os.path.join(patient_root_dir,filename))]
 		# # Iterate over different time points
 		for each_time in time_dirs:
@@ -191,6 +192,8 @@ def read_COVID_19_NY_SBU(in_dir, out_summ_file):
 			for each_dcm_file in dcm_files:
 				# print(each_dcm_file)
 				ds = pydicom.read_file(each_dcm_file)
+				if not "PixelData" in ds:
+					continue
 				if each_dcm_file in bad_files:
 					imgs_bad += [each_dcm_file]
 				elif (0x0008, 0x1140) in ds:
@@ -235,7 +238,7 @@ def read_COVID_19_NY_SBU(in_dir, out_summ_file):
 								# consistent terminology
 								patient_info['race'] = race_lookup(patient_info['race'])
 								patient_info['ethnicity'] = ethnicity_lookup(patient_info['ethnicity'])
-								patient_good_info += [patient_info]
+								patient_good_info = [patient_info]
 						else:
 							imgs_bad += [each_dcm_file]
 					else:
