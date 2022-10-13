@@ -24,7 +24,10 @@ subgroup_dict = {
     "Yes,No":["patient_info","COVID_positive"],
     "Asian,Black or African American,White":["patient_info","race"]
 }
-conversion_files = {repo:f"/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/20220823/{repo}_jpegs/conversion_table.json" for repo in ["MIDRC_RICORD_1C", "COVID_19_NY_SBU", "COVID_19_AR", "open_AI", "open_RI"]}
+conversion_files_openhpc = {repo:f"/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/20220823/{repo}_jpegs/conversion_table.json" for repo in ["MIDRC_RICORD_1C", "COVID_19_NY_SBU", "COVID_19_AR", "open_RI"]}
+conversion_files_openhpc['open_A1'] ="/gpfs_projects/ravi.samala/OUT/2022_CXR/data_summarization/20221010/20221010_open_A1_jpegs/conversion_table.json"
+
+conversion_files_betsy = {repo:f"/scratch/alexis.burgon/2022_CXR/data_summarization/20220823/{repo}_jpegs/conversion_table.json" for repo in ["MIDRC_RICORD_1C", "COVID_19_NY_SBU", "COVID_19_AR", "open_AI", "open_RI"]}
 
 def select_image_per_patient(patient_df, n_images):
     # # iterate by patient, sort by "study date" and select the first n_images
@@ -57,7 +60,7 @@ def get_n_patients(args, df):
 
     if args.stratify != "False":
         # get all combinations of the groups specified
-        args.tasks = args.tasks.replace("_", " ")
+        # args.tasks = args.tasks.replace("_", " ")
         args.stratify = args.stratify.split(",")
         subclasses = [key.split(",") for key, item in subgroup_dict.items() if item[1] in args.stratify]
         strat_groups = ["-".join(item) for item in list(itertools.product(*subclasses))]
@@ -110,47 +113,83 @@ def bootstrapping(args):
     args.tasks = args.tasks.split(",")
     # load conversion files
     conversion_tables = {}
+    if "gpfs_projects" in args.output_dir:
+        conversion_files = conversion_files_openhpc
+    elif "scratch" in args.output_dir:
+        conversion_files = conversion_files_betsy
+    else:
+        print("could not find conversion files")
     for c, fp in conversion_files.items():
+        if not os.path.exists(fp): # DEBUG
+            print(f"No file at {fp}")
+            return
         conversion_tables[c] = pd.read_json(fp)
     # deal with any settings that can reduce the number of possible samples available
     new_df = get_n_patients(args, df)
+    
     if args.stratify != "False":
         # new_df, min_subgroup_size, strat_idxs = get_n_patients(args,df)
-        tr_sample, _ = train_test_split(new_df, test_size=args.percent_test_partition, random_state=RAND_SEED_INITIAL+args.random_seed, shuffle=True, stratify=new_df[args.stratify])
+        tr_sample, val_split = train_test_split(new_df, test_size=args.percent_test_partition, random_state=RAND_SEED_INITIAL+args.random_seed, shuffle=True, stratify=new_df[args.stratify])
+        
     else:
         # new_df = get_n_patients(args, df)
-        tr_sample, _ = train_test_split(new_df, test_size=args.percent_test_partition, random_state=RAND_SEED_INITIAL+args.random_seed, shuffle=True)
+        tr_sample, val_split = train_test_split(new_df, test_size=args.percent_test_partition, random_state=RAND_SEED_INITIAL+args.random_seed, shuffle=True)
     # separate + save validation split (uses all patients not used in the training sample, not caring for stratification/min image)
-    tr_idxs = tr_sample.index.tolist()
-    val_idxs =[idx for idx in df.index.tolist() if idx not in tr_idxs]
-    val_split = df.loc[val_idxs]
+    # tr_idxs = tr_sample.index.tolist()
+    # val_idxs =[idx for idx in df.index.tolist() if idx not in tr_idxs]
+    # val_split = df.loc[val_idxs]
     # validation bootstrapping:
     # TODO: allow unequal steps (?)
     if args.add_joint_validation != "True":
         val_n = int(len(val_split)/args.steps)
     else:
         val_n = int(len(val_split)/(args.steps+1))
+    # print(val_n)
+    # debug
+    # print("Overall val split:")
+    # print(val_split['sex'].value_counts())
     for n in range(args.steps):
-        step_val = val_split.sample(n=val_n, random_state=RAND_SEED_INITIAL+args.random_seed)
+        print(f"Generating val {n}...")
+        
+        if args.stratify != "False": # currently set to work with single stratify choice (ex. sex) that has only two subgroups
+            step_val = val_split.groupby(args.stratify, group_keys=False).apply(lambda x: x.sample(n=int(val_n/2), random_state=RAND_SEED_INITIAL+args.random_seed))
+            # debug
+            # print(f"\nStep {n} validation")
+            # print(step_val['sex'].value_counts())
+            # print("\nRemaining overall")
+            # print(val_split['sex'].value_counts())
+            
+        else:
+            step_val = val_split.sample(n=val_n, random_state=RAND_SEED_INITIAL+args.random_seed)
         val_split.drop(step_val.index, axis=0, inplace=True)
         step_val.to_json(os.path.join(args.output_dir, f"step_{n}_validation.json"), orient='table', indent=2)
         step_csv = convert_to_csv(args, step_val, conversion_tables)
         step_csv.to_csv(os.path.join(args.output_dir, f"step_{n}_validation.csv"))
         # print(f"step {n} val:", len(step_val))
+    
 
     if args.add_joint_validation == "True":
+        # creates a testing parition from the leftover samples in val_split
         val_split.to_json(os.path.join(args.output_dir, "joint_validation.json"), orient='table', indent=2)
         val_csv = convert_to_csv(args, val_split, conversion_tables)
         val_csv.to_csv(os.path.join(args.output_dir,"joint_validation.csv"))
+        # print("\nJoint val:")
+        # print(val_split['sex'].value_counts())
         # print("joint val:", len(val_split))
     
     step_sizes = get_split_sizes(args, len(tr_sample))
     # print(step_sizes)
     step_dfs = {}
+    # print(f"Overall tr")
+    # print(tr_sample['sex'].value_counts())
     # separate individual steps
     for n in range(args.steps):
+        print(f"Generating tr {n}")
         if n == args.steps-1:
-            step_dfs[n] = tr_sample.sample(n=step_sizes[n], random_state=RAND_SEED_INITIAL+args.random_seed)
+            if args.stratify != "False": # currently set to work with single stratify choice (ex. sex) that has only two subgroups
+                step_dfs[n] = tr_sample.groupby(args.stratify, group_keys=False).sample(n=int(step_sizes[n]/2), random_state=RAND_SEED_INITIAL+args.random_seed)
+            else:
+                step_dfs[n] = tr_sample.sample(n=step_sizes[n], random_state=RAND_SEED_INITIAL+args.random_seed)
         else:
             if args.stratify != "False":
                 _, step_dfs[n] = train_test_split(tr_sample, test_size = step_sizes[n], random_state=RAND_SEED_INITIAL+args.random_seed, shuffle=True, stratify=tr_sample[args.stratify])
@@ -158,6 +197,8 @@ def bootstrapping(args):
                 _, step_dfs[n] = train_test_split(tr_sample, test_size = step_sizes[n], random_state=RAND_SEED_INITIAL+args.random_seed, shuffle=True)
             # step_dfs[n] = tr_sample.sample(n=step_sizes[n], random_state=RAND_SEED_INITIAL+args.random_seed)
             tr_sample.drop(step_dfs[n].index, axis=0, inplace=True)
+            # print(f"step {n}")
+            # print(step_dfs[n]['sex'].value_counts())
         if args.accumulate != "False" and n > 0:
             if args.accumulate == "True": #complete accumulation
                 step_dfs[n] = pd.concat([step_dfs[n-1], step_dfs[n]])
@@ -166,7 +207,6 @@ def bootstrapping(args):
                 n_acc = round(args.accumulate*len(step_dfs[n-1]))
                 acc_samples = step_dfs[n-1].sample(n=n_acc, random_state=RAND_SEED_INITIAL+args.random_seed)
                 step_dfs[n] = pd.concat([step_dfs[n],acc_samples])
-
         # save
         step_dfs[n].to_json(os.path.join(args.output_dir, f"step_{n}.json"), orient='table', indent=2)
         step_csv = convert_to_csv(args, step_dfs[n], conversion_tables)
@@ -198,9 +238,9 @@ def convert_to_csv(args, df, conversion_tables):
                     if task in key.split(','):
                         tval = val
                 if 'patient_info' in tval:
-                    img_info[task] = int(row[tval[0]][0][tval[1]] == task)
+                    img_info[task] = int(row[tval[0]][0][tval[1]] == task.replace("_"," "))
                 else:
-                    img_info[task] = int(row[tval[0]][ii][tval[1]] == task)
+                    img_info[task] = int(row[tval[0]][ii][tval[1]] == task.replace("_", " "))
             csv_df.loc[len(csv_df)] = img_info
     return csv_df
 
