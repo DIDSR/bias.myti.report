@@ -2,37 +2,38 @@
 echo
 echo "Running finetune on uignore"
 cd "$(dirname "$0")"
-MAIN_DIR=/gpfs_projects/alexis.burgon/OUT/2022_CXR/model_runs/open_AI_scenario_1_v2
-# RAND=0
-# OPTION=0
-REPO=open_AI
-GPU_ID=2
+MAIN_DIR=/gpfs_projects/alexis.burgon/OUT/2022_CXR/model_runs/open_A1_scenario_1_v3
+REPO=open_A1
+
+GPU_ID=3
 # EPOCHS=500
-declare -a step_epochs=(500 50 50 50)
+declare -a step_epochs=(500 50 50 50 50 50 50 50 50 50) # number of epochs for each step of the model training, in order
 FINETUNE=full
-# STEP=0
 SPLIT=equal
-# # --save_dir ${MAIN_DIR}/RAND_${RAND}_OPTION_${OPTION} \
+BASE_WEIGHTS=CheXpert # Changes which weights are used for step 0. options CheXpert (specific ckpt specified in train.py), ImageNet, (WIP: Random, MIMIC)
+
+# Change the experiment name to differentiate between different settings (aside from step #) in the same partition folder
+EXPERIMENT_NAME=${BASE_WEIGHTS}_1
 # last layer: module.fc.weight,module.fc.bias
-for RAND in 0 1 2
+for RAND in 1 2
 do 
 for OPTION in 0 
 do
-for STEP in 0 1 2 3
+for STEP in 0 1 2 3 4 5 6 7 8 9
 do 
 for FINETUNE in full
 do
-python ../train.py --ckpt_path /gpfs_projects/ravi.samala/OUT/moco/experiments/ravi.samala/r8w1n416_20220715h15_tr_mocov2_20220715-172742/checkpoint_0019.pth.tar \
+python ../train.py --ckpt_path ${BASE_WEIGHTS} \
                    --dataset custom \
-                   --train_custom_csv ${MAIN_DIR}/RAND_${RAND}_OPTION_${OPTION}_${SPLIT}/step_${STEP}.csv \
-                   --val_custom_csv ${MAIN_DIR}/RAND_${RAND}_OPTION_${OPTION}_${SPLIT}/step_${STEP}_validation.csv \
-                   --save_dir ${MAIN_DIR}/RAND_${RAND}_OPTION_${OPTION}_${SPLIT} \
-                   --experiment_name ${FINETUNE}_step_${STEP}_${REPO}_${EPOCHS}_epochs \
+                   --train_custom_csv ${MAIN_DIR}/RAND_${RAND}_OPTION_${OPTION}_${SPLIT}_${#step_epochs[@]}_steps/step_${STEP}.csv \
+                   --val_custom_csv ${MAIN_DIR}/RAND_${RAND}_OPTION_${OPTION}_${SPLIT}_${#step_epochs[@]}_steps/step_${STEP}_validation.csv \
+                   --save_dir ${MAIN_DIR}/RAND_${RAND}_OPTION_${OPTION}_${SPLIT}_${#step_epochs[@]}_steps \
+                   --experiment_name ${EXPERIMENT_NAME}__step_${STEP} \
                    --batch_size 48 \
-                   --iters_per_print 48 \
+                   --iters_per_print 480 \
                    --iters_per_visual 48000 \
-                   --iters_per_eval=4800 \
-                   --iters_per_save=4800 \
+                   --iters_per_eval=48000 \
+                   --iters_per_save=48000 \
                    --gpu_ids ${GPU_ID} \
                    --num_epochs ${step_epochs[$STEP]} \
                    --metric_name custom-AUROC \

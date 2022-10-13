@@ -39,11 +39,15 @@ def train(args):
             tracking_info = json.load(fp)
         tracking_info["Models"][logger_args.experiment_name] = {
             "Training":{
+                "Base_weights":args.model_args.ckpt_path,
+                "max_epochs":args.optim_args.num_epochs,
                 "Started":datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            }
+            }            
         }
         tracking_info['Last updated'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        print(json.dumps(tracking_info,indent=1))
+        with open(tracking_fp, 'w') as fp:
+            json.dump(tracking_info, fp, indent=1)
+        # print(json.dumps(tracking_info,indent=1))
     else:
         tracking_info = None
     
@@ -51,49 +55,108 @@ def train(args):
     print ('Getting logger... log to path: {}'.format(logger_args.log_path))
     logger = Logger(logger_args.log_path, logger_args.save_dir)
 
-    # For conaug, point to the MOCO pretrained weights.
-    if model_args.ckpt_path and model_args.ckpt_path != 'None':
-        # # continual learning evaluation setup
-        # get step #
-        step_n =int(data_args.csv.replace(".csv","").split("_")[-1])
-        if step_n != 0:
-            cur_step = "step_"+str(step_n)
-            prev_step = "step_"+str(step_n-1)
-            prev_step_mdl = os.path.join(str(logger_args.save_dir).replace(cur_step, prev_step), "best.pth.tar")
-            model_args.ckpt_path = prev_step_mdl
-            model_args.moco = False
-        # #
-        print("pretrained checkpoint specified : {}".format(model_args.ckpt_path))
-        # CL-specified args are used to load the model, rather than the
-        # ones saved to args.json.
-        model_args.pretrained = False
-        ckpt_path = model_args.ckpt_path
-        model, ckpt_info = ModelSaver.load_model(ckpt_path=ckpt_path,
-                                                 gpu_ids=args.gpu_ids,
-                                                 model_args=model_args,
-                                                 is_training=True)
+    step_n =int(data_args.csv.replace(".csv","").split("_")[-1])
+    if step_n == 0:
+        # adjusted to allow the use of different pretraining
+        if model_args.ckpt_path and model_args.ckpt_path == 'CheXpert':
+            # specified CSL pretrained checkpoint
+            print()
+            print("pretrained checkpoint specified : {}".format(model_args.ckpt_path))
+            # CL-specified args are used to load the model, rather than the
+            # ones saved to args.json.
+            model_args.pretrained = False
+            ## CHANGE CheXpert checkpoint here!!
+            model_args.ckpt_path = "/gpfs_projects/ravi.samala/OUT/moco/experiments/ravi.samala/r8w1n416_20220715h15_tr_mocov2_20220715-172742/checkpoint_0019.pth.tar"
+            print(f"Loading model from {model_args.ckpt_path}")
+            model, ckpt_info = ModelSaver.load_model(ckpt_path=model_args.ckpt_path,
+                                                    gpu_ids=args.gpu_ids,
+                                                    model_args=model_args,
+                                                    is_training=True)
+            # print(ckpt_info)
+            optim_args.start_epoch = 1
+        elif model.args.ckpt_path and model_args.chkpt_path == "MIMIC":
+             # specified CSL pretrained checkpoint
+            print('MIMIC not yet implemented')
+            return
+            print("pretrained checkpoint specified : {}".format(model_args.ckpt_path))
+            # CL-specified args are used to load the model, rather than the
+            # ones saved to args.json.
+            model_args.pretrained = False
+            ## CHANGE CSL checkpoint here!!
+            ckpt_path = ""
+            model, ckpt_info = ModelSaver.load_model(ckpt_path=model_args.ckpt_path,
+                                                    gpu_ids=args.gpu_ids,
+                                                    model_args=model_args,
+                                                    is_training=True)
+            optim_args.start_epoch = 1
+        elif model_args.ckpt_path and model_args.ckpt_path == "ImageNet":
+            # in the original MoCo CXR, they called this random initialization, but it used ImageNet pretraining
+            print("Starting without pretrained training checkpoint, random initialization with ImageNet pretraining")
+            model_fn = models.__dict__[model_args.model]
+            if data_args.custom_tasks is not None:
+                tasks = NamedTasks[data_args.custom_tasks]
+            else:
+                tasks = model_args.__dict__[TASKS]  # TASKS = "tasks"
+            print("Tasks: {}".format(tasks))
+            model = model_fn(tasks, model_args)
+            #model = nn.DataParallel(model, args.gpu_ids)
+            model = nn.DataParallel(model, args.gpu_ids).to(args.device)
+        elif model_args.ckpt_path and model_args.ckpt_path == 'Random':
+            # TODO
+            print("WIP random initialization")
+        else:
+            print(f"Unrecognized ckpt_path: {args.model_args.ckpt_path}")
+
+            
+    else:  # # continual learning evaluation setup
+        cur_step = "step_"+str(step_n)
+        prev_step = "step_"+str(step_n-1)
+        prev_step_mdl = os.path.join(str(logger_args.save_dir).replace(cur_step, prev_step), "best.pth.tar")
+        model_args.ckpt_path = prev_step_mdl
+        model_args.moco = False
+        optim_args.start_epoch = 1
+        print(f"Loading model from {model_args.ckpt_path}")
+        model, ckpt_info = ModelSaver.load_model(ckpt_path=model_args.ckpt_path,
+                                                gpu_ids=args.gpu_ids,
+                                                model_args=model_args,
+                                                is_training=True)
+        print("ckpt_info:", ckpt_info)
+        optim_args.start_epoch = 1
+
+    # # For conaug, point to the MOCO pretrained weights.
+    # if model_args.ckpt_path and model_args.ckpt_path != 'None':
+       
+    #     print("pretrained checkpoint specified : {}".format(model_args.ckpt_path))
+    #     # CL-specified args are used to load the model, rather than the
+    #     # ones saved to args.json.
+    #     model_args.pretrained = False
+    #     ckpt_path = model_args.ckpt_path
+    #     model, ckpt_info = ModelSaver.load_model(ckpt_path=ckpt_path,
+    #                                              gpu_ids=args.gpu_ids,
+    #                                              model_args=model_args,
+    #                                              is_training=True)
         
 
-        if not model_args.moco:
-            # optim_args.start_epoch = ckpt_info['epoch'] + 1
-            # Adapted for continual learning
-            optim_args.start_epoch = 1
-        else:
-            optim_args.start_epoch = 1
-    else:
-        print('Starting without pretrained training checkpoint, random initialization.')
-        # If no ckpt_path is provided, instantiate a new randomly
-        # initialized model.
-        model_fn = models.__dict__[model_args.model]
-        if data_args.custom_tasks is not None:
-            tasks = NamedTasks[data_args.custom_tasks]
-        else:
-            tasks = model_args.__dict__[TASKS]  # TASKS = "tasks"
-        print("Tasks: {}".format(tasks))
-        model = model_fn(tasks, model_args)
-        #model = nn.DataParallel(model, args.gpu_ids)
-        model = nn.DataParallel(model, args.gpu_ids).to(args.device)
-        #model = nn.parallel.DistributedDataParallel(model, args.gpu_ids).to(args.device)
+    #     if not model_args.moco:
+    #         # optim_args.start_epoch = ckpt_info['epoch'] + 1
+    #         # Adapted for continual learning
+    #         optim_args.start_epoch = 1
+    #     else:
+    #         optim_args.start_epoch = 1
+    # else:
+    #     print('Starting without pretrained training checkpoint, random initialization.') # This is a random initialization of Imagenet Pretraining!
+    #     # If no ckpt_path is provided, instantiate a new randomly
+    #     # initialized model.
+    #     model_fn = models.__dict__[model_args.model]
+    #     if data_args.custom_tasks is not None:
+    #         tasks = NamedTasks[data_args.custom_tasks]
+    #     else:
+    #         tasks = model_args.__dict__[TASKS]  # TASKS = "tasks"
+    #     print("Tasks: {}".format(tasks))
+    #     model = model_fn(tasks, model_args)
+    #     #model = nn.DataParallel(model, args.gpu_ids)
+    #     model = nn.DataParallel(model, args.gpu_ids).to(args.device)
+    #     #model = nn.parallel.DistributedDataParallel(model, args.gpu_ids).to(args.device)
 
 
     # Put model on gpu or cpu and put into training mode.
@@ -101,9 +164,9 @@ def train(args):
     model = model.to(args.device)
     model.train()
 
-    print("========= MODEL ==========")
-    print(model)
-    print('==========================')
+    # print("========= MODEL ==========")
+    # print(model)
+    # print('==========================')
     
     # Get train and valid loader objects.
     train_loader = get_loader(phase="train",
@@ -238,11 +301,11 @@ def train(args):
             optimizer.end_iter()
 
         optimizer.end_epoch(metrics)
-        if tracking_info is not None:
-            tracking_info["Models"][logger_args.experiment_name]["Training"]["Progress"] = f"{optimizer.epoch}/{optimizer.num_epochs}"
-            tracking_info['Last updated'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            with open(tracking_fp, 'w') as fp:
-                json.dump(tracking_info, fp, indent=1)
+        # if tracking_info is not None:
+        #     tracking_info["Models"][logger_args.experiment_name]["Training"]["Progress"] = f"{optimizer.epoch}/{optimizer.num_epochs}"
+        #     tracking_info['Last updated'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        #     with open(tracking_fp, 'w') as fp:
+        #         json.dump(tracking_info, fp, indent=1)
         
 
     logger.log('=== Training Complete ===')
