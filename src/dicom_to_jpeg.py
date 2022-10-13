@@ -119,7 +119,7 @@ def convert_dicom_to_jpeg_parallel(args):
         print(f"Input file {input_file} does not exist")
         return
     # img_info = {} # index: [dicom_file_name, jpeg_file_name]
-    img_info = []
+    img_info = [] # [[dcm, jpeg], [dcm, jpeg], ..]
     in_df = pd.read_json(input_file, orient='table')
     for ii, patient in in_df.iterrows():
         patient_id = patient['patient_id']
@@ -142,7 +142,8 @@ def convert_dicom_to_jpeg_parallel(args):
     # pool.map(convert_image_loop, img_info)
     
     # save the conversion information
-    conversion_df = pd.DataFrame.from_dict(img_info, orient='index', columns=['dicom','jpeg'])
+    # conversion_df = pd.DataFrame.from_dict(img_info, orient='index', columns=['dicom','jpeg'])
+    conversion_df = pd.DataFrame(img_info, columns=['dicom','jpeg'])
     conversion_table_file = os.path.join(img_save_loc, 'conversion_table.json')
     conversion_df.to_json(conversion_table_file)
 
@@ -155,5 +156,5 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--stop_at',type=int, default=0)
     parser.add_argument('-b','--betsy', default=False)
     # convert_dicom_to_jpeg(parser.parse_args())
-    convert_dicom_to_jpeg_parallel(parser.parse_args())(parser.parse_args())
+    convert_dicom_to_jpeg_parallel(parser.parse_args())
     print("\nDONE\n")
