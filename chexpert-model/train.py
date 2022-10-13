@@ -74,7 +74,7 @@ def train(args):
                                                     is_training=True)
             # print(ckpt_info)
             optim_args.start_epoch = 1
-        elif model.args.ckpt_path and model_args.chkpt_path == "MIMIC":
+        elif model_args.ckpt_path and model_args.ckpt_path == "MIMIC":
              # specified CSL pretrained checkpoint
             print('MIMIC not yet implemented')
             return
