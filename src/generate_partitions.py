@@ -22,7 +22,7 @@ subgroup_dict = {
     "F,M":["patient_info","sex"],
     "CR,DX":["images_info","modality"],
     "Yes,No":["patient_info","COVID_positive"],
-    "Asian,Black or African American,White":["patient_info","race"]
+    "Black or African American,White":["patient_info","race"]
 }
 conversion_files_openhpc = {repo:f"/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/20220823/{repo}_jpegs/conversion_table.json" for repo in ["MIDRC_RICORD_1C", "COVID_19_NY_SBU", "COVID_19_AR", "open_RI"]}
 conversion_files_openhpc['open_A1'] ="/gpfs_projects/ravi.samala/OUT/2022_CXR/data_summarization/20221010/20221010_open_A1_jpegs/conversion_table.json"
@@ -48,6 +48,7 @@ def get_n_patients(args, df):
     # adjust dataframe columns
     for key, val in subgroup_dict.items():
         df[val[1]] = df.apply(lambda row: row[val[0]][0][val[1]], axis=1)
+        df = df[df[val[1]].isin(key.split(','))]
     if args.select_option == 1:
         select_idxs = []
         for index, each_patient in df.iterrows():
@@ -165,13 +166,17 @@ def bootstrapping(args):
         step_val.to_json(os.path.join(args.output_dir, f"step_{n}_validation.json"), orient='table', indent=2)
         step_csv = convert_to_csv(args, step_val, conversion_tables)
         step_csv.to_csv(os.path.join(args.output_dir, f"step_{n}_validation.csv"))
+        # print(step_val['race'].value_counts())
+        # return # debug
         # print(f"step {n} val:", len(step_val))
     
 
     if args.add_joint_validation == "True":
         # creates a testing parition from the leftover samples in val_split
         val_split.to_json(os.path.join(args.output_dir, "joint_validation.json"), orient='table', indent=2)
+        
         val_csv = convert_to_csv(args, val_split, conversion_tables)
+        
         val_csv.to_csv(os.path.join(args.output_dir,"joint_validation.csv"))
         # print("\nJoint val:")
         # print(val_split['sex'].value_counts())
@@ -235,11 +240,12 @@ def convert_to_csv(args, df, conversion_tables):
             img_info['Path'] = conv_table[conv_table['dicom']==img]['jpeg'].values[0]
             for task in args.tasks:
                 for key, val in subgroup_dict.items():
-                    if task in key.split(','):
+                    if task.replace("_"," ") in key.split(','):
                         tval = val
                 if 'patient_info' in tval:
                     img_info[task] = int(row[tval[0]][0][tval[1]] == task.replace("_"," "))
                 else:
+                    
                     img_info[task] = int(row[tval[0]][ii][tval[1]] == task.replace("_", " "))
             csv_df.loc[len(csv_df)] = img_info
     return csv_df

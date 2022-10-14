@@ -15,11 +15,11 @@ declare -a IN_summary=("/gpfs_projects/ravi.samala/OUT/2022_CXR/data_summarizati
 OUT_dir="/gpfs_projects/alexis.burgon/OUT/2022_CXR/model_runs/open_A1_scenario_1_v3"
 RAND_SEED=2050
 # split/step options
-N_steps=10
+N_steps=7
 ACCUMULATE=False # True/False, complete accumulation (step n has all of the samples from step n-1)
 PERCENT_TEST_PARTITION=0.2
 ADD_JOINT_VAL=True
-SPLIT_TYPE=equal	# Does not include the validation step, which is separated before the split	
+SPLIT_TYPE=0.25,0.125,0.125,0.125,0.125,0.125,0.125 # Does not include the validation step, which is separated before the split	
 						# # equal: N_steps equal sized splits
 				   		# # increasing: each step is larger than the last
 						# # random: random step sizes (adding up to 100% of input)
@@ -33,7 +33,7 @@ MIN_N_IMAGES_PATIENT=1	# # min number of patients per image, ordered by time
 
 STRATIFY=sex	# TO see the exact groups, see subgroup_dict in generate_partitions.py
 # TASKS="F,M,DC,DX"
-TASKS="F,M,CR,DX,Yes,No,Asian,Black_or_African_American,White" # see supported values in subgroup_dict in generate_partitions.py
+TASKS="F,M,CR,DX,Yes,No,Black_or_African_American,White" # see supported values in subgroup_dict in generate_partitions.py
 															# # Separate values with commas, if a value has spaces, replace with underscore
 
 # # -----------------------------------------------------------------------
@@ -41,7 +41,7 @@ TASKS="F,M,CR,DX,Yes,No,Asian,Black_or_African_American,White" # see supported v
 # # -----------------------------------------------------------------------
 # #
 # for RAND in 0 1 2 3 4 5 6 7 8 9
-for RAND in 1 2
+for RAND in 1 2 3 4
 do
 	# # get length of an array
 	arraylength=${#IN_summary[@]}
@@ -53,7 +53,7 @@ do
 		param_IN_summary="${param_IN_summary} -i ${IN_summary[$i]}"
 	done
 	# #
-	OUT_dir2="${OUT_dir}/RAND_${RAND}_OPTION_${OPTION}_equal_${N_steps}_steps"
+	OUT_dir2="${OUT_dir}/RAND_${RAND}_OPTION_${OPTION}_custom_${N_steps}_steps"
 	mkdir $OUT_dir2
 	python $EXE $param_IN_summary -o $OUT_dir2 \
 								  -r $RAND  \
