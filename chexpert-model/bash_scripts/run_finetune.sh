@@ -5,21 +5,22 @@ cd "$(dirname "$0")"
 MAIN_DIR=/gpfs_projects/alexis.burgon/OUT/2022_CXR/model_runs/open_A1_scenario_1_v3
 REPO=open_A1
 
-GPU_ID=3
+GPU_ID=4
 # EPOCHS=500
-declare -a step_epochs=(500 50 50 50 50 50 50 50 50 50) # number of epochs for each step of the model training, in order
+declare -a step_epochs=(500 50 50 50 50 50 50) # number of epochs for each step of the model training, in order
 FINETUNE=full
-SPLIT=equal
+SPLIT=custom
 BASE_WEIGHTS=CheXpert # Changes which weights are used for step 0. options CheXpert (specific ckpt specified in train.py), ImageNet, (WIP: Random, MIMIC)
 
 # Change the experiment name to differentiate between different settings (aside from step #) in the same partition folder
 EXPERIMENT_NAME=${BASE_WEIGHTS}_1
+# EXPERIMENT_NAME=test_1
 # last layer: module.fc.weight,module.fc.bias
-for RAND in 1 2
+for RAND in 0
 do 
 for OPTION in 0 
 do
-for STEP in 0 1 2 3 4 5 6 7 8 9
+for STEP in 0 1 2 3 4 5 6
 do 
 for FINETUNE in full
 do
