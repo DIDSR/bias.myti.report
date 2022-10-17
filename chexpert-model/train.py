@@ -15,7 +15,7 @@ from optim import Optimizer
 from constants import *
 import json
 from datetime import datetime
-from torchsummaryX import summary
+# from torchsummaryX import summary
 
 
 def train(args):
