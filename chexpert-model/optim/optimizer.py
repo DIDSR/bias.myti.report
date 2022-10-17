@@ -24,6 +24,7 @@ class Optimizer(object):
         self.sgd_dampening = optim_args.sgd_dampening
         self.lr_step = 0
         self.lr_decay_step = optim_args.lr_decay_step
+        self.lr_decay_gamma = optim_args.lr_decay_gamma
         self.lr_patience = optim_args.lr_patience
         self.num_epochs = optim_args.num_epochs
         self.epoch = optim_args.start_epoch
