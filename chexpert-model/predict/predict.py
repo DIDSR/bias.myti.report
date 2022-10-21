@@ -17,7 +17,9 @@ class Predictor(object):
         self.device = device
         self.code_dir = code_dir
 
-    def predict(self, loader):
+    def predict(self, loader, by_patient=False):
+        if by_patient and not loader.dataset.return_info_dict:
+            raise Exception("Cannot predict by patient when return_info_dict is False")
         self.model.eval()
         probs = []
         gt = []
@@ -110,8 +112,27 @@ class Predictor(object):
         #                       for i, task in enumerate(tasks)})
 
         self.model.train()
-
+        if by_patient:
+           print("Getting by-patient predictions and gts")
+           probs_df = convert_to_by_patient(probs_df)
+           gt_df = convert_to_by_patient(gt_df)
         if loader.dataset.return_info_dict:
             return probs_df, gt_df, paths
 
         return probs_df, gt_df
+
+def path_to_pid(img_path):
+    img_name = img_path.split("/")[-1]
+    pid = "_".join(img_name.split("_")[:-1])
+    return pid
+
+def convert_to_by_patient(df):
+    new_df = df.rename(columns={'Path':'patient_id'})
+    out_df = pd.DataFrame()
+    new_df['patient_id'] = new_df['patient_id'].apply(path_to_pid)
+    for col in new_df.columns:
+        if col == 'patient_id':
+            continue
+        out_df[col] = new_df.groupby(['patient_id'])[col].mean()
+    # new_df = new_df.groupby(['patient_id']).mean()
+    return out_df
