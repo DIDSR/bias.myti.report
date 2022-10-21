@@ -15,7 +15,7 @@ from optim import Optimizer
 from constants import *
 import json
 from datetime import datetime
-
+# from torchsummaryX import summary
 
 
 def train(args):
@@ -123,6 +123,7 @@ def train(args):
         print("ckpt_info:", ckpt_info)
         optim_args.start_epoch = 1
 
+    # print(summary(model.module.cuda(), x=torch.rand(1,3, 320, 320).cuda()))
     # # For conaug, point to the MOCO pretrained weights.
     # if model_args.ckpt_path and model_args.ckpt_path != 'None':
        
@@ -223,6 +224,8 @@ def train(args):
         model_args.fine_tuning = ','.join(layers[-n_layers:])
         # Freeze other layers.
         models.PretrainedModel.set_require_grad_for_fine_tuning(model, model_args.fine_tuning.split(','))
+    # print(summary(model.module.cuda(), x=torch.rand(1,3, 320, 320).cuda()))
+    print('Total epochs of {}, Start LR {}, step size of {} with decay of {}'.format(optim_args.num_epochs, optim_args.lr, optim_args.lr_decay_step, optim_args.lr_decay_gamma))
     # Instantiate the optimizer class for guiding model training.
     optimizer = Optimizer(parameters=model.parameters(),
                           optim_args=optim_args,
@@ -233,7 +236,7 @@ def train(args):
                           dataset_len=len(train_loader.dataset),
                           logger=logger)
 
-    if model_args.ckpt_path and not model_args.moco:
+    if model_args.ckpt_path and not model_args.moco and step_n == 0:
         # Load the same optimizer as used in the original training.
         optimizer.load_optimizer(ckpt_path=model_args.ckpt_path,
                                  gpu_ids=args.gpu_ids)
@@ -244,6 +247,22 @@ def train(args):
                                     mask_uncertain=True,
                                     device=args.device)
     
+    if step_n > 0:
+        print('Measuring forward transfer capability and logging:')
+        # # deploy to get the forward transfer assessment
+        predictions, groundtruth = predictor.predict(valid_loader)
+        metrics, curves = evaluator.evaluate_tasks(groundtruth, predictions)
+        logger.log_metrics(metrics)
+
+        # Add logger for all the metrics for valid_loader
+        logger.log_scalars(metrics, optimizer.global_step, False)
+
+        # Get the metric used to save model checkpoints.
+        average_metric = evaluator.evaluate_average_metric(metrics,
+                                                eval_tasks,
+                                                optim_args.metric_name)
+        print(f"AVG METRIC: {average_metric}")
+
     # Run training
     while not optimizer.is_finished_training():
         optimizer.start_epoch()
@@ -262,7 +281,7 @@ def train(args):
                 logger.log_metrics(metrics)
 
                 # Add logger for all the metrics for valid_loader
-                logger.log_scalars(metrics, optimizer.global_step)
+                logger.log_scalars(metrics, optimizer.global_step, False)
 
                 # Get the metric used to save model checkpoints.
                 average_metric = evaluator.evaluate_average_metric(metrics,
