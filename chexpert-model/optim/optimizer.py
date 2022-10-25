@@ -31,6 +31,7 @@ class Optimizer(object):
         self.batch_size = batch_size
         self.dataset_len = dataset_len
         self.loss_meter = AverageMeter()
+        self.loss_log = []
 
         # Current iteration in epoch
         # (i.e., # examples seen in the current epoch)
@@ -161,7 +162,7 @@ class Optimizer(object):
         loss = unweighted_loss.item()
 
         self.loss_meter.update(loss, inputs.size(0))
-
+        self.loss_log.append(self.loss_meter.avg) # this updates once at the beginning, and then after every batch
         # Periodically write to the log and TensorBoard
         if self.iter % self.iters_per_print == 0:
 
