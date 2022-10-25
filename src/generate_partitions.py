@@ -1,6 +1,7 @@
 '''
     Program that partitions data based on the input summary json files
 '''
+from cmath import e
 from decimal import MIN_EMIN
 import os
 import argparse
@@ -13,6 +14,7 @@ import random
 from datetime import date
 import numpy as np
 import itertools
+import time
 
 
 subtract_from_smallest_subgroup = 5
@@ -220,7 +222,7 @@ def bootstrapping(args):
 
 def convert_to_csv(args, df, conversion_tables):
     # converts dataframes to work as csv input for the model (by image rather than by patient)
-    csv_df = pd.DataFrame(columns=["Path"]+[task for task in args.tasks])
+    csv_df = pd.DataFrame(columns=["patient_id","Path"]+[task for task in args.tasks])
     for iii, row in df.iterrows():
         if type(row['images']) == str:
             row['images'] = [row['images']]
@@ -238,6 +240,7 @@ def convert_to_csv(args, df, conversion_tables):
                 print(img)
                 continue
             img_info['Path'] = conv_table[conv_table['dicom']==img]['jpeg'].values[0]
+            img_info['patient_id'] = row['patient_id']
             for task in args.tasks:
                 for key, val in subgroup_dict.items():
                     if task.replace("_"," ") in key.split(','):
@@ -279,7 +282,176 @@ def find_overlap(sub_idxs):
     for i in range(1, len(sub_idxs)):
         out = [value for value in out if value in list(sub_idxs.values())[i]]
     return out       
- 
+
+def convert_to_csv_v2(args, df, conversion_table):
+    for x in subgroup_dict.values():
+        df[x[1]] = df.apply(lambda row: row[x[0]][0][x[1]], axis=1)
+    new_df = df.explode('images')
+    new_df['Path'] = new_df['images'].map(lambda i: conversion_table[conversion_table['dicom']==i]['jpeg'].values[0])
+    # drop no longer needed columns
+    new_df = new_df.drop(['patient_info','images_info','num_images', 'bad_images', 'bad_images_info', 'index', 'images'], axis=1)
+    return new_df.reset_index()
+
+def bootstrapping_v2(args):
+    print('Beginning partition generation')
+    if "," in args.split_type: # catch problems with custom split sizes
+        args.split_type = [float(x) for x in args.split_type.split(",")]
+        if len(args.split_type) != args.steps:
+            print(f"Given {len(args.split_type)} split sizes for {args.steps} splits")
+            return
+        elif sum(args.split_type) != 1:
+            print(f"{args.split_type} does not sum to 1")
+            return
+    # 1) Set up overall csv file
+        # Includes all samples to be used in all random seeds
+    overall_csv = os.path.join("/".join(args.output_dir.split("/")[:-1]), 'all_partition_samples.csv')
+    # print(overall_csv)
+    if os.path.exists(overall_csv): # csv already exists, read from file
+        print("overall csv found, reading from file")
+        df = pd.read_csv(overall_csv, index_col=0)
+    else: # generate and save overall csv
+        print("no overall csv found, generating")
+        
+        # load json files
+        dfs = []
+        repo_str = ''
+        for each_summ_file in args.input_list:
+            dfs.append(pd.read_json(each_summ_file, orient='table'))
+            repo_str = '__' + os.path.basename(each_summ_file).split(".")[0]
+        df = functools.reduce(lambda left,right: pd.concat([left,right], axis=0),dfs)
+        df = df.reset_index()
+        df = df.replace(to_replace='RICORD-1c', value="MIDRC_RICORD_1C", regex=True)
+        df = df[df.num_images > 0] # drop rows with zero images
+        df = df[df['images_info'].map(lambda d: len(d)>0)] # drop rows with no image information
+        # # DEBUG - only selecting some patients
+        # print("**********DEBUG MODE: not using all patients!**********")
+        # df = df.loc[0:99,:]
+        original_total_patients = len(df)
+        # convert to by-image format
+        conversion_tables = {}
+        if "gpfs_projects" in args.output_dir:
+            conversion_files = conversion_files_openhpc
+        elif "scratch" in args.output_dir:
+            conversion_files = conversion_files_betsy
+        else:
+            print("could not find conversion files")
+            return
+        for c, fp in conversion_files.items():
+            if not os.path.exists(fp): # DEBUG
+                print(f"No file at {fp}")
+                return
+            conversion_tables[c] = pd.read_json(fp)
+        conv_table = pd.concat(conversion_tables.values())
+        df = convert_to_csv_v2(args, df, conv_table)
+        if args.limit_classes:
+            for key, val in subgroup_dict.items():
+                sub = val[1]
+                # keep options that are not reported at all
+                if len(df[sub].unique()) == 1 and df[sub].unique().tolist()[0] == 'Not Reported':
+                    continue
+                valid_options = key.split(",")
+                df = df[df[sub].isin(valid_options)]
+        for key, val in subgroup_dict.items():
+            sub = val[1]
+            for k in key.replace(" ","_").split(","):
+                # convert from subgroup to binary values
+                df[k] = (df[sub] == k).astype(int)
+
+        total_images = len(df)
+        total_patients = len(df['patient_id'].unique())
+        print(f"\nFound {total_images} images from {total_patients} patients within {len(args.input_list)} repo(s).")
+        df.to_csv(overall_csv, index=None)
+    
+    # 2) generate the individual random seed partition
+    # TODO get the repository for each step # [WIP]
+    if args.step_repo is None:
+        # using all repos provided for all steps
+        step_repos = {n:df['repo'].unique() for n in range(args.steps)}
+    else:
+        step_repos = {}
+        for sr in args.step_repo.split("/"):
+            # print(sr)
+            step_numbers, step_repo = sr.split("__")
+            srs = [x for x in step_repo.split(",")]
+            # print(srs)
+            if "-" in step_numbers: # given a range of numbers
+                f, l = step_numbers.split("-")
+                step_numbers = [x for x in range(int(f), int(l))]
+            else: # given specific step numbers
+                step_numbers = [int(x) for x in step_numbers.split(",")]
+            # print(step_numbers)
+            for x in step_numbers:
+                step_repos[x] = srs
+    # print(len(df))
+    # print(step_repos)
+    id_df = df.drop_duplicates(subset=['patient_id'])
+    # print(len(id_df))
+    if args.stratify != "Fasle":
+        # adjust numbers to account for smaller subgroups
+        # currently only works for stratifying by one setting
+        # print(id_df[args.stratify].value_counts())
+        n_available = min(id_df[args.stratify].value_counts()) - subtract_from_smallest_subgroup
+        id_df = id_df.groupby(args.stratify, group_keys=False).apply(lambda x: x.sample(n=n_available, random_state=RAND_SEED_INITIAL+args.random_seed))
+        # print(id_df[args.stratify].value_counts())
+    if args.stratify != "False":
+        tr_sample, val_sample = train_test_split(id_df, test_size=args.percent_test_partition,random_state=RAND_SEED_INITIAL+args.random_seed, shuffle=True, stratify=id_df[args.stratify])
+    else:
+        tr_sample, val_sample = train_test_split(id_df, test_size=args.percent_test_partition,random_state=RAND_SEED_INITIAL+args.random_seed, shuffle=True)
+    print(len(tr_sample), len(val_sample))
+
+    # generate files
+    if args.add_joint_validation != 'False':
+        n_val = int(len(val_sample)/(args.steps+1))
+    else:
+        n_val = int(len(val_sample)/(args.steps))
+    
+    step_sizes = get_split_sizes(args, len(tr_sample))
+    print(step_sizes)
+    step_tr = {}
+    step_val = {}
+    for n in range(args.steps):
+        print(f"\nstep {n}")
+        # validation
+        if args.stratify != "False": # currently can only stratify by one binary class
+            step_val[n] = val_sample.groupby(args.stratify, group_keys=False).apply(lambda x: x.sample(n=int(n_val/2), random_state = RAND_SEED_INITIAL+args.random_seed))
+        else:
+            step_val[n] = val_sample.sample(n=n_val, random_state = RAND_SEED_INITIAL+args.random_seed)
+        val_sample.drop(step_val[n].index, axis=0, inplace=True) # remove those patient ids to avoid data leakage
+        # get all images for that patient
+        v_pids = step_val[n]['patient_id'].unique().tolist()
+        validation_split = df[df['patient_id'].isin(v_pids)]
+        # training
+        # TODO: accumulate
+        if args.stratify != "False": # currently can only stratify by one binary class
+            step_tr[n] = tr_sample.groupby(args.stratify, group_keys=False).apply(lambda x: x.sample(n=int(step_sizes[n]/2), random_state = RAND_SEED_INITIAL+args.random_seed))
+        else:
+            step_tr[n] = tr_sample.sample(n=int(step_sizes[n]/2), random_state = RAND_SEED_INITIAL+args.random_seed)
+        tr_sample.drop(step_tr[n].index, axis=0, inplace=True) # remove those patient ids to avoid data leakage
+        if args.accumulate > 0 and n >0:
+            if args.stratify != "False": # currently can only stratify by one binary class
+                acc = step_tr[n-1].groupby(args.stratify, group_keys=False).apply(lambda x: x.sample(frac=args.accumulate, random_state = RAND_SEED_INITIAL+args.random_seed))
+            else:
+                acc = step_tr[n-1].sample(frac=args.accumulate, random_state = RAND_SEED_INITIAL+args.random_seed)
+            step_tr[n] = pd.concat([step_tr[n], acc],axis=0)
+        # get all images for that patient
+        tr_pids = step_tr[n]['patient_id'].unique().tolist()
+        training_split = df[df['patient_id'].isin(tr_pids)]
+
+        # save files
+        training_split.to_csv(os.path.join(args.output_dir, f"step_{n}.csv"))
+        validation_split.to_csv(os.path.join(args.output_dir, f"step_{n}_validation.csv"))
+
+    if args.add_joint_validation != 'False':
+        v_pids = val_sample['patient_id'].unique().tolist()
+        joint_val = df[df['patient_id'].isin(v_pids)]
+        joint_val.to_csv(os.path.join(args.output_dir, 'joint_validation.csv'))
+        
+        
+
+
+    
+
+
 if __name__ == "__main__":
     pd.options.mode.chained_assignment = None
     parser = argparse.ArgumentParser(description='PyTorch Training')
@@ -296,14 +468,23 @@ if __name__ == "__main__":
     parser.add_argument('-split_type', default="equal")
     parser.add_argument('-tasks', default="F,M,CR,DX")
     # parser.add_argument('-tasks', default="auto")
-    parser.add_argument("-accumulate", default=False)
-    parser.add_argument("-add_joint_validation", default=False)
+    # parser.add_argument("-accumulate", default=False)
+    parser.add_argument('-accumulate', default=0, type=float)
+    parser.add_argument("-add_joint_validation", default=True)
+    # parser.add_argument("-limit_classes", default=False, help='Only include samples that belong to one to one of the tasks specified')
+    # # DEBUG
+    parser.add_argument("-limit_classes", default=True, help='Only include samples that belong to one to one of the tasks specified')
+    parser.add_argument("-partition_name", required=True, help="name associated with the partition generation settings")
+    parser.add_argument("-step_repo", help="repository for each step #")
+
     args = parser.parse_args()
     # # call
     output_log_file = os.path.join(args.output_dir, 'tracking.log')
-    bootstrapping(args)
+    bootstrapping_v2(args)
+    # bootstrapping(args)
     tracking_info = {"Partition":args.__dict__}
     tracking_info['Partition']["Generated on"] = str(date.today())
     tracking_info['Models'] = {}
     with open(output_log_file, 'w') as fp:
         json.dump(tracking_info, fp, indent=2)
+    print("Done")
