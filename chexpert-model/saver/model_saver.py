@@ -10,11 +10,12 @@ from argparse import Namespace
 import os
 import models
 from constants import *
+import numpy as np
 
 
 class ModelSaver(object):
     """Class to save and load model ckpts."""
-    def __init__(self, save_dir, iters_per_save, max_ckpts,
+    def __init__(self, save_dir, iters_per_save, max_ckpts, selection_args,
                  metric_name='val_loss', maximize_metric=False,
                  keep_topk=True, logger=None, **kwargs):
         """
@@ -41,11 +42,25 @@ class ModelSaver(object):
         self.ckpt_paths = queue.PriorityQueue()
         self.keep_topk = keep_topk
         self.logger = logger
+        # # new best.pth.tar selection parameters
+        self.best_loss_threshold = selection_args.loss_threshold
+        self.best_dev_threshold = selection_args.max_std
+        self.best_n_iters = selection_args.evaluate_region
 
-    def _is_best(self, metric_val):
+    def _is_best(self, metric_val, optimizer):
         """Check whether metric_val is the best one we've seen so far."""
         if metric_val is None:
             return False
+        # New criteria
+        running_avg = sum(optimizer.loss_log[-self.best_n_iters:])/self.best_n_iters
+        # print("RUNNIGN AVG:", running_avg)
+        # print("RUNNING STD",np.std(optimizer.loss_log[-self.best_n_iters:]))
+        # print(optimizer.loss_log[-self.best_n_iters:])
+        if running_avg > self.best_loss_threshold:
+            return False
+        if np.std(optimizer.loss_log[-self.best_n_iters:]) > self.best_dev_threshold:
+            return False
+        # as long as it passes those 2 criteria, it can then be evaluated based on the previous "best" selection
         return (self.best_metric_val is None
                 or (self.maximize_metric and
                     self.best_metric_val < metric_val)
@@ -85,8 +100,8 @@ class ModelSaver(object):
         else:
             print("Path {} already exists".format(self.save_dir))
         torch.save(ckpt_dict, ckpt_path)
-
-        if self._is_best(metric_val):
+        print("METRIC VAL:", metric_val)
+        if self._is_best(metric_val, optimizer):
             # Save the best model
             if self.logger is not None:
                 self.logger.log("Saving the model based on metric=" +

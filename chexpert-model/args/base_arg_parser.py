@@ -15,6 +15,10 @@ class BaseArgParser(object):
         # Path fixes
         self.parser.add_argument("--code_dir",
                                  default=None)
+        # Random state setting
+        self.parser.add_argument("--random_state",
+                                default=None,
+                                type=int)
 
         # Logger args
         self.parser.add_argument('--save_dir',

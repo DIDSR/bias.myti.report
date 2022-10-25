@@ -8,7 +8,19 @@ class TrainArgParser(BaseArgParser):
     def __init__(self):
         super(TrainArgParser, self).__init__()
         self.is_training = True
-        
+        # Selection args -> affect the selection of "best.pth.tar"
+        self.parser.add_argument("--loss_threshold",
+                                 dest='selection_args.loss_threshold',
+                                 default=0.2,
+                                 help='maximum loss value to allow current model as best')
+        self.parser.add_argument("--loss_std",
+                                 dest='selection_args.max_std',
+                                 default=0.05,
+                                 help='maximum std allowed for within evaulate_region to allow current model as best')
+        self.parser.add_argument("--evaluate_region",
+                                 dest='selection_args.evaluate_region',
+                                 default=5,
+                                 help="number of previous iterations used to consider the average loss and std for best evaluation")
         # Model args
         self.parser.add_argument('--model',
                                  dest='model_args.model',

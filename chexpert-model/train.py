@@ -23,6 +23,9 @@ def train(args):
     """Run model training."""
 
     print("Start Training ...")
+    # set random state, if specified
+    if args.random_state is not None:
+        torch.manual_seed(args.random_state)
 
     # Get nested namespaces.
     model_args = args.model_args
@@ -41,6 +44,7 @@ def train(args):
             "Training":{
                 "Base_weights":args.model_args.ckpt_path,
                 "max_epochs":args.optim_args.num_epochs,
+                "random_state":args.random_state,
                 "Started":datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }            
         }
@@ -196,7 +200,8 @@ def train(args):
                        max_ckpts=logger_args.max_ckpts,
                        metric_name=optim_args.metric_name,
                        maximize_metric=optim_args.maximize_metric,
-                       keep_topk=logger_args.keep_topk)
+                       keep_topk=logger_args.keep_topk,
+                       selection_args=args.selection_args)
     # get model layers to train
     if model_args.model == 'ResNet18':
         model_layers = [name for name,para in model.named_parameters()]
@@ -287,7 +292,7 @@ def train(args):
                 average_metric = evaluator.evaluate_average_metric(metrics,
                                                       eval_tasks,
                                                       optim_args.metric_name)
-                print(f"AVG METRIC: {average_metric}")
+                # print(f"AVG METRIC: {average_metric}")
 
                 if optimizer.global_step % logger_args.iters_per_save == 0:
                     # Only save every iters_per_save examples directly
@@ -320,6 +325,7 @@ def train(args):
             optimizer.end_iter()
 
         optimizer.end_epoch(metrics)
+
         # if tracking_info is not None:
         #     tracking_info["Models"][logger_args.experiment_name]["Training"]["Progress"] = f"{optimizer.epoch}/{optimizer.num_epochs}"
         #     tracking_info['Last updated'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
