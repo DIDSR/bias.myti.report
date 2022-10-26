@@ -15,6 +15,10 @@ class BaseArgParser(object):
         # Path fixes
         self.parser.add_argument("--code_dir",
                                  default=None)
+        # evaluate by-patient or by-image
+        self.parser.add_argument("--by_patient",
+                                 default=False,
+                                 type=bool)
         # Random state setting
         self.parser.add_argument("--random_state",
                                 default=None,

@@ -178,13 +178,13 @@ def train(args):
                              data_args=data_args,
                              transform_args=transform_args,
                              is_training=True,
-                             return_info_dict=False,
+                             return_info_dict=True,
                              logger=logger)
     valid_loader = get_loader(phase="valid",
                               data_args=data_args,
                               transform_args=transform_args,
                               is_training=False,
-                              return_info_dict=False,
+                              return_info_dict=True,
                               logger=logger)
     
     # Instantiate the predictor class for obtaining model predictions.
@@ -274,12 +274,13 @@ def train(args):
 
         # TODO: JBY, HACK WARNING  # What is the hack?
         metrics = None
-        for inputs, targets in train_loader:
+        # for inputs, targets in train_loader:
+        for inputs, targets, _ in train_loader:
             optimizer.start_iter()
             if optimizer.global_step and optimizer.global_step % optimizer.iters_per_eval == 0 or len(train_loader.dataset) - optimizer.iter < optimizer.batch_size:
 
                 # Only evaluate every iters_per_eval examples.
-                predictions, groundtruth = predictor.predict(valid_loader)
+                predictions, groundtruth, paths = predictor.predict(valid_loader, by_patient=args.by_patient)
                 # print("predictions: {}".format(predictions))
                 metrics, curves = evaluator.evaluate_tasks(groundtruth, predictions)
                 # Log metrics to stdout.
@@ -307,7 +308,7 @@ def train(args):
                     # make predictions on the entire validation set
                     import os
                     print("Predicting on entire validation set...")
-                    predictions, gt = predictor.predict(valid_loader)
+                    predictions, gt, path = predictor.predict(valid_loader,by_patient=args.by_patient)
                     predictions.to_csv(os.path.join(saver.save_dir, "validation_predictions.csv"))
                     gt.to_csv(os.path.join(saver.save_dir, "valitaion_gt.csv"))
 
