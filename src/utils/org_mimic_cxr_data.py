@@ -244,7 +244,9 @@ def read_patient_data_parallel(lst, patient_df2):
                     'ethnicity': "Not available",
                     'COVID_positive': "Not applicable",
                     'age': each_study_id['age_decile'],
-                    'insurance': each_study_id['insurance'] if each_study_id['insurance'] and not each_study_id['insurance'].isspace() else 'Missing',
+                    # 'insurance': each_study_id['insurance'] if each_study_id['insurance'] and not each_study_id['insurance'].isspace() else 'Missing',
+                    'insurance': each_study_id['insurance'],
+                    'frontal': each_study_id['frontal'],
                     # # diseases
                     'Atelectasis': each_study_id['Atelectasis'],
                     'Cardiomegaly': each_study_id['Cardiomegaly'],
@@ -260,7 +262,7 @@ def read_patient_data_parallel(lst, patient_df2):
                     'Pneumonia': each_study_id['Pneumonia'],
                     'Pneumothorax': each_study_id['Pneumothorax'],
                     }
-        patient_good_info = [patient_info]
+    patient_good_info = [patient_info]
     df.loc[0] = [each_patient] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] +[imgs_bad] + [imgs_bad_info] + ['mimic_cxr']
     lst.append(df)
     return 0
@@ -311,8 +313,8 @@ def org_mimic_repo_parallel(args):
         patient_df = record_pd.loc[record_pd['subject_id'] == each_patient]
         patient_df_lst.append([patient_df])
         num_patients_to_json += 1
-        if num_patients_to_json == 100:
-            break
+        # if num_patients_to_json == 100:
+        #     break
     # # start parallel
     print('Saving {} patients to json'.format(num_patients_to_json))
     pool = Pool(os.cpu_count()-1)
