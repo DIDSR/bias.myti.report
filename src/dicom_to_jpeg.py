@@ -18,8 +18,10 @@ def get_repo(args):
     else:
         # summary_json = f"/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/20220823/summary_table__{args.repo}.json"
         # img_save_loc = f"/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/20220823/{args.repo}_jpegs"
-        summary_json = f"/gpfs_projects/ravi.samala/OUT/2022_CXR/data_summarization/20221010/20221010_summary_table__{args.repo}.json"
-        img_save_loc = f"/gpfs_projects/ravi.samala/OUT/2022_CXR/data_summarization/20221010/20221010_{args.repo}_jpegs"
+        # summary_json = f"/gpfs_projects/ravi.samala/OUT/2022_CXR/data_summarization/20221010/20221010_summary_table__{args.repo}.json"
+        # img_save_loc = f"/gpfs_projects/ravi.samala/OUT/2022_CXR/data_summarization/20221010/20221010_{args.repo}_jpegs"
+        summary_json = f"/gpfs_projects/ravi.samala/OUT/mimic/temp/20221026_summary_table__{args.repo}.json"
+        img_save_loc = f"/gpfs_projects/ravi.samala/OUT/mimic/20221026_{args.repo}_jpegs"
     return summary_json, img_save_loc
 
 def get_dcms(file_path):
@@ -152,7 +154,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-r', '--repo', required=True,
                         choices=['open_A1','open_RI','MIDRC_RICORD_1C',
-                        'COVID_19_AR','COVID_19_NY_SBU','COVIDGR_10'])
+                        'COVID_19_AR','COVID_19_NY_SBU','COVIDGR_10', 'mimic_cxr'])
     parser.add_argument('-s', '--stop_at',type=int, default=0)
     parser.add_argument('-b','--betsy', default=False)
     # convert_dicom_to_jpeg(parser.parse_args())
