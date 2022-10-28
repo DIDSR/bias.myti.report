@@ -231,9 +231,15 @@ def read_patient_data_parallel(lst, patient_df2):
         img_info['study_time'] = each_study_id['StudyTime']
         # # based on the CR or DX, select the approporate DCM tag for view
         if 'DX' in ds[0x0008,0x0060].value:
-            img_info['view position'] = ds[0x0018,0x5101].value
+            if (0x0018,0x5101) in ds:
+                img_info['view position'] = ds[0x0018,0x5101].value
+            else:
+                img_info['view position'] = 'UNKNOWN DX VIEW POSITION'
         elif 'CR' in ds[0x0008,0x0060].value:
-            img_info['view position'] = ds[0x0018,0x1400].value
+            if (0x0018,0x1400) in ds:
+                img_info['view position'] = ds[0x0018,0x1400].value
+            else:
+                img_info['view position'] = 'UNKNOWN CR VIEW POSITION'
         else:
             img_info['view position'] = 'ERROR: UNKNOWN: ' + ds[0x0008,0x0060].value
         imgs_good_info.append(img_info)
