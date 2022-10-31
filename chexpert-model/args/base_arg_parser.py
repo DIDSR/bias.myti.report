@@ -129,7 +129,10 @@ class BaseArgParser(object):
             # Set up training tasks for the model to output and train on.
             
             if args.data_args.custom_tasks is not None:
-                tasks = NamedTasks[args.data_args.custom_tasks]
+                if args.data_args.custom_tasks in NamedTasks:
+                    tasks = NamedTasks[args.data_args.custom_tasks]
+                else:
+                    tasks = args.data_args.custom_tasks.split(",")
             else:
                 tasks = DATASET2TASKS[args.data_args.dataset]
             print("In base arg: read tasks from constants with dataset {}: {}".format(args.data_args.dataset, tasks))

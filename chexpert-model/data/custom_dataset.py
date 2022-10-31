@@ -79,7 +79,10 @@ class CustomDataset(BaseDataset):
         df = df.rename(columns={"Lung Opacity": "Airspace Opacity"}).sort_values(COL_STUDY)
 
         if self.data_args.custom_tasks:
-            fill_tasks = NamedTasks[self.data_args.custom_tasks]
+            if self.data_args.custom_tasks in NamedTasks:
+                fill_tasks = NamedTasks[self.data_args.custom_tasks]
+            else:
+                fill_tasks = self.data_args.custom_tasks.split(",")
         else:
             fill_tasks = DATASET2TASKS[self.data_args.dataset]
         # don't have any na values
@@ -102,7 +105,11 @@ class CustomDataset(BaseDataset):
                 labels = study_df[DATASET2TASKS[self.data_args.dataset]]
         else:
             if self.data_args.custom_tasks:
-                labels = df[NamedTasks[self.data_args.custom_tasks]]
+                if self.data_args.custom_tasks in NamedTasks:
+                    labels = df[NamedTasks[self.data_args.custom_tasks]]
+                else:
+                    labels = df[self.data_args.custom_tasks.split(",")]
+
             else:
                 labels = df[DATASET2TASKS[self.data_args.dataset]]
 

@@ -35,25 +35,54 @@ def train(args):
     transform_args = args.transform_args
     # # Changes made for continual_learning_evaluation =============================
     
-    tracking_fp = os.path.join(("/").join(str(logger_args.save_dir).split("/")[:-1]), 'tracking.log')
-    # print(tracking_fp)
-    if os.path.exists(tracking_fp):
-        with open(tracking_fp, 'r') as fp:
-            tracking_info = json.load(fp)
-        tracking_info["Models"][logger_args.experiment_name] = {
-            "Training":{
-                "Base_weights":args.model_args.ckpt_path,
-                "max_epochs":args.optim_args.num_epochs,
-                "random_state":args.random_state,
-                "Started":datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            }            
+    # New tracking method 10/31/2022
+    partition_tracking_fp = os.path.join(("/").join(str(logger_args.save_dir).split("/")[:-1]), 'tracking.log')
+    model_tracking_fp = os.path.join(logger_args.save_dir, 'model_tracking.log')
+    # generate model tracking info
+    # get tasks
+    if data_args.custom_tasks:
+        if data_args.custom_tasks in NamedTasks:
+            tasks = NamedTasks[data_args.custom_tasks]
+        else:
+            tasks = data_args.custom_tasks.split(",")
+    tracking_info = {
+        'Experiment Name':logger_args.experiment_name,
+        'Base Weights':args.model_args.ckpt_path,
+        'max_epochs':args.optim_args.num_epochs,
+        'tasks':tasks,
+        'random_state':args.random_state,
+        'step':int(data_args.csv.replace(".csv","").split("_")[-1]),
+        'training started':datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'training completed':None,
+        'best iter info':{
+            'loss threshold':args.selection_args.loss_threshold,
+            'loss std threshold':args.selection_args.max_std,
+            'num trailing iterations':args.selection_args.evaluate_region,
+            'epoch':None,
+            'AUROC':None
         }
-        tracking_info['Last updated'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with open(tracking_fp, 'w') as fp:
-            json.dump(tracking_info, fp, indent=1)
-        # print(json.dumps(tracking_info,indent=1))
-    else:
-        tracking_info = None
+    }
+    with open(model_tracking_fp, 'w') as fp:
+        json.dump(tracking_info, fp, indent=2)
+    # tracking_fp = os.path.join(("/").join(str(logger_args.save_dir).split("/")[:-1]), 'tracking.log')
+    # # print(tracking_fp)
+    # if os.path.exists(tracking_fp):
+    #     with open(tracking_fp, 'r') as fp:
+    #         tracking_info = json.load(fp)
+    #     tracking_info["Models"][logger_args.experiment_name] = {
+    #         "Training":{
+    #             "Base_weights":args.model_args.ckpt_path,
+    #             "max_epochs":args.optim_args.num_epochs,
+    #             "random_state":args.random_state,
+    #             "Started":datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    #         }            
+    #     }
+    #     tracking_info['Last updated'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    #     with open(tracking_fp, 'w') as fp:
+    #         json.dump(tracking_info, fp, indent=1)
+    #     # print(json.dumps(tracking_info,indent=1))
+    # else:
+    #     tracking_info = None
     
     # Get logger.
     print ('Getting logger... log to path: {}'.format(logger_args.log_path))
@@ -193,7 +222,11 @@ def train(args):
     evaluator = Evaluator(logger)
     # Get the set of tasks which will be used for saving models
     # and annealing learning rate.
-    eval_tasks = EVAL_METRIC2TASKS[optim_args.metric_name]
+    # allow for specific tasks to be designated as an argument
+    if data_args.custom_tasks and data_args.custom_tasks not in NamedTasks:
+        eval_tasks = data_args.custom_tasks.split(",")
+    else:
+        eval_tasks = EVAL_METRIC2TASKS[optim_args.metric_name]
     # Instantiate the saver class for saving model checkpoints.
     saver = ModelSaver(save_dir=logger_args.save_dir,
                        iters_per_save=logger_args.iters_per_save,
@@ -336,9 +369,11 @@ def train(args):
 
     logger.log('=== Training Complete ===')
     if tracking_info is not None:
-        tracking_info["Models"][logger_args.experiment_name]["Training"]["Progress"] = "Complete " + datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        tracking_info['Last updated'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with open(tracking_fp, 'w') as fp:
+        tracking_info['training completed'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # TODO
+        tracking_info['best iter info']['epoch'] = None
+        tracking_info['best iter info']['AUROC'] = None
+        with open(model_tracking_fp, 'w') as fp:
                 json.dump(tracking_info, fp, indent=1)
 
 if __name__ == '__main__':

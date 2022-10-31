@@ -198,8 +198,8 @@ def test(args):
         
         # # =========================================================
         # switching tasks
-        data_args.metric_name = 'custom-AUROC'
-        data_args.custom_tasks = 'custom-tasks'
+        # data_args.metric_name = 'custom-AUROC'
+        # data_args.custom_tasks = 'custom-tasks'
         # set up summary
         All_AUROCs = {}
         # loop through datasets
@@ -256,10 +256,15 @@ def test(args):
             AUROC_dict = {}
             # print(f"TASKS: {model_args.__dict__[TASKS]}")
             for task in model_args.__dict__[TASKS]:
-                # print(task)
+                print(task)
                 # don't use rows with missing values (-1)
                 task_gt = groundtruth[groundtruth[task] >= 0]
                 task_pred = predictions[groundtruth[task] >= 0]
+                print(len(task_gt))
+                print(len(task_pred))
+                print(task_gt.head(5))
+                # print(task_gt[task].head(5))
+                # print(task_pred[task].head(5))
                 if len(task_gt) <= 1:
                     continue
                 # get overall AUROC
@@ -368,6 +373,5 @@ def test(args):
 if __name__ == "__main__":
     torch.multiprocessing.set_sharing_strategy('file_system')
     parser = TestArgParser()
-    parser.parser.add_argument("--by_patient",default=False)
     print("Start test...")
     test(parser.parse_args())
