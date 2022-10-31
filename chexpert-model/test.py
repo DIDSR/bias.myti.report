@@ -260,9 +260,6 @@ def test(args):
                 # don't use rows with missing values (-1)
                 task_gt = groundtruth[groundtruth[task] >= 0]
                 task_pred = predictions[groundtruth[task] >= 0]
-                print(len(task_gt))
-                print(len(task_pred))
-                print(task_gt.head(5))
                 # print(task_gt[task].head(5))
                 # print(task_pred[task].head(5))
                 if len(task_gt) <= 1:
