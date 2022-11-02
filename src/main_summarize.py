@@ -36,6 +36,9 @@
 	# # COVID-19-NY-SBU
 	# # 	Removing all views with view position (ds[0x0018,0x5105]) == 'LATERAL' : removed 9 images
 	# # 	Manually removed 7 images
+	# #
+	# # 11/2/2022
+	# # The function read_open_A1_20221010 works for both open-A1 and open-R1
 '''
 import os
 import glob
@@ -61,6 +64,9 @@ COVIDGR_10_label_path = "../data/COVIDGR_10_severity.csv"
 open_A1_Cases = "../data/20221010_open_A1_all_Cases.tsv"
 open_A1_Imaging_Studies = "../data/20221010_open_A1_all_Imaging_Studies.tsv"
 open_A1_Imaging_Series = "../data/20221010_open_A1_all_Imaging_Series.tsv"
+open_R1_Cases = "../data/20221022_Open_R1_Cases.tsv"
+open_R1_Imaging_Studies = "../data/20221022_open_R1_Imaging_Studies.tsv"
+open_R1_Imaging_Series = "../data/20221022_Open_R1_Imaging_Series.tsv"
 # files to remove:
 COVID_19_AR_bad_files_path = "../data/COVID_19_AR__manually_deleted_images.txt"
 RICORD_1c_bad_files_path = "../data/MIDRC_RICORD_1c__manually_deleted_images.txt"
@@ -841,7 +847,7 @@ def read_COVIDGR_10(in_dir, out_summ_file):
 		return
 	
 	
-def read_open_A1_20221010(in_dir, out_summ_file):
+def read_open_A1_20221010(in_dir, out_summ_file, repo_name):
 	'''
 	using the imaging data and the associated MIDRC tsv files downloaded on 20221010
 
@@ -849,6 +855,8 @@ def read_open_A1_20221010(in_dir, out_summ_file):
 		../data/20221010_open_A1_all_Cases.tsv: get patient-level info (submitter_id, sex, age, race, COVID_status)
 		../data/20221010_open_A1_all_Imaging_Studies.tsv: for a submitter_id (case_ids_0), use the study_modality_0
 			identify the study_uid which is the subdirectory name. However, sometimes, the study_uid is the main directory
+	
+	11/02/2022: works for both open-A1 and open-R1
 	'''
 	# information to gather (pixel spacing and img size done separately)
 	img_info_dict = {
@@ -859,9 +867,17 @@ def read_open_A1_20221010(in_dir, out_summ_file):
 		'manufacturer':(0x0008,0x0070),
 		'manufacturer model name':(0x0008,0x1090)}
 	# # get patient info
-	patient_df = pd.read_csv(open_A1_Cases, sep='\t')
-	# img_study_df = pd.read_csv(open_A1_Imaging_Studies, sep='\t')
-	img_series_df = pd.read_csv(open_A1_Imaging_Series, sep='\t')
+	if repo_name == 'open-A1':
+		patient_df = pd.read_csv(open_A1_Cases, sep='\t')
+		# img_study_df = pd.read_csv(open_A1_Imaging_Studies, sep='\t')
+		img_series_df = pd.read_csv(open_A1_Imaging_Series, sep='\t')
+	elif repo_name == 'open-R1':
+		patient_df = pd.read_csv(open_R1_Cases, sep='\t')
+		# img_study_df = pd.read_csv(open_R1_Imaging_Studies, sep='\t')
+		img_series_df = pd.read_csv(open_R1_Imaging_Series, sep='\t')
+	else:
+		print('ERROR. Unknown repo: ' + repo_name)
+		return
 	df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images','bad_images', 'bad_images_info', 'repo'])
 	print('There are {} patients'.format(len(patient_df.index)))
 	# # iterate over the patient-id
@@ -885,8 +901,10 @@ def read_open_A1_20221010(in_dir, out_summ_file):
 			if study_row['modality'] in modality_choices:
 				# print([patient_id, study_row['case_ids_0'], study_row['study_uid']])
 				patient_study_path = None
-				patient_study_path1 = os.path.join(in_dir, study_row['case_ids_0'], study_row['study_uid_0'], study_row['series_uid'])
-				patient_study_path2 = os.path.join(in_dir, study_row['study_uid_0'], study_row['series_uid'])
+				# patient_study_path1 = os.path.join(in_dir, study_row['case_ids_0'], study_row['study_uid_0'], study_row['series_uid'])
+				# patient_study_path2 = os.path.join(in_dir, study_row['study_uid_0'], study_row['series_uid'])
+				patient_study_path1 = os.path.join(in_dir, study_row['case_ids_0'], str(study_row['study_uid_0']), str(study_row['series_uid']))
+				patient_study_path2 = os.path.join(in_dir, str(study_row['study_uid_0']), str(study_row['series_uid']))
 				if os.path.exists(patient_study_path1):
 					patient_study_path = patient_study_path1
 				elif os.path.exists(patient_study_path2):
@@ -912,20 +930,20 @@ def read_open_A1_20221010(in_dir, out_summ_file):
 
 		# # create patient-level info
 		patient_info = {
-							'sex':"M" if patient_row['sex'] == "Male" else "F" if patient_row['sex'] == "Female" else "Unknown",
-							'race':race_lookup(patient_row['race']),
-							'ethnicity':ethnicity_lookup(patient_row['ethnicity']),
-							'COVID_positive':patient_row['covid19_positive'],
-							'age':patient_row['age_at_index'],
-							}
+						'sex':"M" if patient_row['sex'] == "Male" else "F" if patient_row['sex'] == "Female" else "Unknown",
+						'race':race_lookup(patient_row['race']),
+						'ethnicity':ethnicity_lookup(patient_row['ethnicity']),
+						'COVID_positive':patient_row['covid19_positive'],
+						'age':patient_row['age_at_index'],
+						}
 		patient_good_info = [patient_info]
 		# add to df
 		if not patient_skip:
-			df.loc[len(df)] = [patient_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] +[imgs_bad] + [imgs_bad_info] + ['open_A1']
+			df.loc[len(df)] = [patient_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] +[imgs_bad] + [imgs_bad_info] + [repo_name]
 			num_patients_to_json += 1
-		# # # for debug
+		# # # # for debug
 		# if num_patients_to_json == 10:
-		# 	# print(df.head(10))
+		# 	print(df.head(10))
 		# 	break
 		# break
 	# #
@@ -948,8 +966,6 @@ def read_open_A1_20221010(in_dir, out_summ_file):
 	# df.to_csv(out_summ_file + '.tsv', sep = '\t', index=False)
 
 
-
-
 def select_fn(sel_repo):
 	print('Working on {}'.format(sel_repo[0]))
 	if sel_repo[0] == 'COVID_19_NY_SBU':
@@ -958,11 +974,12 @@ def select_fn(sel_repo):
 		read_COVID_19_AR(sel_repo[1], sel_repo[2])
 	elif sel_repo[0] == 'open_A1':
 		# read_open_AI(sel_repo[1], sel_repo[2])
-		read_open_A1_20221010(sel_repo[1], sel_repo[2])
+		read_open_A1_20221010(sel_repo[1], sel_repo[2], 'open-A1')
 	elif sel_repo[0] == 'MIDRC_RICORD_1C':
 		read_RICORD_1c(sel_repo[1], sel_repo[2])
 	elif sel_repo[0] == 'open_R1':
-		read_open_RI(sel_repo[1], sel_repo[2])
+		# read_open_RI(sel_repo[1], sel_repo[2])
+		read_open_A1_20221010(sel_repo[1], sel_repo[2], 'open-R1')
 	elif sel_repo[0] == 'COVIDGR_10':
 		read_COVIDGR_10(sel_repo[1], sel_repo[2])
 	else:
