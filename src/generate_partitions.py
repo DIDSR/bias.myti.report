@@ -253,24 +253,24 @@ def convert_to_csv(args, df, conversion_tables):
             csv_df.loc[len(csv_df)] = img_info
     return csv_df
 
-def get_split_sizes(args, total_number):
+def get_split_sizes(args):
     split_sizes = [0 for i in range(args.steps)]
     if args.split_type == 'equal':
         for i in range(args.steps):
-            split_sizes[i] = int((1/args.steps) * total_number)
+            split_sizes[i] = (1/args.steps)
     elif args.split_type == 'increasing':
         tot_splits = (args.steps*args.steps + args.steps)/2
         for i in range(args.steps):
-            split_sizes[i] = int((1/tot_splits)*(i+1)*total_number)   
+            split_sizes[i] = (1/tot_splits)*(i+1)
     elif args.split_type == 'random':
         random.seed(RAND_SEED_INITIAL+args.random_seed)
         x = random.sample(range(1,10), args.steps)
         y = [z/sum(x) for z in x]
         for i in range(args.steps):
-            split_sizes[i] = int(y[i]*total_number)
+            split_sizes[i] =y[i]
     elif type(args.split_type) == list:
         for i in range(args.steps):
-            split_sizes[i] = int(args.split_type[i]*total_number)
+            split_sizes[i] = args.split_type[i]
     else:
         print("unrecognized split_type")
         return
@@ -286,6 +286,7 @@ def find_overlap(sub_idxs):
 def convert_to_csv_v2(args, df, conversion_table):
     for x in subgroup_dict.values():
         df[x[1]] = df.apply(lambda row: row[x[0]][0][x[1]], axis=1)
+    df['race'] = df['race'].replace({" ":"_"}, regex=True)
     new_df = df.explode('images')
     new_df['Path'] = new_df['images'].map(lambda i: conversion_table[conversion_table['dicom']==i]['jpeg'].values[0])
     # drop no longer needed columns
@@ -294,6 +295,7 @@ def convert_to_csv_v2(args, df, conversion_table):
 
 def bootstrapping_v2(args):
     print('Beginning partition generation')
+    args.tasks = args.tasks.split(",")
     if "," in args.split_type: # catch problems with custom split sizes
         args.split_type = [float(x) for x in args.split_type.split(",")]
         if len(args.split_type) != args.steps:
@@ -349,7 +351,8 @@ def bootstrapping_v2(args):
                 # keep options that are not reported at all
                 if len(df[sub].unique()) == 1 and df[sub].unique().tolist()[0] == 'Not Reported':
                     continue
-                valid_options = key.split(",")
+                valid_options = key.replace(" ", "_").split(",")
+                valid_options = [item for item in valid_options if item in args.tasks]
                 df = df[df[sub].isin(valid_options)]
         for key, val in subgroup_dict.items():
             sub = val[1]
@@ -386,26 +389,56 @@ def bootstrapping_v2(args):
     # print(step_repos)
     id_df = df.drop_duplicates(subset=['patient_id'])
     # print(len(id_df))
-    if args.stratify != "Fasle":
-        # adjust numbers to account for smaller subgroups
-        # currently only works for stratifying by one setting
-        # print(id_df[args.stratify].value_counts())
-        n_available = min(id_df[args.stratify].value_counts()) - subtract_from_smallest_subgroup
-        id_df = id_df.groupby(args.stratify, group_keys=False).apply(lambda x: x.sample(n=n_available, random_state=RAND_SEED_INITIAL+args.random_seed))
-        # print(id_df[args.stratify].value_counts())
     if args.stratify != "False":
-        tr_sample, val_sample = train_test_split(id_df, test_size=args.percent_test_partition,random_state=RAND_SEED_INITIAL+args.random_seed, shuffle=True, stratify=id_df[args.stratify])
+        strat_classes = []
+        for x, y in subgroup_dict.items():
+            if y[1] in args.stratify.split(","):
+                if len(strat_classes) == 0:
+                    strat_classes = x.split(",")
+                    continue
+                strat_classes = [",".join(z).replace(" ", "_") for z in itertools.product(strat_classes, x.split(","))]
+        
+        
+        print("Strat classes: ", strat_classes)
+        strat_id_dfs = {}
+        # get the individual df for each class
+        min_n = 10000000
+        for cls in strat_classes:
+            temp_df = id_df.copy()
+            for c in cls.split(","):
+                temp_df = temp_df[temp_df[c] == 1]
+            strat_id_dfs[cls] = temp_df
+            if len(temp_df) < min_n:
+                min_n = len(temp_df)
+        min_n -= subtract_from_smallest_subgroup
+        for cls, df in strat_id_dfs.items():
+            strat_id_dfs[cls] = df.sample(min_n, random_state=RAND_SEED_INITIAL+args.random_seed)
+    
+    if args.add_joint_validation != 0:
+        if args.stratify != "False":
+            jvs = []
+            for cls in strat_id_dfs:
+                temp_jv = strat_id_dfs[cls].sample(frac=args.add_joint_validation, random_state=RAND_SEED_INITIAL+args.random_seed)
+                strat_id_dfs[cls].drop(temp_jv.index, inplace=True)
+                jvs.append(temp_jv)
+            jv = pd.concat(jvs, axis=0)
+        else:
+            id_df, jv = train_test_split(id_df, test_size=args.add_joint_validation,random_state=RAND_SEED_INITIAL+args.random_seed, shuffle=True)
+        v_pids = jv['patient_id'].unique().tolist()
+        joint_val = df[df['patient_id'].isin(v_pids)]
+        joint_val.to_csv(os.path.join(args.output_dir, 'joint_validation.csv'))
+
+    if args.stratify != "False":
+        val_samples = {}
+        for cls in strat_id_dfs:
+            val_samples[cls] = strat_id_dfs[cls].sample(frac=args.percent_test_partition, random_state=RAND_SEED_INITIAL+args.random_seed)
+            strat_id_dfs[cls].drop(val_samples[cls].index, inplace=True)
     else:
         tr_sample, val_sample = train_test_split(id_df, test_size=args.percent_test_partition,random_state=RAND_SEED_INITIAL+args.random_seed, shuffle=True)
-    print(len(tr_sample), len(val_sample))
 
     # generate files
-    if args.add_joint_validation != 'False':
-        n_val = int(len(val_sample)/(args.steps+1))
-    else:
-        n_val = int(len(val_sample)/(args.steps))
-    
-    step_sizes = get_split_sizes(args, len(tr_sample))
+    n_val = int(1/(args.steps))
+    step_sizes = get_split_sizes(args)
     print(step_sizes)
     step_tr = {}
     step_val = {}
@@ -413,38 +446,48 @@ def bootstrapping_v2(args):
         print(f"\nstep {n}")
         # validation
         if args.stratify != "False": # currently can only stratify by one binary class
-            step_val[n] = val_sample.groupby(args.stratify, group_keys=False).apply(lambda x: x.sample(n=int(n_val/2), random_state = RAND_SEED_INITIAL+args.random_seed))
+            step_vals = []
+            for cls in val_samples:
+                temp_val = val_samples[cls].sample(frac=n_val, random_state=RAND_SEED_INITIAL+args.random_seed)
+                val_samples[cls].drop(temp_val.index, inplace=True)
+                step_vals.append(temp_val)
+            step_val[n] = pd.concat(step_vals, axis=0)
         else:
             step_val[n] = val_sample.sample(n=n_val, random_state = RAND_SEED_INITIAL+args.random_seed)
-        val_sample.drop(step_val[n].index, axis=0, inplace=True) # remove those patient ids to avoid data leakage
+            val_sample.drop(step_val[n].index, axis=0, inplace=True) # remove those patient ids to avoid data leakage
         # get all images for that patient
+        df = pd.read_csv(overall_csv)
         v_pids = step_val[n]['patient_id'].unique().tolist()
         validation_split = df[df['patient_id'].isin(v_pids)]
+        
         # training
         # TODO: accumulate
         if args.stratify != "False": # currently can only stratify by one binary class
-            step_tr[n] = tr_sample.groupby(args.stratify, group_keys=False).apply(lambda x: x.sample(n=int(step_sizes[n]/2), random_state = RAND_SEED_INITIAL+args.random_seed))
+            step_trs = []
+            for cls in strat_id_dfs:
+                temp_step = strat_id_dfs[cls].sample(frac=step_sizes[n], random_state=RAND_SEED_INITIAL+args.random_seed)
+                strat_id_dfs[cls].drop(temp_step.index, inplace=True)
+                step_trs.append(temp_step)
+            step_tr[n] = pd.concat(step_trs, axis=0)
         else:
             step_tr[n] = tr_sample.sample(n=int(step_sizes[n]/2), random_state = RAND_SEED_INITIAL+args.random_seed)
-        tr_sample.drop(step_tr[n].index, axis=0, inplace=True) # remove those patient ids to avoid data leakage
-        if args.accumulate > 0 and n >0:
+            tr_sample.drop(step_tr[n].index, axis=0, inplace=True) # remove those patient ids to avoid data leakage
+        if args.accumulate > 0 and n >0: # TODO: stratify and accumulate
             if args.stratify != "False": # currently can only stratify by one binary class
                 acc = step_tr[n-1].groupby(args.stratify, group_keys=False).apply(lambda x: x.sample(frac=args.accumulate, random_state = RAND_SEED_INITIAL+args.random_seed))
             else:
                 acc = step_tr[n-1].sample(frac=args.accumulate, random_state = RAND_SEED_INITIAL+args.random_seed)
             step_tr[n] = pd.concat([step_tr[n], acc],axis=0)
         # get all images for that patient
+        df = pd.read_csv(overall_csv)
         tr_pids = step_tr[n]['patient_id'].unique().tolist()
         training_split = df[df['patient_id'].isin(tr_pids)]
-
+        
         # save files
         training_split.to_csv(os.path.join(args.output_dir, f"step_{n}.csv"))
         validation_split.to_csv(os.path.join(args.output_dir, f"step_{n}_validation.csv"))
 
-    if args.add_joint_validation != 'False':
-        v_pids = val_sample['patient_id'].unique().tolist()
-        joint_val = df[df['patient_id'].isin(v_pids)]
-        joint_val.to_csv(os.path.join(args.output_dir, 'joint_validation.csv'))
+   
         
         
 
@@ -470,7 +513,7 @@ if __name__ == "__main__":
     # parser.add_argument('-tasks', default="auto")
     # parser.add_argument("-accumulate", default=False)
     parser.add_argument('-accumulate', default=0, type=float)
-    parser.add_argument("-add_joint_validation", default=True)
+    parser.add_argument("-add_joint_validation", default=0, type=float)
     # parser.add_argument("-limit_classes", default=False, help='Only include samples that belong to one to one of the tasks specified')
     # # DEBUG
     parser.add_argument("-limit_classes", default=True, help='Only include samples that belong to one to one of the tasks specified')
@@ -484,7 +527,6 @@ if __name__ == "__main__":
     # bootstrapping(args)
     tracking_info = {"Partition":args.__dict__}
     tracking_info['Partition']["Generated on"] = str(date.today())
-    tracking_info['Models'] = {}
     with open(output_log_file, 'w') as fp:
         json.dump(tracking_info, fp, indent=2)
     print("Done")
