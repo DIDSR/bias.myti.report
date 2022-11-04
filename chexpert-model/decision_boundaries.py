@@ -15,6 +15,7 @@ from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 import numpy as np
 import seaborn as sns
+from shapely.geometry import Polygon, Point
 import os
 
         
@@ -48,7 +49,8 @@ class plane_dataset(BaseDataset):
                 randomize=0,
                 random_range=(0,255),
                 shuffle=0,
-                normalize=True):
+                normalize=True,
+                shape='rectangle'):
         self.subgroups = subgroups
         self.steps = steps
         self.normalize = normalize
@@ -100,8 +102,30 @@ class plane_dataset(BaseDataset):
         list1 = torch.linspace(self.bound1[0] - range_l*len1, self.bound1[1] + range_r*len1, self.steps)
         list2 = torch.linspace(self.bound2[0] - range_l*len2, self.bound2[1] + range_r*len2, self.steps)
         grid = torch.meshgrid([list1, list2])
-        self.coefs1 = grid[0].flatten()
-        self.coefs2 = grid[1].flatten()
+        # Different plot shape options
+        if shape == 'rectangle':
+            self.coefs1 = grid[0].flatten()
+            self.coefs2 = grid[1].flatten()
+        elif shape == 'triangle':
+            poly = Polygon(self.coords)
+            xcoefs1 = grid[0].flatten()
+            ycoefs1 = grid[1].flatten()
+            dat = np.hstack((xcoefs1[:,np.newaxis], ycoefs1[:,np.newaxis]))
+            contains = np.vectorize(lambda p: poly.contains(Point(p)), signature="(n)->()")
+            flags = contains(np.array(dat))
+            indices = [i for i, x in enumerate(flags) if x]
+            self.coefs1 = xcoefs1[indices]
+            self.coefs2 = ycoefs1[indices]
+        elif shape == 'line':
+            poly = Polygon(self.coords)
+            xcoefs1 = grid[0].flatten()
+            ycoefs1 = grid[1].flatten()
+            dat = np.hstack((xcoefs1[:,np.newaxis], ycoefs1[:,np.newaxis]))
+            contains = np.vectorize(lambda p:Point(p).distance(poly.boundary)<150, signature="(n)->()")
+            flags = contains(np.array(dat))
+            indices = [i for i, x in enumerate(flags) if x]
+            self.coefs1 = xcoefs1[indices]
+            self.coefs2 = ycoefs1[indices]
         self.df = self.load_df()
 
     def load_df(self):
