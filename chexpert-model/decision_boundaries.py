@@ -17,21 +17,6 @@ import numpy as np
 import seaborn as sns
 import os
 
-def get_sample_list(subclasses, df):
-    output = []
-    # select only samples of the particular subclass from the dataframe
-    for subclass in subclasses:
-        if "F" in subclass:
-            sub_df = df[df.Female == 1]
-        elif "M" in subclass:
-            sub_df = df[df.Male == 1]
-        if "CR" in subclass:
-            sub_df = sub_df[sub_df.CR == 1]
-        elif "DX" in subclass:
-            sub_df = sub_df[sub_df.DX == 1]
-        # collect the index values
-        output.append(list(sub_df.index.values))
-    return output
         
 def get_plane(img1, img2, img3):
     a = img2 - img1
@@ -48,146 +33,85 @@ def get_plane(img1, img2, img3):
     coords = [[0,0], [a_norm,0], [first_coef, second_coef]]
     return a, b_orthog, b, coords
 
+
 class plane_dataset(BaseDataset):
-    def __init__(self, 
-                csv_name,
-                selection_mode='random',
-                samples=None,
-                is_training=False, 
-                study_level=False, 
-                return_info_dict=False, 
-                data_args=None,
-                steps=100,
+    '''
+    Dataset built of virtual images interpolated from the three input images
+    '''
+    def __init__(self,
+                dataframe, # CXR information dataframe
+                img_idxs,
+                subgroups,
+                prediction_tasks,
                 scale=320,
-                data_mode='normal',
-                model=None,
-                save_result_images=False):
-        self.csv_name = csv_name
-        self.is_training = is_training
-        self.study_level = study_level
-        self.return_info_dict = return_info_dict
-        self.data_args = data_args
-
-        csv_df = pd.read_csv(self.csv_name)
-        # # NOTE: currently resizing imgs to 320x320, as they all need to be the exact same dimensions to get plane
+                steps=100,
+                randomize=0,
+                random_range=(0,255),
+                shuffle=0,
+                normalize=True):
+        self.subgroups = subgroups
+        self.steps = steps
+        self.normalize = normalize
+        self.return_info_dict = False
+        self.study_level = False
+        self.prediction_tasks = prediction_tasks
         self.transform = transforms.Compose([transforms.Resize((scale,scale)),transforms.PILToTensor()])
-        
-        # select samples
-        sample_idx = []
-        if selection_mode == 'index':
-            if len(samples) != 3:
-                print(f'Index selection requires 3 samples, found {len(samples)}')
-                return
-            sample_idx = samples
-        elif selection_mode == 'class':
-            print('=====================')
-            print(f'csv_df columns: {csv_df.columns}')
-            if len(samples) != 3:
-                print(f'Class selection requires 3 samples, found {len(samples)}')
-                return
-            for sample in samples:
-                if 'F' in sample:
-                    sub_df = csv_df[csv_df.Female == 1]
-                elif 'M' in sample:
-                    sub_df = csv_df[csv_df.Male == 1]
-                if 'CR' in sample:
-                    sub_df = sub_df[sub_df.CR == 1]
-                elif 'DX' in sample:
-                    sub_df = sub_df[sub_df.DX == 1]
-                sample_idx += list(sub_df.sample().index)
-        elif selection_mode == 'random':
-            print('random')
-            sample_idx += list(csv_df.sample(n=3).index)
-        else:
-            print(f'Unknown selection mode {selection_mode}. Returning')
-            return
-
-        #print(sample_idx)
-        sample_classes = []
-        for idx in sample_idx:
-            if csv_df.iloc[idx]['Female'] == 1:
-                sex = 'Female'
-            elif csv_df.iloc[idx]['Male'] == 1:
-                sex = 'Male'
-            if csv_df.iloc[idx]['CR'] == 1:
-                mod = 'CR'
-            elif csv_df.iloc[idx]['DX'] == 1:
-                mod = 'DX'
-            sample_classes += [f'{sex}-{mod}']
-        #print(sample_classes)
-        # load base images ===============
-        img_data = ({'path':[csv_df.iloc[i]['Path'] for i in sample_idx],
-                    'class':sample_classes})
-        imgs = [Image.open(path).convert('RGB') for path in img_data['path']]
-        imgs = [self.transform(img).to(torch.float) for img in imgs]
-        
-        # troubleshooting
-        self.base_img_mean = torch.mean(torch.stack(imgs),[0,2,3], keepdim=True)
+        # BASE IMAGES ====================================
+        self.imgs = {ii:{} for ii in range(3)}
+        self.img_list = []
+        for ii,idx in enumerate(img_idxs):
+            row = dataframe.iloc[idx,:]
+            self.imgs[ii]['Index'] = idx
+            # load image
+            self.imgs[ii]['Image'] = self.transform(Image.open(row['Path']).convert('RGB')).to(torch.float)
+            self.img_list.append(self.imgs[ii]['Image'])
+            label = []
+            for key, values in self.subgroups.items():
+                for sub in values:
+                    if row[sub] == 1:
+                        self.imgs[ii][key] = sub
+                        label.append(sub)
+            self.imgs[ii]['Label'] = "-".join(label)
+        self.base_img_mean = torch.mean(torch.stack(self.img_list),[0,2,3], keepdim=True)
         self.base_img_mean = torch.squeeze(self.base_img_mean)
-        self.base_img_std = torch.std(torch.stack(imgs),[0,2,3], keepdim=True)
+        self.base_img_std = torch.std(torch.stack(self.img_list),[0,2,3], keepdim=True)
         self.base_img_std = torch.squeeze(self.base_img_std)
         # set up normalization for interpolated images
         self.norm = transforms.Normalize(self.base_img_mean, self.base_img_std)
-        #self.base_images = imgs
-        #self.base_labels = sample_classes
-        self.basis = {'images':imgs,
-                      'labels':sample_classes,
-                      'index':sample_idx,
-                      'img_path':img_data['path']}
-
-        # print(img_data['path'])
-        # # get plane
-        self.vec1, self.vec2, b, self.coords = get_plane(imgs[0], imgs[1], imgs[2])
-        # view images
-        if save_result_images:
-            # save original three images in plot
-            fig2, ax2 = plt.subplots(1,3)
-            for i in range(3):
-                ax2[i].imshow(imgs[i].permute(1,2,0).numpy())
-            plt.savefig("/gpfs_projects/alexis.burgon/OUT/2022_CXR/decision_boundaries/base_imgs.png")
-
-        # # set constants
+        # random img input settings
+        for ii in range(randomize):
+            self.imgs[ii]['Image'] = np.random.randint(random_range[0], random_range[1], size=(scale,scale), dtype=np.uint8)
+        # image pixel shuffle
+        for ii in range(shuffle):
+            self.imgs[ii]['Image'] = np.random.shuffle(self.imgs[ii]['Image'])
+        # VIRTUAL IMAGES ==================================
+        self.vec1, self.vec2, b, self.coords = get_plane(self.imgs[0]['Image'], self.imgs[1]['Image'], self.imgs[2]['Image'])
+        # constants
         range_l = 0.1
         range_r = 0.1
-        # # create plane dataset
-        self.base_img = imgs[0]
+        # generate dataset
+        self.base_img = self.imgs[0]['Image']
         x_bounds = [coord[0] for coord in self.coords]
         y_bounds = [coord[1] for coord in self.coords]
-
         self.bound1 = [torch.min(torch.tensor(x_bounds)), torch.max(torch.tensor(x_bounds))]
         self.bound2 = [torch.min(torch.tensor(y_bounds)), torch.max(torch.tensor(y_bounds))]
         len1 = self.bound1[-1] - self.bound1[0]
         len2 = self.bound2[-1] - self.bound2[0]
-
-        self.steps = steps
-
         list1 = torch.linspace(self.bound1[0] - range_l*len1, self.bound1[1] + range_r*len1, self.steps)
         list2 = torch.linspace(self.bound2[0] - range_l*len2, self.bound2[1] + range_r*len2, self.steps)
         grid = torch.meshgrid([list1, list2])
-
         self.coefs1 = grid[0].flatten()
         self.coefs2 = grid[1].flatten()
         self.df = self.load_df()
 
-        if save_result_images:
-            fig, ax = plt.subplots(self.steps, self.steps)
-            for i in range(len(self.df)):
-                image = self.df.iloc[i]['Image'].permute(1,2,0).numpy()
-                ax[int(i/self.steps), i%self.steps].imshow(image)
-                ax[int(i/self.steps), i%self.steps].axis('off')
-            plt.savefig("/gpfs_projects/alexis.burgon/OUT/2022_CXR/decision_boundaries/test_images.png")
-
-        
     def load_df(self):
-        #print("loading df")
         images = []
         for i in range(self.coefs1.shape[0]):
             images += [self.base_img + self.coefs1[i] * self.vec1 + self.coefs2[i] * self.vec2]
             # normalize values based on base images
-            images[i] = self.norm(images[i])
-                    
-        labels = [np.array([0,0,0,0])] * len(images)
-        # Unsure of column names needed
+            if self.normalize:
+                images[i] = self.norm(images[i])
+        labels = [np.array([0]*len(self.prediction_tasks))] * len(images)
         self.images = images
         df = pd.DataFrame(list(zip(images, labels)), columns=['Image', 'Label'])
         return df
@@ -195,13 +119,13 @@ class plane_dataset(BaseDataset):
     def __len__(self):
         return self.coefs1.shape[0]
 
+    def get_image(self, index):
+        return self.df.at[index, 'Image'], self.df.at[index,'Label']
+
     def get_study(self, index=None):
         images = self.df['Image'].tolist()
         labels = self.df['Label'].tolist()
         return images, labels
-    
-    def get_image(self, index):
-        return self.df.iloc[index]['Image'], self.df.iloc[index]['Label']
 
     def __getitem__(self, index):
         if self.study_level:
@@ -209,160 +133,124 @@ class plane_dataset(BaseDataset):
         else:
             return self.get_image(index)
 
-
-def get_planeloader(data_args, csv_input,selection_mode, samples, steps, data_mode='normal', model=None, save_result_images=False):
-    dataset = plane_dataset(csv_input,
-                            selection_mode=selection_mode,
-                            samples=samples,
-                            steps=steps,
-                            data_mode=data_mode,
-                            model=model,
-                            save_result_images=save_result_images)
+def get_planeloader(data_args, **kwargs):
+    dataset = plane_dataset(**kwargs)
     planeloader = data.DataLoader(dataset=dataset,
-        batch_size=data_args.batch_size,
-        shuffle=False,
-        num_workers=data_args.num_workers)
+                                  batch_size = data_args.batch_size,
+                                  shuffle=False,
+                                  num_workers=data_args.num_workers)
     return planeloader
 
-def imscatter(x, y, image, ax=None, zoom=1):
-    im = OffsetImage(image, zoom=zoom)
-    x, y = np.atleast_1d(x,y)
-    artists = []
-    ab = AnnotationBbox(im, (x,y), xycoords='data', frameon=False)
-    artists.append(ax.add_artist(ab))
-    ax.update_datalim(np.column_stack([x,y]))
-    ax.autoscale()
-    return artists
+def catagorize(row, subgroups):
+    label = []
+    for s in subgroups:
+        if s in row:
+            label.append(row[s])
+    return "-".join(label)
 
-# TESTING FUNCTIONALITY
-def fudge_data(predictions, planeloader):
-    predictions = np.zeros((len(planeloader.dataset),14))
-    c1 = round(len(planeloader.dataset)/3)
-    c2 = round(2*len(planeloader.dataset)/3)
-    predictions[:c1,0] = 1
-    predictions[c1:c2,1] = 1
-    predictions[c2:,2] = 1
-    predictions[1000:2000, 3] = 2
-    predictions[6000:7500, 7] = 2
-    return predictions
-    
+def decision_region_analysis(predictions,
+                             planeloader,
+                             classes,
+                             save_loc=None,
+                             generate_plot=True,
+                             color_dict=None,
+                             label_with='class',
+                             title_with='index'):   
 
-def plot_decision_boundaries(predictions,
-                            planeloader,
-                            classes,
-                            synthetic_predictions=False,
-                            #plot_mode='overlap',
-                            save_loc="/gpfs_projects/alexis.burgon/OUT/2022_CXR/decision_boundaries/test.png",
-                            point_size=2,
-                            generate_plot=True):
-    """
-    generates a plot of decision boundaries from predictions on a planeloader dataset
-    and saves as a png
-
-    predictions: numpy array of shape (samples, classes)
-    planeloader: dataloader of a plane_dataset
-    labels: labels of the original three images
-    synthetic_predictions: bool, whether or not to fake predictions
-    save_loc: save location of output plot
-    """
-    
-
-    if synthetic_predictions:
-        print('Generating synthetic predictions ...')
-        predictions = fudge_data(predictions, planeloader)
-
-    preds = torch.tensor(predictions.values)
-    summ_df = pd.DataFrame({'class':classes, 'occurances':[0]*len(classes), 'percent':[0]*len(classes)})
-    
-
-    
-    # this is pretty much hardcoded for male-DX, male-CR, female-DX, female-CR
-    mod_pred = torch.argmax(preds[:,:2], dim=1).numpy() # CR=0, DX=1
-    sex_pred = torch.argmax(preds[:,2:], dim=1).numpy() # F=0, M=1
-
-    class_pred = np.zeros((preds.size()[0], len(classes)))
-    for i in range(len(classes)):
-        #print(f'working on {classes[i]}')
-        if 'F' in classes[i]:
-            class_pred[:,i] += 1 - sex_pred[:]
-        elif 'M' in classes[i]:
-            class_pred[:,i] += sex_pred[:]
-        if 'CR' in classes[i]:
-            class_pred[:,i] +=  1 - mod_pred[:]
-        elif 'DX' in classes[i]:
-            class_pred[:,i] += mod_pred[:]
-    class_pred = np.argmax(class_pred, axis=1)
-
-    classes_found, class_counts = np.unique(class_pred, return_counts=True)
-    
-    for i in range(len(classes_found)):
-        class_idx = int(classes_found[i])
-        summ_df['occurances'].iloc[class_idx] = class_counts[i]
-        summ_df['percent'].iloc[class_idx] = (class_counts[i]/np.sum(class_counts))*100
-        
-    if generate_plot:
-        # # plot settings ================================================
-        # col_map = cm.get_cmap('tab20')
-        col_palette = sns.color_palette("hls", 14)
-        color_dict = {"F-CR": "#dd75b0",
-                    "F-DX": "#db2b8f",
-                    "M-CR": "#759add",
-                    "M-DX": "#3973dd"}
-        col_palette = sns.color_palette([color_dict['F-CR'],
-                                        color_dict['F-DX'],
-                                        color_dict['M-CR'],
-                                        color_dict['M-DX']])
-        fig, ax = plt.subplots(figsize=(8,6))
-        #ax.axis('tight')
-        ax.tick_params(labelsize=8)
-
-        col_map = ListedColormap(col_palette.as_hex())
-        cmaplist = [col_map(i) for i in range(col_map.N)]
-        cmaplist = cmaplist[:len(classes)]
-        col_map = LinearSegmentedColormap.from_list('custom_colormap', cmaplist,N=len(classes))
-        x = planeloader.dataset.coefs1.numpy()
-        y = planeloader.dataset.coefs2.numpy()
-        #class_dict = {classes[i]:i for i in range(len(classes))}
-
-        label_color_dict = dict(zip([*range(len(classes))],cmaplist))
-        
-        color_idx = [label_color_dict[label] for label in class_pred]
-
-        scatter = ax.scatter(x,y,c=color_idx, s=point_size) # original had alpha=val, but alpha needs to be a scalar and val is a tuple
-
-
-        coords = planeloader.dataset.coords
-        # # add markers for original 3 images
-        img_markers = [".",".","."]
-        img_points = []
-        for i in range(3):
-            label = planeloader.dataset.basis['labels'][i]
-            img_points.append(ax.scatter(coords[i][0], coords[i][1],s=10, c='black'))
-            # place class label with original 3 points (slight offset to increase legibility)
-            plt.text(coords[i][0]-1500, coords[i][1]+500, planeloader.dataset.basis['labels'][i])
-        #img_legend = plt.legend(img_points, [labels[i] for i in range(len(labels))], bbox_to_anchor=(1.0,1.0), loc='lower left')
-        
-        patch_list = []
-        for i in classes_found:
-            patch_list.append(mpatches.Patch(color=cmaplist[i], label=f'{classes[i]}'))
-        # Paper Example Formatting ========================================
-        ax.axis('off')
-        #ax.
-        # ====================================
-        plt.legend(handles=patch_list, 
-                bbox_to_anchor=(0.5, 0),
-                loc='upper center',
-                ncol=len(patch_list),
-                borderaxespad=2)
-        #plt.gca().add_artist(img_legend)
-        plt.title(planeloader.dataset.basis['index'])
-        if os.path.isfile(save_loc):
-            os.remove(save_loc)
-        plt.savefig(save_loc, bbox_inches='tight', dpi=300)
-        plt.close(fig)
-    return summ_df
-
-
-
-
-    
+    # summary_df = pd.DataFrame({"class":classes, 'occurances':[0]*len(classes), 'percent':[0]*len(classes)})
+    indiv_classes =list(set(x for c in classes for x in c.split("-")))
+    class_dict = {key:None for key in planeloader.dataset.subgroups}
+    class_dict['class'] = classes
+    class_df = pd.DataFrame(class_dict)
+    class_df = class_df.set_index("class")
+    for c in classes:
+        for key, vals in planeloader.dataset.subgroups.items():
+            for v in vals:
+                if v in c.split("-"):
+                    class_df.at[c,key] = v
+    class_df.dropna(how='all', axis=1, inplace=True)
+    summary_df = pd.DataFrame(columns = ('Class','Occurances', 'Percent'))
+    summary_df = summary_df.set_index("Class")
+    for key, vals in planeloader.dataset.subgroups.items():
+        outputs = [v for v in vals if v in indiv_classes]
+        if len(outputs) == 0:
+            continue
+        if len(outputs) == 1:
+            print("???")
+            continue
+        # currently only works for binary outputs
+        conditions = [predictions[outputs[0]] > predictions[outputs[1]], predictions[outputs[0]] < predictions[outputs[1]]]
+        choices = [outputs[0], outputs[1]]
+        predictions[key] = np.select(conditions, choices, default='Unknown')
+    predictions['Label'] = predictions.apply(lambda row: catagorize(row, planeloader.dataset.subgroups), axis=1)
+    predicted_labels = pd.DataFrame({"Label":predictions['Label'].values, 'x':planeloader.dataset.coefs1.numpy(), 'y':planeloader.dataset.coefs2.numpy()})
+    predicted_classes = predicted_labels['Label'].unique().tolist()
+    # get the number of predictions for each class
+    for ii, row in class_df.iterrows():
+        temp_df = predictions.copy()
+        for col in class_df.columns:
+            temp_df = temp_df[temp_df[col] == row[col]]
+        summary_df.at[ii, "Occurances"] = len(temp_df)
+        summary_df.at[ii, 'Percent'] = (len(temp_df)/len(predictions)) * 100
+    if generate_plot: # TODO
+        if save_loc is None:
+            print("cannot generate plots without a save location")
+        else:
+            # set up visual options:
+            if color_dict is None:
+                col_palette = sns.color_palette("hls", 14)
+                col_map = ListedColormap(col_palette.as_hex())
+                cmaplist = [col_map(i) for i in range(col_map.N)][:len(classes)]
+                col_map = LinearSegmentedColormap.from_list('custom_colormap', cmaplist,N=len(classes))
+                label_color_dict = dict(zip([*range(len(classes))], cmaplist))
+                color_dict = {label:label_color_dict[ii] for ii, label in enumerate(predicted_classes)}
+            
+            fig, ax = plt.subplots(figsize=(8,6))
+            ax.tick_params(labelsize=8)
+            color_idx = [color_dict[label] for label in predicted_labels['Label'].values] # TODO
+            # color_idx = [color_dict[label] for label in predicted_classes]
+            x = planeloader.dataset.coefs1.numpy()
+            y = planeloader.dataset.coefs2.numpy()
+            scatter = ax.scatter(x,y,c=color_idx, s=10)
+            coords = planeloader.dataset.coords
+            img_markers = [".",".","."]
+            img_points = []
+            for i in range(3):
+                # label = planeloader.dataset
+                if label_with == 'class':
+                    label=planeloader.dataset.imgs[i]['Label']
+                elif label_with == 'index':
+                    label=planeloader.dataset.imgs[i]['Index']
+                elif label_with == 'none':
+                    label = ''
+                img_points.append(ax.scatter(coords[i][0], coords[i][1], s=10, c='black'))
+                plt.text(coords[i][0]-1500, coords[i][1]+1500, label)
+            
+            patch_list = []
+            for ii, label in enumerate(classes): #TODO: update to only classes found
+                patch_list.append(mpatches.Patch(color=color_dict[label], label=label))
+            
+            ax.axis("off")
+            plt.legend(handles=patch_list,
+                       bbox_to_anchor=(0.5,0),
+                       loc='upper center',
+                       ncol=len(patch_list),
+                       borderaxespad=2)
+            # TODO: title plot with indexs
+            if title_with == 'index':
+                plt.title(f"{planeloader.dataset.imgs[0]['Index']}, {planeloader.dataset.imgs[1]['Index']}, {planeloader.dataset.imgs[2]['Index']}")
+            elif title_with == 'class':
+                if len(set([planeloader.dataset.imgs[i]['Label'] for i in range(3)])) == 1:
+                    # base triplet is one class
+                    plt.title(planeloader.dataset.imgs[0]['Label'])
+                else:
+                    plt.title(f"{planeloader.dataset.imgs[0]['Label']}, {planeloader.dataset.imgs[1]['Label']}, {planeloader.dataset.imgs[2]['Label']}")
+            elif title_with == 'both':
+                if len(set([planeloader.dataset.imgs[i]['Label'] for i in range(3)])) == 1:
+                    # base triplet is one class
+                    plt.title(f"{planeloader.dataset.imgs[0]['Label']} ({planeloader.dataset.imgs[0]['Index']}, {planeloader.dataset.imgs[1]['Index']}, {planeloader.dataset.imgs[2]['Index']})")
+                else:
+                    plt.title(f"{planeloader.dataset.imgs[0]['Label']}, {planeloader.dataset.imgs[1]['Label']}, {planeloader.dataset.imgs[2]['Label']} ({planeloader.dataset.imgs[0]['Index']}, {planeloader.dataset.imgs[1]['Index']}, {planeloader.dataset.imgs[2]['Index']})")
+            plt.savefig(save_loc, bbox_inches='tight', dpi=300)
+            plt.close(fig)
+    return summary_df
