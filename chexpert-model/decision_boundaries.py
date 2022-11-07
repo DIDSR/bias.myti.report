@@ -208,6 +208,7 @@ def decision_region_analysis(predictions,
         predictions[key] = np.select(conditions, choices, default='Unknown')
     predictions['Label'] = predictions.apply(lambda row: catagorize(row, planeloader.dataset.subgroups), axis=1)
     predicted_labels = pd.DataFrame({"Label":predictions['Label'].values, 'x':planeloader.dataset.coefs1.numpy(), 'y':planeloader.dataset.coefs2.numpy()})
+    output_array = predicted_labels.to_numpy()
     predicted_classes = predicted_labels['Label'].unique().tolist()
     # get the number of predictions for each class
     for ii, row in class_df.iterrows():
@@ -231,7 +232,7 @@ def decision_region_analysis(predictions,
             
             fig, ax = plt.subplots(figsize=(8,6))
             ax.tick_params(labelsize=8)
-            color_idx = [color_dict[label] for label in predicted_labels['Label'].values] # TODO
+            color_idx = [color_dict[label] for label in predicted_labels['Label'].values]
             # color_idx = [color_dict[label] for label in predicted_classes]
             x = planeloader.dataset.coefs1.numpy()
             y = planeloader.dataset.coefs2.numpy()
@@ -277,4 +278,4 @@ def decision_region_analysis(predictions,
                     plt.title(f"{planeloader.dataset.imgs[0]['Label']}, {planeloader.dataset.imgs[1]['Label']}, {planeloader.dataset.imgs[2]['Label']} ({planeloader.dataset.imgs[0]['Index']}, {planeloader.dataset.imgs[1]['Index']}, {planeloader.dataset.imgs[2]['Index']})")
             plt.savefig(save_loc, bbox_inches='tight', dpi=300)
             plt.close(fig)
-    return summary_df
+    return summary_df, output_array

@@ -44,81 +44,6 @@ def get_img_idxs(idxs, allow_image_reuse, n_samples, curr_idxs=[]):
     return [list(s) for s in curr_idxs]
 
 
-        
-
-def decision_boundary_setup(groundtruth,
-                            input_classes,
-                            output_classes,
-                            output_dir,
-                            num_samples,
-                            triplet_classes=None,
-                            consistent_triplet=True,
-                            allow_image_reuse=True,
-                            update_summary_every=5):
-    # temp
-    # torch.manual_seed(1)
-    random.seed(1)
-    # TODO: inconsistent triplets
-    interaction_subgroups, all_possible_triplet_classes = get_all_combos(input_classes.values(), consistent_triplet=consistent_triplet)
-    # set up summary dataframe
-    overall_summary_fname = os.path.join(output_dir, 'test_overall_summary.csv') # TODO: naming convention
-    if os.path.exists(overall_summary_fname):
-        summary_df = pd.read_csv(overall_summary_fname)
-    elif consistent_triplet:
-        summary_df = pd.DataFrame(columns=['triplet class'] + [key for key in input_classes]+['n_combinations','AUROC'] + [f"%{x}" for x in output_classes])
-    else:
-        print("WIP summary file")
-    if triplet_classes == None:
-        triplet_classes = all_possible_triplet_classes
-    # get the indexs of the images of each interaction subgroup
-    isub_idxs = {}
-    for isub in interaction_subgroups:
-        temp_df = groundtruth.copy()
-        for c in isub:
-            temp_df = temp_df[temp_df[c] == 1]
-        isub_idxs[isub] = temp_df.index.tolist()
-    # get/create overall summary file
-    
-    for triplet in triplet_classes:
-        if len(set(triplet)) > 1: # TODO
-            continue
-        # check if existing individual summary file
-        t_name = "_".join(["".join(i) for i in triplet])
-        for i, j in abbreviation_table.items():
-            t_name = t_name.replace(i,j)
-        indiv_summary_fname = os.path.join(output_dir, f"{t_name}_combinatations.csv")
-        if os.path.exists(indiv_summary_fname):
-            indiv_df = pd.read_csv(indiv_summary_fname, index_col=0)
-            indiv_df  = indiv_df.astype(dtype={'img1 idx':int, 'img2 idx':int, 'img3 idx':int})
-            # get idx combinations already in df
-            current_idxs = []
-            for ii, row in indiv_df.iterrows():
-                current_idxs.append([row['img1 idx'], row['img2 idx'], row['img3 idx']])
-        else:
-            # set up the individual df
-            indiv_df = pd.DataFrame(columns=['img1 idx', 'img2 idx', 'img3 idx'] + [f"%{x}" for x in output_classes])
-            current_idxs = []
-        if len(indiv_df) < num_samples:
-            # either new individual df, or num_samples has increased
-            img_idxs = get_img_idxs(isub_idxs[isub][:10], allow_image_reuse=allow_image_reuse, n_samples=num_samples, curr_idxs=current_idxs)
-            for imgs in img_idxs:
-                if len(indiv_df[(indiv_df['img1 idx'] == imgs[0]) & (indiv_df['img2 idx'] == imgs[1]) & (indiv_df['img3 idx'] == imgs[2])] != 0):
-                    continue
-                indiv_df.loc[len(indiv_df)] = imgs + [None]*len(output_classes)
-            indiv_df = indiv_df.astype(dtype={'img1 idx':int, 'img2 idx':int, 'img3 idx':int})
-            # print(indiv_df)
-            indiv_df.to_csv(indiv_summary_fname)
-        # add to summary_df
-        if len(summary_df[summary_df['triplet class'] == t_name]) == 0:
-            cls = {}
-            for x in triplet[0]:
-                for key, vals in input_classes.items():
-                    if x in vals:
-                        cls[key] = x 
-            summary_df.loc[len(summary_df)] = [t_name]+[cls[key] for key in input_classes] +[0]*4
-        
-    print(summary_df)
-
 def trial_setup(data_args, transform_args,  predictor, save_dir, input_classes=test_input_classes, output_classes=test_output_classes, consistent_triplet=True, num_samples=10):
     # determine the possible combinations
     interaction_subgroups, all_possible_triplet_classes = get_all_combos(input_classes.values(), consistent_triplet=consistent_triplet)
@@ -173,6 +98,9 @@ def run_db_eval(args):
     output_classes = test_output_classes
     steps = 100
     update_every = 5
+    plot_shape = 'triangle'
+    save_every = 1
+    generate_plot = True
     # load arguments
     model_args = args.model_args
     data_args = args.data_args
@@ -204,15 +132,21 @@ def run_db_eval(args):
         for i, j in abbreviation_table.items():
             trip_id = trip_id.replace(i,j)
         triplet_save_dir = os.path.join(save_dir, trip_id)
+        triplet_array_file = os.path.join(save_dir, f"{trip_id}.npz")
         if not os.path.exists(triplet_save_dir):
             os.mkdir(triplet_save_dir)
         triplet_summary_file = os.path.join(save_dir, f"{trip_id}_summary.csv")
-        if os.path.exists(triplet_summary_file):
+        if os.path.exists(triplet_summary_file): # resuming trial
             triplet_summ = pd.read_csv(triplet_summary_file, index_col=0)
             used_idxs = triplet_summ['idxs'].values.tolist()
+            DB_arrays = np.load(triplet_array_file, allow_pickle=True)
+            print(DB_arrays.files)
+            DB_arrays = dict(DB_arrays)
+            print(DB_arrays.keys())
         else:
             triplet_summ = pd.DataFrame(columns=['idxs']+[f"%{out}" for out in output_classes])
             used_idxs = []
+            DB_arrays = {}
         if len(triplet_summ) < n_samples:
             # get correct samples from the dataframe
             temp_df = pd.read_csv(os.path.join(save_dir,"correct_only_groundtruth.csv"), index_col=0)
@@ -226,24 +160,32 @@ def run_db_eval(args):
                 used_idxs.append(current_sample)
                 # time to generate the decision boundary plots!
                 inpt_df = pd.read_csv(data_args.test_csv)
-                planeloader = get_planeloader(data_args, dataframe=inpt_df, img_idxs=current_sample, subgroups=input_classes, prediction_tasks=model_args.tasks, steps=steps)
+                planeloader = get_planeloader(data_args, dataframe=inpt_df, img_idxs=current_sample, subgroups=input_classes, prediction_tasks=model_args.tasks, steps=steps, shape=plot_shape)
                 predictions, groundtruth = predictor.predict(planeloader)
-                db_results = decision_region_analysis(predictions, 
+                db_results, db_array = decision_region_analysis(predictions, 
                                                       planeloader, 
                                                       title_with='both',
                                                       label_with='none',
                                                       classes=output_classes,
+                                                      generate_plot=generate_plot,
                                                       color_dict = {"Yes":"#11721a", "No":"#721a11", "Unknown":"#1385ef"},  # Unknown -> equally predicted for either class
                                                       save_loc=os.path.join(triplet_save_dir, f"{ii+1}__{current_sample[0]}_{current_sample[1]}_{current_sample[2]}"))
+                DB_arrays[f"{ii+1}__{current_sample[0]}_{current_sample[1]}_{current_sample[2]}"] = db_array
                 triplet_summ.loc[ii] = [None]*len(triplet_summ.columns)
                 triplet_summ.at[ii, 'idxs'] = current_sample
                 for out in output_classes:
                     triplet_summ.at[ii, f"%{out}"] = db_results.at[out, "Percent"]
-                triplet_summ.to_csv(triplet_summary_file)
-                if (ii+1) %update_every == 0:
+                if (ii+1) % save_every == 0:
+                    triplet_summ.to_csv(triplet_summary_file)
+                    np.savez_compressed(triplet_array_file, **DB_arrays)
+                if (ii+1) % update_every == 0:
                     update_overall_summary(overall_summ_file, triplet_summ, trip[0], input_classes, output_classes) 
+                return # DEBUG
+            triplet_summ.to_csv(triplet_summary_file) # save at the end of DB for indiviual triplet
         update_overall_summary(overall_summ_file,triplet_summ,trip[0],input_classes, output_classes)
-                
+
+
+
 def update_overall_summary(overall_summary_file, class_summary_df, triplet_class, input_classes, output_classes):
     df = pd.read_csv(overall_summary_file, index_col=0)
     id_cols = []
