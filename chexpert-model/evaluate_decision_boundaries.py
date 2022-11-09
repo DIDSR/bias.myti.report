@@ -15,7 +15,26 @@ import numpy as np
 
 test_input_classes = {'sex':['M','F'], 'race':['White', 'Black_or_African_American'], "COVID_positive":["Yes", "No"]}
 test_output_classes = ['Yes', "No"]
-# test_input_classes = {'sex':['M','F'],"COVID_postive":["Yes", "No"]}
+# edit the triplet classes to use - set to None to use all combos from test_input_classes
+# test_input_triplet = [[("M","White","Yes"),("M","White","Yes"),("M","White","Yes")],
+#                       [("M","White","No"),("M","White","No"),("M","White","No")]]
+# test_input_triplet = [[("M","Black_or_African_American","Yes"),("M","Black_or_African_American","Yes"),("M","Black_or_African_American","Yes")],
+#                       [("M","Black_or_African_American","No"),("M","Black_or_African_American","No"),("M","Black_or_African_American","No")]]
+# test_input_triplet = [[("F","White","Yes"),("F","White","Yes"),("F","White","Yes")],
+#                       [("F","White","No"),("F","White","No"),("F","White","No")]]
+# test_input_triplet = [[("F","Black_or_African_American","Yes"),("F","Black_or_African_American","Yes"),("F","Black_or_African_American","Yes")],
+                    #   [("F","Black_or_African_American","No"),("F","Black_or_African_American","No"),("F","Black_or_African_American","No")]]                     
+
+test_input_triplet = [[("M","Black_or_African_American","Yes"),("M","Black_or_African_American","Yes"),("M","Black_or_African_American","Yes")],
+                      [("M","Black_or_African_American","No"),("M","Black_or_African_American","No"),("M","Black_or_African_American","No")],
+                      [("M","White","Yes"),("M","White","Yes"),("M","White","Yes")],
+                      [("M","White","No"),("M","White","No"),("M","White","No")]]
+
+# test_input_triplet = [[("F","White","Yes"),("F","White","Yes"),("F","White","Yes")],
+#                       [("F","White","No"),("F","White","No"),("F","White","No")],
+#                       [("F","Black_or_African_American","Yes"),("F","Black_or_African_American","Yes"),("F","Black_or_African_American","Yes")],
+#                       [("F","Black_or_African_American","No"),("F","Black_or_African_American","No"),("F","Black_or_African_American","No")]]
+
 abbreviation_table = {
     'Female':"F",
     'Male':"M",
@@ -43,30 +62,49 @@ def get_img_idxs(idxs, allow_image_reuse, n_samples, curr_idxs=[]):
         curr_idxs.append(set(item))
     return [list(s) for s in curr_idxs]
 
+def get_pid_combos(pids, n_pid_use):
+    out_pids = []
+    for r in range(n_pid_use):
+        r_pids = [p for p in pids]
+        for n in range(int(len(pids)/3)):
+            item = sample(r_pids, 3)
+            while set(item) in out_pids: # don't allow the same exact combo of patients multiple times
+                item = sample(r_pids,3)
+            for i in item:
+                r_pids.remove(i)
+            out_pids.append(set(item))
+        # print("r: ", r)
+        # print(len(out_pids))
+    return [list(p) for p in out_pids]
 
 def trial_setup(data_args, transform_args,  predictor, save_dir, input_classes=test_input_classes, output_classes=test_output_classes, consistent_triplet=True, num_samples=10):
     # determine the possible combinations
     interaction_subgroups, all_possible_triplet_classes = get_all_combos(input_classes.values(), consistent_triplet=consistent_triplet)
     # load groundtruth, limit to only correct classifications
+    orig_gt = pd.read_csv(data_args.test_csv)
     loader = get_loader(phase = data_args.phase,
                         data_args = data_args,
                         transform_args=transform_args,
                         is_training=False,
                         return_info_dict=True)
     base_predictions, base_groundtruth, base_paths = predictor.predict(loader)
-    print(f"Base groundtruth has {len(base_groundtruth)} values")
+    base_predictions['patient_id'] = base_predictions.Path.map(orig_gt.set_index("Path").patient_id)
+    
+    # base_predictions, base_groundtruth = predictor.predict(loader, by_patient=False)
+    print(f"Base predictions has {len(base_predictions)} values ({len(base_predictions['patient_id'].unique())} patients)")
     for key, vals in input_classes.items():
         cols = [v for v in vals if v in output_classes]
         if len(cols) == 0:
             continue
         base_predictions[cols] = base_predictions[cols].eq(base_predictions[cols].max(axis=1), axis=0).astype(int)
+
         for c in cols:
             base_predictions['correct'] = np.where(base_predictions[c]==base_groundtruth[c], True, False)
             base_groundtruth = base_groundtruth[base_predictions['correct'] == True]
             base_predictions = base_predictions[base_predictions['correct'] == True]
-    print(f"Limiting to correct classifications yields {len(base_groundtruth)} values")
+    print(f"Limiting to correct classifications yields {len(base_predictions)} values ({len(base_predictions['patient_id'].unique())} patients)")
     # save a version of the base_groundtruth file, with all classes, not just output classes
-    orig_gt = pd.read_csv(data_args.test_csv)
+    
     orig_gt = orig_gt[orig_gt['Path'].isin(base_groundtruth['Path'].values)]
     orig_gt.to_csv(os.path.join(save_dir,"correct_only_groundtruth.csv"))
     # base_groundtruth.to_csv(os.path.join(save_dir,"correct_only_groundtruth.csv"))
@@ -94,13 +132,16 @@ def run_db_eval(args):
     # TODO: replace placeholders
     input_classes = test_input_classes
     consistent_triplet = True
-    n_samples = 50
+    n_samples = 495
     output_classes = test_output_classes
     steps = 100
-    update_every = 5
+    update_every = 15
     plot_shape = 'triangle'
-    save_every = 1
-    generate_plot = True
+    save_every = 5
+    generate_plot = False
+    n_patient_repeat = 15
+    triplet_classes = test_input_triplet
+    # triplet_classes=None
     # load arguments
     model_args = args.model_args
     data_args = args.data_args
@@ -126,38 +167,63 @@ def run_db_eval(args):
     if not os.path.exists(os.path.join(save_dir,"correct_only_groundtruth.csv")):
         print("No trial file found, generating")
         trial_setup(data_args, transform_args, predictor, save_dir, input_classes=input_classes, output_classes=output_classes)
-    interaction_subgroups, all_possible_triplet_classes = get_all_combos(input_classes.values(), consistent_triplet=consistent_triplet)
+    if triplet_classes == None: # get the combinations of triplets if triplets not provided!
+        interaction_subgroups, all_possible_triplet_classes = get_all_combos(input_classes.values(), consistent_triplet=consistent_triplet)
+    else:
+        all_possible_triplet_classes = triplet_classes
+    
     for trip in all_possible_triplet_classes: # TODO: non consistent triplets
+    
         trip_id = "_".join(["".join(t) for t in trip])
         for i, j in abbreviation_table.items():
             trip_id = trip_id.replace(i,j)
         triplet_save_dir = os.path.join(save_dir, trip_id)
         triplet_array_file = os.path.join(save_dir, f"{trip_id}.npz")
-        if not os.path.exists(triplet_save_dir):
-            os.mkdir(triplet_save_dir)
-        triplet_summary_file = os.path.join(save_dir, f"{trip_id}_summary.csv")
-        if os.path.exists(triplet_summary_file): # resuming trial
-            triplet_summ = pd.read_csv(triplet_summary_file, index_col=0)
-            used_idxs = triplet_summ['idxs'].values.tolist()
-            DB_arrays = np.load(triplet_array_file, allow_pickle=True)
-            print(DB_arrays.files)
-            DB_arrays = dict(DB_arrays)
-            print(DB_arrays.keys())
-        else:
-            triplet_summ = pd.DataFrame(columns=['idxs']+[f"%{out}" for out in output_classes])
-            used_idxs = []
-            DB_arrays = {}
-        if len(triplet_summ) < n_samples:
-            # get correct samples from the dataframe
+        triplet_idx_file = os.path.join(save_dir, f'{trip_id}_idxs.json')
+        if not os.path.exists(triplet_idx_file): # restricted by n_patient_repeat and the total number of patients w/ a correctly predicted img
+            # get triplet idxs
+            # get the patient_ids for the triplet class
             temp_df = pd.read_csv(os.path.join(save_dir,"correct_only_groundtruth.csv"), index_col=0)
             for t in trip[0]:
                 temp_df = temp_df[temp_df[t] == 1]
-            for ii in range(len(triplet_summ), n_samples):
-                # get idxs 
-                current_sample = temp_df.sample(n=3).index.tolist()
-                while current_sample in used_idxs:
-                    current_sample = temp_df.sample(n=3).index.tolist()
-                used_idxs.append(current_sample)
+            # get patient_ids 
+            pids = list(temp_df['patient_id'].unique())
+            triplet_idxs = get_pid_combos(pids, n_patient_repeat)
+            idx_df = pd.DataFrame(triplet_idxs, columns=['pid0','pid1','pid2'])
+            idx_df.to_json(triplet_idx_file)
+        else:
+            idx_df = pd.read_json(triplet_idx_file)
+        if not os.path.exists(triplet_save_dir):
+            os.mkdir(triplet_save_dir)
+        triplet_summary_file = os.path.join(save_dir, f"{trip_id}_summary.csv")
+        all_potential_idxs_file = os.path.join(save_dir, f"{trip_id}_idxs.json")
+        if os.path.exists(triplet_summary_file): # resuming trial
+            triplet_summ = pd.read_csv(triplet_summary_file, index_col=0)
+            triplet_idxs = pd.read_json(all_potential_idxs_file)
+            # used_idxs = triplet_summ['idxs'].values.tolist()
+            DB_arrays = np.load(triplet_array_file, allow_pickle=True)
+            DB_arrays = dict(DB_arrays)
+        else:
+            triplet_summ = pd.DataFrame(columns=['idxs']+[f"%{out}" for out in output_classes])
+            # used_idxs = []
+            DB_arrays = {}
+        if len(triplet_summ) < n_samples:
+            temp_df = pd.read_csv(os.path.join(save_dir,"correct_only_groundtruth.csv"), index_col=0)
+            # for t in trip[0]:
+            #     temp_df = temp_df[temp_df[t] == 1]
+            for ii in range(len(triplet_summ), min(n_samples,len(idx_df))):
+                # get idxs  -> choose a random image from each of the specified patients
+                # current_pids = idx_df.iloc[ii]
+                # print(current_pids)
+                current_sample = []
+                for pid in ['pid0','pid1','pid2']:
+                    current_sample.append(temp_df[temp_df['patient_id'] == idx_df.at[ii,pid]].sample(n=1).index.tolist()[0])
+                
+                # current_sample = temp_df.sample(n=3).index.tolist()
+                # print(current_sample)
+                # while current_sample in used_idxs:
+                #     current_sample = temp_df.sample(n=3).index.tolist()
+                # used_idxs.append(current_sample)
                 # time to generate the decision boundary plots!
                 inpt_df = pd.read_csv(data_args.test_csv)
                 planeloader = get_planeloader(data_args, dataframe=inpt_df, img_idxs=current_sample, subgroups=input_classes, prediction_tasks=model_args.tasks, steps=steps, shape=plot_shape)
@@ -180,7 +246,7 @@ def run_db_eval(args):
                     np.savez_compressed(triplet_array_file, **DB_arrays)
                 if (ii+1) % update_every == 0:
                     update_overall_summary(overall_summ_file, triplet_summ, trip[0], input_classes, output_classes) 
-                return # DEBUG
+                # return # DEBUG
             triplet_summ.to_csv(triplet_summary_file) # save at the end of DB for indiviual triplet
         update_overall_summary(overall_summ_file,triplet_summ,trip[0],input_classes, output_classes)
 
