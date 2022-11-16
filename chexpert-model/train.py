@@ -18,6 +18,18 @@ from datetime import datetime
 # from torchsummaryX import summary
 
 
+ckpt_files_open_hpc = {
+    "CheXpert_Resnet":"/gpfs_projects/ravi.samala/OUT/moco/experiments/ravi.samala/r8w1n416_20220715h15_tr_mocov2_20220715-172742/checkpoint_0019.pth.tar",
+    "Mimic_Resnet":"/gpfs_projects/ravi.samala/OUT/moco/experiments/ravi.samala/mimic_cxr__resnet18_w00001_20221027h06_tr_mocov2_20221027-083123/checkpoint_0019.pth.tar",
+    "CheXpert-Mimic_Resnet":"/gpfs_projects/ravi.samala/OUT/moco/experiments/ravi.samala/chexpert_mimic__resnet18_w00001_20221027h06_tr_mocov2_20221028-063241/checkpoint_0019.pth.tar",
+    "CheXpert-Mimic_Densenet":"/gpfs_projects/ravi.samala/OUT/moco/experiments/ravi.samala/chexpert_mimic__densenet121_w00001_20221102h10_tr_mocov2_20221102-094931/checkpoint_0019.pth.tar",
+    "CheXpert-Mimic_Resnext":"/gpfs_projects/ravi.samala/OUT/moco/experiments/ravi.samala/chexpert_mimic__resnext50_32x4d_w00001_20221104h20_tr_mocov2_20221105-071721/checkpoint_0019.pth.tar",
+    "CheXpert-Mimic_WideResnet":"/gpfs_projects/ravi.samala/OUT/moco/experiments/ravi.samala/chexpert_mimic__wide_resnet50_2_w00001_20221104h20_tr_mocov2_20221105-063601/checkpoint_0019.pth.tar"
+}
+
+ckpt_files_betsy = {
+    "CheXpert_Resnet": "/scratch/alexis.burgon/2022_CXR/model_runs/moco_checkpoints/checkpoint_0019.pth.tar"
+}
 def train(args):
     import os # Why does os only import properly if in the function?
     """Run model training."""
@@ -38,6 +50,10 @@ def train(args):
     # New tracking method 10/31/2022
     partition_tracking_fp = os.path.join(("/").join(str(logger_args.save_dir).split("/")[:-1]), 'tracking.log')
     model_tracking_fp = os.path.join(logger_args.save_dir, 'model_tracking.log')
+    if "gpfs_projects" in model_tracking_fp:
+        ckpt_files = ckpt_files_open_hpc
+    elif "scratch" in model_tracking_fp:
+        ckpt_files = ckpt_files_betsy
     # generate model tracking info
     # get tasks
     if data_args.custom_tasks:
@@ -91,15 +107,14 @@ def train(args):
     step_n =int(data_args.csv.replace(".csv","").split("_")[-1])
     if step_n == 0:
         # adjusted to allow the use of different pretraining
-        if model_args.ckpt_path and model_args.ckpt_path == 'CheXpert':
-            # specified CSL pretrained checkpoint
-            print()
-            print("pretrained checkpoint specified : {}".format(model_args.ckpt_path))
-            # CL-specified args are used to load the model, rather than the
-            # ones saved to args.json.
-            model_args.pretrained = False
-            ## CHANGE CheXpert checkpoint here!!
-            model_args.ckpt_path = "/gpfs_projects/ravi.samala/OUT/moco/experiments/ravi.samala/r8w1n416_20220715h15_tr_mocov2_20220715-172742/checkpoint_0019.pth.tar"
+        if model_args.ckpt_path:
+            model_args.pretrained = False # TODO: look into what this does
+            print(f"pretrained checkpoint specified: {model_args.ckpt_path}")
+            if model_args.ckpt_path in ckpt_files:
+                model_args.ckpt_path = ckpt_files[model_args.ckpt_path]
+            else:
+                print("Specified ckpt_path not implemented yet")
+                return
             print(f"Loading model from {model_args.ckpt_path}")
             model, ckpt_info = ModelSaver.load_model(ckpt_path=model_args.ckpt_path,
                                                     gpu_ids=args.gpu_ids,
@@ -107,40 +122,8 @@ def train(args):
                                                     is_training=True)
             # print(ckpt_info)
             optim_args.start_epoch = 1
-        elif model_args.ckpt_path and model_args.ckpt_path == "MIMIC":
-             # specified CSL pretrained checkpoint
-            print('MIMIC not yet implemented')
-            return
-            print("pretrained checkpoint specified : {}".format(model_args.ckpt_path))
-            # CL-specified args are used to load the model, rather than the
-            # ones saved to args.json.
-            model_args.pretrained = False
-            ## CHANGE CSL checkpoint here!!
-            ckpt_path = ""
-            model, ckpt_info = ModelSaver.load_model(ckpt_path=model_args.ckpt_path,
-                                                    gpu_ids=args.gpu_ids,
-                                                    model_args=model_args,
-                                                    is_training=True)
-            optim_args.start_epoch = 1
-        elif model_args.ckpt_path and model_args.ckpt_path == "ImageNet":
-            # in the original MoCo CXR, they called this random initialization, but it used ImageNet pretraining
-            print("Starting without pretrained training checkpoint, random initialization with ImageNet pretraining")
-            model_fn = models.__dict__[model_args.model]
-            if data_args.custom_tasks is not None:
-                tasks = NamedTasks[data_args.custom_tasks]
-            else:
-                tasks = model_args.__dict__[TASKS]  # TASKS = "tasks"
-            print("Tasks: {}".format(tasks))
-            model = model_fn(tasks, model_args)
-            #model = nn.DataParallel(model, args.gpu_ids)
-            model = nn.DataParallel(model, args.gpu_ids).to(args.device)
-        elif model_args.ckpt_path and model_args.ckpt_path == 'Random':
-            # TODO
-            print("WIP random initialization")
-        else:
-            print(f"Unrecognized ckpt_path: {args.model_args.ckpt_path}")
-
             
+                
     else:  # # continual learning evaluation setup
         cur_step = "step_"+str(step_n)
         prev_step = "step_"+str(step_n-1)
@@ -371,8 +354,10 @@ def train(args):
     if tracking_info is not None:
         tracking_info['training completed'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         # TODO
-        tracking_info['best iter info']['epoch'] = None
-        tracking_info['best iter info']['AUROC'] = None
+        if os.path.exists(os.path.join(logger_args.save_dir, "best.pth.tar")):
+            best_ckpt_dict = torch.load(os.path.join(logger_args.save_dir, "best.pth.tar"))
+        tracking_info['best iter info']['epoch'] = best_ckpt_dict['ckpt_info']['epoch']
+        tracking_info['best iter info']['AUROC'] = best_ckpt_dict['ckpt_info']['custom-AUROC']
         with open(model_tracking_fp, 'w') as fp:
                 json.dump(tracking_info, fp, indent=1)
 
