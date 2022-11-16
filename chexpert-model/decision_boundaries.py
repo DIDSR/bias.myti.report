@@ -14,8 +14,8 @@ from matplotlib import cm
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 import numpy as np
-import seaborn as sns
-from shapely.geometry import Polygon, Point
+# import seaborn as sns
+# from shapely.geometry import Polygon, Point
 import os
 
         
@@ -50,7 +50,12 @@ class plane_dataset(BaseDataset):
                 random_range=(0,255),
                 shuffle=0,
                 normalize=True,
-                shape='rectangle'):
+                shape='rectangle',
+                save_images=None):
+        # print("CREATING PLANELODAER")
+        # print('RANDOMIZE: ', randomize)
+        # print("RANDOM RANGE: ", random_range)
+        # print("SHUFFLE: ", shuffle)
         self.subgroups = subgroups
         self.steps = steps
         self.normalize = normalize
@@ -80,12 +85,22 @@ class plane_dataset(BaseDataset):
         self.base_img_std = torch.squeeze(self.base_img_std)
         # set up normalization for interpolated images
         self.norm = transforms.Normalize(self.base_img_mean, self.base_img_std)
+
+        t_to_PIL = transforms.ToPILImage()
         # random img input settings
         for ii in range(randomize):
-            self.imgs[ii]['Image'] = np.random.randint(random_range[0], random_range[1], size=(scale,scale), dtype=np.uint8)
+            self.imgs[ii]['Image'] = torch.from_numpy(np.random.randint(random_range[0], random_range[1], size=(scale,scale), dtype=np.uint8))
+            self.imgs[ii]['Image'] = self.transform(t_to_PIL(self.imgs[ii]['Image']).convert('RGB'))
         # image pixel shuffle
         for ii in range(shuffle):
-            self.imgs[ii]['Image'] = np.random.shuffle(self.imgs[ii]['Image'])
+            # self.imgs[ii]['Image'] = self.imgs[ii]['Image'].numpy()
+            np.random.shuffle(self.imgs[ii]['Image'].numpy())
+            self.imgs[ii]['Image'] = self.transform(t_to_PIL(self.imgs[ii]['Image']))
+        if save_images is not None:
+            
+            for ii in range(3):
+                save_img = t_to_PIL(self.imgs[ii]['Image'])
+                save_img.save(os.path.join(save_images,'images', f'img_{ii}_r{randomize}_({random_range})_s{shuffle}.png'))
         # VIRTUAL IMAGES ==================================
         self.vec1, self.vec2, b, self.coords = get_plane(self.imgs[0]['Image'], self.imgs[1]['Image'], self.imgs[2]['Image'])
         # constants
@@ -107,6 +122,7 @@ class plane_dataset(BaseDataset):
             self.coefs1 = grid[0].flatten()
             self.coefs2 = grid[1].flatten()
         elif shape == 'triangle':
+            from shapely.geometry import Polygon, Point
             poly = Polygon(self.coords)
             xcoefs1 = grid[0].flatten()
             ycoefs1 = grid[1].flatten()
@@ -218,6 +234,7 @@ def decision_region_analysis(predictions,
         summary_df.at[ii, "Occurances"] = len(temp_df)
         summary_df.at[ii, 'Percent'] = (len(temp_df)/len(predictions)) * 100
     if generate_plot: # TODO
+        import seaborn as sns
         if save_loc is None:
             print("cannot generate plots without a save location")
         else:
