@@ -73,33 +73,11 @@ def train(args):
         'best iter info':{
             'loss threshold':args.selection_args.loss_threshold,
             'loss std threshold':args.selection_args.max_std,
-            'num trailing iterations':args.selection_args.evaluate_region,
-            'epoch':None,
-            'AUROC':None
+            'num trailing iterations':args.selection_args.evaluate_region
         }
     }
     with open(model_tracking_fp, 'w') as fp:
         json.dump(tracking_info, fp, indent=2)
-    # tracking_fp = os.path.join(("/").join(str(logger_args.save_dir).split("/")[:-1]), 'tracking.log')
-    # # print(tracking_fp)
-    # if os.path.exists(tracking_fp):
-    #     with open(tracking_fp, 'r') as fp:
-    #         tracking_info = json.load(fp)
-    #     tracking_info["Models"][logger_args.experiment_name] = {
-    #         "Training":{
-    #             "Base_weights":args.model_args.ckpt_path,
-    #             "max_epochs":args.optim_args.num_epochs,
-    #             "random_state":args.random_state,
-    #             "Started":datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    #         }            
-    #     }
-    #     tracking_info['Last updated'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    #     with open(tracking_fp, 'w') as fp:
-    #         json.dump(tracking_info, fp, indent=1)
-    #     # print(json.dumps(tracking_info,indent=1))
-    # else:
-    #     tracking_info = None
-    
     # Get logger.
     print ('Getting logger... log to path: {}'.format(logger_args.log_path))
     logger = Logger(logger_args.log_path, logger_args.save_dir)
@@ -139,43 +117,6 @@ def train(args):
         print("ckpt_info:", ckpt_info)
         optim_args.start_epoch = 1
 
-    # print(summary(model.module.cuda(), x=torch.rand(1,3, 320, 320).cuda()))
-    # # For conaug, point to the MOCO pretrained weights.
-    # if model_args.ckpt_path and model_args.ckpt_path != 'None':
-       
-    #     print("pretrained checkpoint specified : {}".format(model_args.ckpt_path))
-    #     # CL-specified args are used to load the model, rather than the
-    #     # ones saved to args.json.
-    #     model_args.pretrained = False
-    #     ckpt_path = model_args.ckpt_path
-    #     model, ckpt_info = ModelSaver.load_model(ckpt_path=ckpt_path,
-    #                                              gpu_ids=args.gpu_ids,
-    #                                              model_args=model_args,
-    #                                              is_training=True)
-        
-
-    #     if not model_args.moco:
-    #         # optim_args.start_epoch = ckpt_info['epoch'] + 1
-    #         # Adapted for continual learning
-    #         optim_args.start_epoch = 1
-    #     else:
-    #         optim_args.start_epoch = 1
-    # else:
-    #     print('Starting without pretrained training checkpoint, random initialization.') # This is a random initialization of Imagenet Pretraining!
-    #     # If no ckpt_path is provided, instantiate a new randomly
-    #     # initialized model.
-    #     model_fn = models.__dict__[model_args.model]
-    #     if data_args.custom_tasks is not None:
-    #         tasks = NamedTasks[data_args.custom_tasks]
-    #     else:
-    #         tasks = model_args.__dict__[TASKS]  # TASKS = "tasks"
-    #     print("Tasks: {}".format(tasks))
-    #     model = model_fn(tasks, model_args)
-    #     #model = nn.DataParallel(model, args.gpu_ids)
-    #     model = nn.DataParallel(model, args.gpu_ids).to(args.device)
-    #     #model = nn.parallel.DistributedDataParallel(model, args.gpu_ids).to(args.device)
-
-
     # Put model on gpu or cpu and put into training mode.
     print(args.device)
     model = model.to(args.device)
@@ -192,13 +133,33 @@ def train(args):
                              is_training=True,
                              return_info_dict=True,
                              logger=logger)
-    valid_loader = get_loader(phase="valid",
-                              data_args=data_args,
-                              transform_args=transform_args,
-                              is_training=False,
-                              return_info_dict=True,
-                              logger=logger)
-    
+    # # options for multiple validation sets
+    print("loading validation loader!")
+    if data_args.csv_dev.endswith(".csv"):
+        multiple_validation=False
+        all_valid_loaders=None
+        valid_loader = get_loader(phase="valid",
+                                data_args=data_args,
+                                transform_args=transform_args,
+                                is_training=False,
+                                return_info_dict=True,
+                                logger=logger)
+    elif data_args.csv_dev.endswith(".json"):
+        multiple_validation=True
+        all_valid_loaders = {}
+        with open(data_args.csv_dev, 'r') as fp:
+            val_dict = json.load(fp)
+        for id, info in val_dict.items():
+            # print(f"\nloading {id}")
+            if id == 'random_state':
+                continue
+            data_args.csv_dev = info['file']
+            all_valid_loaders[id] = get_loader(phase="valid",
+                                data_args=data_args,
+                                transform_args=transform_args,
+                                is_training=False,
+                                return_info_dict=True,
+                                logger=logger)
     # Instantiate the predictor class for obtaining model predictions.
     predictor = Predictor(model, args.device, args.code_dir)
     # Instantiate the evaluator class for evaluating models.
@@ -217,7 +178,8 @@ def train(args):
                        metric_name=optim_args.metric_name,
                        maximize_metric=optim_args.maximize_metric,
                        keep_topk=logger_args.keep_topk,
-                       selection_args=args.selection_args)
+                       selection_args=args.selection_args,
+                       multiple_validation=all_valid_loaders.keys())
     # get model layers to train
     if model_args.model == 'ResNet18':
         model_layers = [name for name,para in model.named_parameters()]
@@ -271,19 +233,33 @@ def train(args):
     if step_n > 0:
         print('Measuring forward transfer capability and logging:')
         # # deploy to get the forward transfer assessment
-        predictions, groundtruth = predictor.predict(valid_loader)
-        metrics, curves = evaluator.evaluate_tasks(groundtruth, predictions)
-        logger.log_metrics(metrics)
+        if multiple_validation: # Not tested on step > 0
+            print()
+            for id, val_loader in all_valid_loaders.items():
+                predictions, groundtruth = predictor.predict(val_loader)
+                metrics, curves = evaluator.evaluate_tasks(groundtruth, predictions)
+                logger.log_metrics(metrics)
 
-        # Add logger for all the metrics for valid_loader
-        logger.log_scalars(metrics, optimizer.global_step, False)
+                # Add logger for all the metrics for valid_loader
+                logger.log_scalars(metrics, optimizer.global_step, False)
+                # Get the metric used to save model checkpoints.
+                average_metric = evaluator.evaluate_average_metric(metrics,
+                                                        eval_tasks,
+                                                        optim_args.metric_name)
+                print(f"AVG METRIC ({id}): {average_metric}")
+        else:
+            predictions, groundtruth = predictor.predict(valid_loader)
+            metrics, curves = evaluator.evaluate_tasks(groundtruth, predictions)
+            logger.log_metrics(metrics)
 
-        # Get the metric used to save model checkpoints.
-        average_metric = evaluator.evaluate_average_metric(metrics,
-                                                eval_tasks,
-                                                optim_args.metric_name)
-        print(f"AVG METRIC: {average_metric}")
+            # Add logger for all the metrics for valid_loader
+            logger.log_scalars(metrics, optimizer.global_step, False)
 
+            # Get the metric used to save model checkpoints.
+            average_metric = evaluator.evaluate_average_metric(metrics,
+                                                    eval_tasks,
+                                                    optim_args.metric_name)
+            print(f"AVG METRIC: {average_metric}")
     # Run training
     while not optimizer.is_finished_training():
         optimizer.start_epoch()
@@ -294,40 +270,74 @@ def train(args):
         for inputs, targets, _ in train_loader:
             optimizer.start_iter()
             if optimizer.global_step and optimizer.global_step % optimizer.iters_per_eval == 0 or len(train_loader.dataset) - optimizer.iter < optimizer.batch_size:
+                if not multiple_validation:
+                    # Only evaluate every iters_per_eval examples.
+                    predictions, groundtruth, paths = predictor.predict(valid_loader, by_patient=args.by_patient)
+                    # print("predictions: {}".format(predictions))
+                    metrics, curves = evaluator.evaluate_tasks(groundtruth, predictions)
+                    # Log metrics to stdout.
+                    logger.log_metrics(metrics)
 
-                # Only evaluate every iters_per_eval examples.
-                predictions, groundtruth, paths = predictor.predict(valid_loader, by_patient=args.by_patient)
-                # print("predictions: {}".format(predictions))
-                metrics, curves = evaluator.evaluate_tasks(groundtruth, predictions)
-                # Log metrics to stdout.
-                logger.log_metrics(metrics)
+                    # Add logger for all the metrics for valid_loader
+                    logger.log_scalars(metrics, optimizer.global_step, False)
 
-                # Add logger for all the metrics for valid_loader
-                logger.log_scalars(metrics, optimizer.global_step, False)
+                    # Get the metric used to save model checkpoints.
+                    average_metric = evaluator.evaluate_average_metric(metrics,
+                                                        eval_tasks,
+                                                        optim_args.metric_name)
+                    # print(f"AVG METRIC: {average_metric}")
 
-                # Get the metric used to save model checkpoints.
-                average_metric = evaluator.evaluate_average_metric(metrics,
-                                                      eval_tasks,
-                                                      optim_args.metric_name)
-                # print(f"AVG METRIC: {average_metric}")
+                    if optimizer.global_step % logger_args.iters_per_save == 0:
+                        # Only save every iters_per_save examples directly
+                        # after evaluation.
+                        print("Save global step: {}".format(optimizer.global_step))
+                        saver.save(iteration=optimizer.global_step,
+                                epoch=optimizer.epoch,
+                                model=model,
+                                optimizer=optimizer,
+                                device=args.device,
+                                metric_val=average_metric)
+                        # make predictions on the entire validation set
+                        # import os
+                        # print("Predicting on entire validation set...")
+                        # predictions, gt, path = predictor.predict(valid_loader,by_patient=args.by_patient)
+                        # predictions.to_csv(os.path.join(saver.save_dir, "validation_predictions.csv"))
+                        # gt.to_csv(os.path.join(saver.save_dir, "validation_gt.csv"))
+                else:
+                    # Only evaluate every iters_per_eval examples.
+                    for id, val_loader in all_valid_loaders.items():
+                        predictions, groundtruth, paths = predictor.predict(val_loader, by_patient=args.by_patient)
+                        # print("predictions: {}".format(predictions))
+                        metrics, curves = evaluator.evaluate_tasks(groundtruth, predictions)
+                        # Log metrics to stdout.
+                        logger.log_metrics(metrics)
 
-                if optimizer.global_step % logger_args.iters_per_save == 0:
-                    # Only save every iters_per_save examples directly
-                    # after evaluation.
-                    print("Save global step: {}".format(optimizer.global_step))
-                    saver.save(iteration=optimizer.global_step,
-                               epoch=optimizer.epoch,
-                               model=model,
-                               optimizer=optimizer,
-                               device=args.device,
-                               metric_val=average_metric)
-                    # make predictions on the entire validation set
-                    import os
-                    print("Predicting on entire validation set...")
-                    predictions, gt, path = predictor.predict(valid_loader,by_patient=args.by_patient)
-                    predictions.to_csv(os.path.join(saver.save_dir, "validation_predictions.csv"))
-                    gt.to_csv(os.path.join(saver.save_dir, "valitaion_gt.csv"))
+                        # Add logger for all the metrics for valid_loader
+                        logger.log_scalars(metrics, optimizer.global_step, False)
 
+                        # Get the metric used to save model checkpoints.
+                        average_metric = evaluator.evaluate_average_metric(metrics,
+                                                            eval_tasks,
+                                                            optim_args.metric_name)
+                        print(f"AVG METRIC ({id}): {average_metric}")
+
+                        if optimizer.global_step % logger_args.iters_per_save == 0:
+                            # Only save every iters_per_save examples directly
+                            # after evaluation.
+                            print("Save global step: {}".format(optimizer.global_step))
+                            saver.save(iteration=optimizer.global_step,
+                                    epoch=optimizer.epoch,
+                                    model=model,
+                                    optimizer=optimizer,
+                                    device=args.device,
+                                    metric_val=average_metric,
+                                    val_id=id)
+                            # make predictions on the entire validation set
+                            # import os
+                            # print("Predicting on entire validation set...")
+                            # predictions, gt, path = predictor.predict(val_loader,by_patient=args.by_patient)
+                            # predictions.to_csv(os.path.join(saver.save_dir, "validation_predictions.csv"))
+                            # gt.to_csv(os.path.join(saver.save_dir, "validation_gt.csv"))
                 # Step learning rate scheduler.
                 optimizer.step_scheduler(average_metric)
 
@@ -354,10 +364,17 @@ def train(args):
     if tracking_info is not None:
         tracking_info['training completed'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         # TODO
-        if os.path.exists(os.path.join(logger_args.save_dir, "best.pth.tar")):
-            best_ckpt_dict = torch.load(os.path.join(logger_args.save_dir, "best.pth.tar"))
-        tracking_info['best iter info']['epoch'] = best_ckpt_dict['ckpt_info']['epoch']
-        tracking_info['best iter info']['AUROC'] = best_ckpt_dict['ckpt_info']['custom-AUROC']
+        if multiple_validation:
+            for id in all_valid_loaders:
+                if os.path.exists(os.path.join(logger_args.save_dir, f"{id}__best.pth.tar")):
+                    best_ckpt_dict = torch.load(os.path.join(logger_args.save_dir, f"{id}__best.pth.tar"))
+                tracking_info['best iter info'][f'{id}__epoch'] = best_ckpt_dict['ckpt_info']['epoch']
+                tracking_info['best iter info'][f'{id}__AUROC'] = best_ckpt_dict['ckpt_info']['custom-AUROC']
+        else:
+            if os.path.exists(os.path.join(logger_args.save_dir, "best.pth.tar")):
+                best_ckpt_dict = torch.load(os.path.join(logger_args.save_dir, "best.pth.tar"))
+            tracking_info['best iter info']['epoch'] = best_ckpt_dict['ckpt_info']['epoch']
+            tracking_info['best iter info']['AUROC'] = best_ckpt_dict['ckpt_info']['custom-AUROC']
         with open(model_tracking_fp, 'w') as fp:
                 json.dump(tracking_info, fp, indent=1)
 
