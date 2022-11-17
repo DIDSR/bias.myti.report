@@ -17,7 +17,7 @@ class ModelSaver(object):
     """Class to save and load model ckpts."""
     def __init__(self, save_dir, iters_per_save, max_ckpts, selection_args,
                  metric_name='val_loss', maximize_metric=False,
-                 keep_topk=True, logger=None, **kwargs):
+                 keep_topk=True, logger=None, multiple_validation=None,**kwargs):
         """
         Args:
             save_dir: Directory to save checkpoints.
@@ -46,28 +46,38 @@ class ModelSaver(object):
         self.best_loss_threshold = selection_args.loss_threshold
         self.best_dev_threshold = selection_args.max_std
         self.best_n_iters = selection_args.evaluate_region
+        #
+        if multiple_validation is not None:
+            self.multiple_validation = True
+            self.best_metric_val = {id:None for id in multiple_validation}
+        else:
+            self.multiple_validation = False
 
-    def _is_best(self, metric_val, optimizer):
+    def _is_best(self, metric_val, optimizer, val_id=None):
         """Check whether metric_val is the best one we've seen so far."""
         if metric_val is None:
             return False
         # New criteria
         running_avg = sum(optimizer.loss_log[-self.best_n_iters:])/self.best_n_iters
-        # print("RUNNIGN AVG:", running_avg)
-        # print("RUNNING STD",np.std(optimizer.loss_log[-self.best_n_iters:]))
-        # print(optimizer.loss_log[-self.best_n_iters:])
         if running_avg > self.best_loss_threshold:
             return False
         if np.std(optimizer.loss_log[-self.best_n_iters:]) > self.best_dev_threshold:
             return False
         # as long as it passes those 2 criteria, it can then be evaluated based on the previous "best" selection
-        return (self.best_metric_val is None
-                or (self.maximize_metric and
-                    self.best_metric_val < metric_val)
-                or (not self.maximize_metric and
-                    self.best_metric_val > metric_val))
+        if self.multiple_validation:
+            return (self.best_metric_val[val_id] is None
+                    or (self.maximize_metric and
+                        self.best_metric_val[val_id] < metric_val)
+                    or (not self.maximize_metric and
+                        self.best_metric_val[val_id] > metric_val))
+        else:
+            return (self.best_metric_val is None
+                    or (self.maximize_metric and
+                        self.best_metric_val < metric_val)
+                    or (not self.maximize_metric and
+                        self.best_metric_val > metric_val))
 
-    def save(self, iteration, epoch, model, optimizer, device, metric_val):
+    def save(self, iteration, epoch, model, optimizer, device, metric_val, val_id = None):
         """Save model parameters to disk.
 
         Args:
@@ -101,16 +111,26 @@ class ModelSaver(object):
             print("Path {} already exists".format(self.save_dir))
         torch.save(ckpt_dict, ckpt_path)
         print("METRIC VAL:", metric_val)
-        if self._is_best(metric_val, optimizer):
+        if self._is_best(metric_val, optimizer, val_id=val_id):
             # Save the best model
-            if self.logger is not None:
-                self.logger.log("Saving the model based on metric=" +
-                                f"{self.metric_name} and maximize=" +
-                                f"{self.maximize_metric} with value" +
-                                f"={metric_val}.")
-            self.best_metric_val = metric_val
-            best_path = self.save_dir / 'best.pth.tar'
-            shutil.copy(ckpt_path, best_path)
+            if val_id is None:
+                if self.logger is not None:
+                    self.logger.log("Saving the model based on metric=" +
+                                    f"{self.metric_name} and maximize=" +
+                                    f"{self.maximize_metric} with value" +
+                                    f"={metric_val}.")
+                self.best_metric_val = metric_val
+                best_path = self.save_dir / 'best.pth.tar'
+                shutil.copy(ckpt_path, best_path)
+            else:
+                if self.logger is not None:
+                    self.logger.log(f"Saving the model for validation portion {val_id} based on metric=" +
+                                    f"{self.metric_name} and maximize=" +
+                                    f"{self.maximize_metric} with value" +
+                                    f"={metric_val}.")
+                self.best_metric_val[val_id] = metric_val
+                best_path = self.save_dir / f'{val_id}__best.pth.tar'
+                shutil.copy(ckpt_path, best_path)
 
         # Add checkpoint path to priority queue (lower priority order gets
         # removed first)
