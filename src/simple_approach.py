@@ -7,54 +7,19 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
-import torchvision
+# import torchvision
 from torchvision import models
 from torch.optim import lr_scheduler
 # # Other
 from torchsummaryX import summary
-import matplotlib
-import matplotlib.pyplot as plt
+# import matplotlib
+# import matplotlib.pyplot as plt
 import numpy as np
 from sklearn import metrics
 # # Other custom
 from dat_data_load import Dataset
 # # 
-matplotlib.use('TkAgg')
-
-
-# functions to show an image
-def imshow(img):
-    # img = img / 2000 + 0     # unnormalize
-    npimg = img.numpy()
-    print([np.min(npimg), np.max(npimg)])
-    plt.imshow(np.transpose(npimg, (1, 2, 0)))
-    plt.show()
-
-# # Define a simple CNN
-class Net(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.conv1 = nn.Conv2d(3, 16, 5, 3)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(16, 16, 5, 1)
-        self.conv3 = nn.Conv2d(16, 32, 5, 1)
-        self.fc1 = nn.Linear(32 * 12 * 12, 1024)
-        self.fc2 = nn.Linear(1024, 256)
-        self.fc3 = nn.Linear(256, 64)
-        # self.fc4 = nn.Linear(64, 2)
-        self.fc4 = nn.Linear(64, 1)
-
-    def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = F.relu(self.conv3(x))
-        x = torch.flatten(x, 1) # flatten all dimensions except batch
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        x = self.fc4(x)
-        x = torch.sigmoid(x)
-        return x
+# matplotlib.use('TkAgg')
 
 
 # # --------------------------------------------------------------------
@@ -69,14 +34,6 @@ train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True, num_worker
 test_loader = DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=4)
 # #
 # #
-# net = Net()
-# print(net)
-# net.to(device)
-# x=torch.rand(16,3,224,224)
-# print(summary(net, x.to(device)))
-# criterion = nn.CrossEntropyLoss()
-# optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-
 net = models.resnet18(pretrained=True)
 num_ftrs = net.fc.in_features
 net.fc = nn.Linear(num_ftrs, 1)
@@ -87,7 +44,6 @@ optimizer = optim.SGD(model_ft.parameters(), lr=0.001, momentum=0.9)
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
 
 for epoch in range(50):  # loop over the dataset multiple times
-
     running_loss = 0.0
     for i, (filenames, inputs, labels) in enumerate(train_loader, 0):
         inputs = inputs.cuda()
@@ -103,7 +59,7 @@ for epoch in range(50):  # loop over the dataset multiple times
         optimizer.step()
 
         # # print statistics
-        if i+1 % 25 == 0:
+        if i % 25 == 0:
             print(f'[{epoch + 1}, {i + 1:5d}] loss: {loss.item() / 2000:.6f}')
 print('Finished Training')
 
@@ -138,8 +94,6 @@ with torch.no_grad():
         # the class with the highest energy is what we choose as prediction
         _, predicted = torch.max(outputs.data, 1)
         total += labels.size(0)
-        # print(labels)
-        # print(predicted)
         correct += (predicted.cpu() == labels.cpu()).sum().item()
         # #
         labl_list = list(labels.cpu().numpy())
