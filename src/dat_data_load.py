@@ -14,7 +14,7 @@ from torch.utils.data import Dataset as BaseDataset
 
 # #
 # #
-def read_dat_rot(imageName, rot_flag):
+def read_dat_rot(imageName, rot_flag, custom_scale):
     with open(imageName, "rb") as f:
         bytes = f.read(4)
         size = struct.unpack('<HH', bytes)
@@ -43,7 +43,10 @@ def read_dat_rot(imageName, rot_flag):
     npAr3[2, :, :] = npAr2[:, :]
     npAr3 = npAr3.astype(np.float32)
     # # spcial
-    npAr3 = (npAr3 - 400)/(2000.0 - 400.0)
+    if custom_scale:
+        # # custom scale only for BG corrected mammo masses
+        # # adjust this if the task changes
+        npAr3 = (npAr3 - 400)/(2000.0 - 400.0)
     npAr3[npAr3 < 0] = 0
     npAr3[npAr3 > 1] = 1
     # # <<
@@ -55,11 +58,13 @@ class Dataset(BaseDataset):
             self,
             list_file,
             crop_to_224=True,
-            train_flag=True
+            train_flag=True,
+            custom_scale=False
     ):
         # #
         self.crop_to_224 = crop_to_224
         self.train_flag = train_flag
+        self.custom_scale = custom_scale
         lines = open(list_file).readlines()
         info = np.array([t.rstrip().split('\t') for t in lines])
         dats = info[:, 0]
@@ -76,9 +81,9 @@ class Dataset(BaseDataset):
         # #
         if self.train_flag:
             rot_flag = random.randint(0, 7)
-            img_o = read_dat_rot(self.images[i], rot_flag)
+            img_o = read_dat_rot(self.images[i], rot_flag, self.custom_scale)
         else:
-            img_o = read_dat_rot(self.images[i], 0)
+            img_o = read_dat_rot(self.images[i], 0, self.custom_scale)
         lbl_o = self.class_values[i]
         # #
         if self.crop_to_224:

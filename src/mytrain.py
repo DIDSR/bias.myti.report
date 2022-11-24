@@ -45,11 +45,16 @@ def change_googlenet_model(model, num_channels):
     return model
 
 
-def adjust_learning_rate(optimizer, epoch, args):
-    """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-    lr = args.start_learning_rate * (0.1 ** (epoch // 30))
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
+def change_resnet18_model(model, num_channels, p=0.2):
+    new_layers = nn.Sequential(nn.Dropout(p), nn.Linear(1000, 512), nn.Linear(512, 128), nn.Linear(128, num_channels))
+    model = nn.Sequential(model, new_layers)
+    return model
+
+# def adjust_learning_rate(optimizer, epoch, args):
+#     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
+#     lr = args.start_learning_rate * (0.1 ** (epoch // 30))
+#     for param_group in optimizer.param_groups:
+#         param_group['lr'] = lr
 
 
 def roc_auc(output, target, topk=(1,)):
@@ -76,38 +81,40 @@ def train(args):
     #     param.requires_grad = False
     # for p in model.parameters():
     #     p.requires_grad = False
-    # print(summary(model, (1, 3, 224, 224)))
-    num_channels = 2
-    # if args.dcnn == 'googlenet':
-    #     model = change_googlenet_model(model, num_channels)
-    # print(model)
-    # Freeze all base layers in the "features" section of the model (the feature extractor) by setting requires_grad=False
-    print(model)
-    model.fc = torch.nn.Linear(in_features=model.fc.in_features, out_features=num_channels, bias=True)
+    num_channels = 1
+    if args.dcnn == 'googlenet':
+        model = change_googlenet_model(model, num_channels)
+    elif args.dcnn == 'resnet18':
+        model = change_resnet18_model(model, num_channels)
     
     # # # debug code to understand how a ROI passes through the network
     x=torch.rand(16,3,224,224)
     print(summary(model, x))
-    # return
 
+    # # 
     torch.cuda.set_device(args.gpu_id)
     model.cuda(args.gpu_id)
-    # # Create tr and vd dataset
-    train_dataset = Dataset(args.input_train_file, crop_to_224=True, train_flag=True)
-    valid_dataset = Dataset(args.validation_file, crop_to_224=True, train_flag=False)
-    # # Create the data loader
+    # # Create tr and vd datasets
+    train_dataset = Dataset(args.input_train_file, crop_to_224=True, train_flag=True, custom_scale=True)
+    valid_dataset = Dataset(args.validation_file, crop_to_224=True, train_flag=False, custom_scale=True)
+    # # Create tr and vd data loaders
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.threads)
     valid_loader = DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.threads)
     num_steps_in_epoch = len(train_loader)
     # # 
-    optimizer = torch.optim.Adam(model.parameters(), args.start_learning_rate, weight_decay=args.step_decay)
-    decayRate = 0.96
-    my_lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=decayRate)
+    # optimizer = torch.optim.Adam(model.parameters(), args.start_learning_rate, weight_decay=args.step_decay)
+    optimizer = torch.optim.SGD(model.parameters(), lr=args.start_learning_rate, momentum=0.9)
+    decayRate = 0.95
+    # my_lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=decayRate)
+    my_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=num_steps_in_epoch*5, gamma=decayRate)
 
     print('Training...')
-    criterion = nn.CrossEntropyLoss()
+    # criterion = nn.CrossEntropyLoss()
+    # loss = ops.sigmoid_focal_loss(inputs=output.float(), targets=nn.functional.one_hot(target, num_classes=2).float(),
+    #                               alpha=args.alpha, gamma=args.gamma, reduction='mean')
+    criterion = nn.BCELoss()
     for epoch in range(args.num_epochs):
-        # # adjust_learning_rate(optimizer, epoch, args)
+        # adjust_learning_rate(optimizer, epoch, args)
         # # train for one epoch
         run_train(train_loader, model, criterion, optimizer, epoch, writer, my_lr_scheduler, num_steps_in_epoch, valid_loader, args)
         # break
@@ -139,22 +146,12 @@ def run_train(train_loader, model, criterion, optimizer, epoch, writer, my_lr_sc
         optimizer.zero_grad()
         output = model(images.float())
         
-        # loss = ops.sigmoid_focal_loss(inputs=output.float(), targets=nn.functional.one_hot(target, num_classes=2).float(),
-        #                               alpha=args.alpha, gamma=args.gamma, reduction='mean')
-        # print(output)
-        # print(torch.max(output,1)[0])
-        # print(target)
-        # loss = criterion(torch.max(output,1)[0],  target)
-        loss = criterion(output,  target)
-        # print(loss)
+        loss = criterion(torch.sigmoid(torch.flatten(output)), target.float())
         writer.add_scalar("Loss/train", loss.item(), master_iter)
-        # # # AUC - batch based
-        # auc = AUROC(pos_label=1)
-        # auc_val = auc(output[:, 0],  target)
-        # writer.add_scalar("AUC/train", auc_val.item(), master_iter)
         # # compute gradient and do SGD step
         loss.backward()
         optimizer.step()
+        my_lr_scheduler.step()
         # #
         writer.add_scalar("LR/train", my_lr_scheduler.get_last_lr()[0], master_iter)
 
@@ -174,14 +171,12 @@ def run_validate(val_loader, model, writer, args):
             images = images.cuda()
             output = model(images.float())
             # #
-            target_image_pred_probs = torch.softmax(output, dim=1)
-            # target_image_pred_probs = output
-            # target_image_pred_label = torch.argmax(target_image_pred_probs, dim=1)
+            target_image_pred_probs = torch.sigmoid(torch.flatten(output))
             # # accumulate
             labl_list = list(target.cpu().numpy())
             type_all += labl_list
             fnames_all += fname
-            scr = list(target_image_pred_probs.cpu().numpy()[:, 0])
+            scr = list(target_image_pred_probs.cpu().numpy())
             scores_all += scr
 
     result_df1 = pd.DataFrame(list(zip(fnames_all, type_all, scores_all)), columns=['ROI_path', 'type', 'probability'])
@@ -210,7 +205,7 @@ if __name__ == '__main__':
     # parser.add_argument('-o', '--optimizer', help='which optimizer to use: \'adam\' or \'gd\'', required=True)
     parser.add_argument('-b', '--batch_size', type=int, default=64, help='batch size.')
     parser.add_argument('-n', '--num_epochs', type=int, default=2000, help='num. of epochs.')
-    parser.add_argument('-t', '--threads', type=int, default=2, help='num. of threads.')
+    parser.add_argument('-t', '--threads', type=int, default=4, help='num. of threads.')
     parser.add_argument('-r', '--start_learning_rate', type=float, default=0.0001, help='starting learning rate.')
     parser.add_argument('-s', '--step_decay', type=int, default=1000, help='Step for decay of learning rate.')
     # parser.add_argument('--alpha', type=float, default=0.25, help='focal loss alpha')

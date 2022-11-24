@@ -7,20 +7,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
-# import torchvision
 from torchvision import models
 from torch.optim import lr_scheduler
 # # Other
-from torchsummaryX import summary
-# import matplotlib
-# import matplotlib.pyplot as plt
 import numpy as np
 from sklearn import metrics
 # # Other custom
 from dat_data_load import Dataset
 # # 
-# matplotlib.use('TkAgg')
-
 
 # # --------------------------------------------------------------------
 # # START HERE
@@ -29,16 +23,16 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 print(device)
 input_tr_lis = '/udsk11/rsamala/Lists/DCNN_lists/FeatEnggSplit/atm3/CADx_Tr_MAM_256x256__322USF_585DM_1032CBIS_1283SFM__T3222.lis'
 OUT_PATH = '/nas/unas25/rsamala/2022_MAM_CADx_DCNN/cifar_net.pth'
-train_dataset = Dataset(input_tr_lis, crop_to_224=True, train_flag=True)
+# # 
+train_dataset = Dataset(input_tr_lis, crop_to_224=True, train_flag=True, custom_scale=True)
 train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=4)
-test_loader = DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=4)
+test_loader = DataLoader(train_dataset, batch_size=64, shuffle=False, num_workers=4)
 # #
 # #
 net = models.resnet18(pretrained=True)
 num_ftrs = net.fc.in_features
 net.fc = nn.Linear(num_ftrs, 1)
 model_ft = net.to(device)
-# criterion = nn.CrossEntropyLoss()
 criterion = nn.BCELoss()
 optimizer = optim.SGD(model_ft.parameters(), lr=0.001, momentum=0.9)
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
@@ -63,23 +57,7 @@ for epoch in range(50):  # loop over the dataset multiple times
             print(f'[{epoch + 1}, {i + 1:5d}] loss: {loss.item() / 2000:.6f}')
 print('Finished Training')
 
-
-# torch.save(net.state_dict(), OUT_PATH)
-
-# dataiter = iter(test_loader)
-# fnames, images, labels = next(dataiter)
-
-# print('GroundTruth: ', ' '.join(f'{labels[j]:d}' for j in range(4)))
-# imshow(torchvision.utils.make_grid(images))
-
-# # load the model
-# net = Net()
-# net.load_state_dict(torch.load(OUT_PATH))
-# outputs = net(images)
-# _, predicted = torch.max(outputs, 1)
-
-# print('Predicted: ', ' '.join(f'{predicted[j]:d}' for j in range(4)))
-
+# # deployment
 type_all = []
 scores_all = []
 correct = 0
@@ -106,5 +84,4 @@ with torch.no_grad():
     fpr, tpr, thresholds = metrics.roc_curve(np.array(type_all), np.array(scores_all), pos_label=1)
     auc_val = metrics.auc(fpr, tpr)
     print('AUC = {}'.format(auc_val))
-
 print(f'Accuracy of the network on the 10000 test images: {100 * correct // total} %')
