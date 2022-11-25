@@ -105,6 +105,7 @@ def train(args):
     print('Training...')
     print('EPOCH\tTR-AVG-LOSS\tVD-AUC')
     criterion = nn.BCELoss()
+    auc_val = -1
     for epoch in range(args.num_epochs):
         # # train for one epoch
         avg_loss = run_train(train_loader, model, criterion, optimizer, epoch, writer, my_lr_scheduler, num_steps_in_epoch, valid_loader, args)
@@ -120,6 +121,9 @@ def train(args):
                 'auc': auc_val,
                 'optimizer': optimizer.state_dict(),
             }, os.path.join(args.output_base_dir, 'checkpoint__' + str(epoch) + '.pth.tar'))
+    # # log the final model
+    with open(args.log_path, 'a') as fp:
+        fp.write(args.input_train_file + '\t' + args.validation_file +  '\t' +  args.output_base_dir + '\t' + str(auc_val) + '\n')
 
 
 def run_train(train_loader, model, criterion, optimizer, epoch, writer, my_lr_scheduler, num_steps_in_epoch, val_loader, args):
@@ -178,19 +182,19 @@ def run_validate(val_loader, model, writer, args):
     # #
     fpr, tpr, _ = metrics.roc_curve(np.array(type_all), np.array(scores_all), pos_label=1)
     auc_val = metrics.auc(fpr, tpr)
-    with open(os.path.join(args.log_path, 'log.log'), 'a') as fp:
-        fp.write("{:d}\t{:1.5f}".format(master_iter, auc_val))
+    with open(os.path.join(args.output_base_dir, 'log.log'), 'a') as fp:
+        fp.write("{:d}\t{:1.5f}\n".format(master_iter, auc_val))
     writer.add_scalar("AUC/test", auc_val, master_iter)
     return auc_val
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Inference using tf')
+        description='Training using pytorch')
     parser.add_argument('-i', '--input_train_file', help='input training list file', required=True)
     parser.add_argument('-v', '--validation_file', help='input validation list file', required=True)
     parser.add_argument('-o', '--output_base_dir', help='output dir', required=True)
-    parser.add_argument('-d', '--dcnn', help="which dcnn to use: 'inception_v1', 'inception_v4', 'alexnet' or 'inception_resnet_v2'", required=True)
+    parser.add_argument('-d', '--dcnn', help="which dcnn to use: 'googlenet', 'resnet18', 'wide_resnet50_2' or 'densenet121'", required=True)
     # parser.add_argument('-f', '--freeze_up_to', help="Must be a freezable layer in the structure e.g. FirstLayer", required=True)
     # Must be one of: 'FirstLayer', 'Mixed_3b', 'Mixed_3c', 'Mixed_4b', 'Mixed_4c', 'Mixed_4d', 'Mixed_4e', 'Mixed_4f', 'Mixed_5b', 'Mixed_5c'
     # parser.add_argument('-g', '--ckpt_path', help='checkpoint saving path', required=True)
@@ -210,11 +214,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     print(args)
-    if not os.path.isdir(args.log_path):
-        os.makedirs(args.log_path)
 
     # # save the args
-    with open(os.path.join(args.log_path, 'args.json'), 'w') as fp:
+    with open(os.path.join(args.output_base_dir, 'training_args.json'), 'w') as fp:
         json.dump(args.__dict__, fp, indent=2)
     # # # ========================================
     train(args)

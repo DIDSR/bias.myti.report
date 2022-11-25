@@ -42,13 +42,13 @@ def read_dat_rot(imageName, rot_flag, custom_scale):
     npAr3[1, :, :] = npAr2[:, :]
     npAr3[2, :, :] = npAr2[:, :]
     npAr3 = npAr3.astype(np.float32)
-    # # spcial
+    # # special
     if custom_scale:
         # # custom scale only for BG corrected mammo masses
         # # adjust this if the task changes
         npAr3 = (npAr3 - 400)/(2000.0 - 400.0)
-    npAr3[npAr3 < 0] = 0
-    npAr3[npAr3 > 1] = 1
+        npAr3[npAr3 < 0] = 0
+        npAr3[npAr3 > 1] = 1
     # # <<
     return npAr3
 
