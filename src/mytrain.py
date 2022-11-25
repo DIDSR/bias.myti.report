@@ -45,18 +45,6 @@ def add_classification_layer_v1(model, num_channels, p=0.2):
     return model
 
 
-def roc_auc(output, target, topk=(1,)):
-    with torch.no_grad():
-        pred_np = list(output.cpu().numpy())
-        pred_np = [list(x)[1] for x in pred_np]
-        target_np = list(target.cpu().numpy())
-        fpr, tpr, thresholds = metrics.roc_curve(np.array(target_np), np.array(pred_np), pos_label=1)
-        res = []
-        AUC = metrics.auc(fpr, tpr)
-        res.append(AUC)
-    return res
-
-
 def save_checkpoint(state, filename='checkpoint.pth.tar'):
     torch.save(state, filename)
 
@@ -81,7 +69,6 @@ def train(args):
     # # # debug code to understand how a ROI passes through the network
     x=torch.rand(16,3,224,224)
     print(summary(model, x))
-
     # # 
     torch.cuda.set_device(args.gpu_id)
     model.cuda(args.gpu_id)
@@ -101,7 +88,7 @@ def train(args):
         print('ERROR. Uknown optimizer')
         return
     my_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=num_steps_in_epoch*args.decay_every_N_epoch, gamma=args.decay_multiplier)
-
+    # #
     print('Training...')
     print('EPOCH\tTR-AVG-LOSS\tVD-AUC')
     criterion = nn.BCELoss()
