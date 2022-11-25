@@ -36,18 +36,10 @@ import json
 # # VisionTransformer
 # # Wide ResNet
 
-
-
 master_iter = 0
 
 
-# def change_googlenet_model(model, num_channels, p=0.2):
-#     new_layers = nn.Sequential(nn.Dropout(p), nn.Linear(1024, 512), nn.Linear(512, 128), nn.Linear(128, num_channels))
-#     model = nn.Sequential(model, new_layers)
-#     return model
-
-
-def change_resnet18_model(model, num_channels, p=0.2):
+def add_classification_layer_v1(model, num_channels, p=0.2):
     new_layers = nn.Sequential(nn.Dropout(p), nn.Linear(1000, 512), nn.Linear(512, 128), nn.Linear(128, num_channels))
     model = nn.Sequential(model, new_layers)
     return model
@@ -75,13 +67,16 @@ def train(args):
     model = models.__dict__[args.dcnn](pretrained=True)
     num_channels = 1
     if args.dcnn == 'googlenet':
-        model = change_resnet18_model(model, num_channels)
+        model = add_classification_layer_v1(model, num_channels)
     elif args.dcnn == 'resnet18':
-        model = change_resnet18_model(model, num_channels)
+        model = add_classification_layer_v1(model, num_channels)
     elif args.dcnn == 'wide_resnet50_2':
-        model = change_resnet18_model(model, num_channels)
+        model = add_classification_layer_v1(model, num_channels)
     elif args.dcnn == 'densenet121':
-        model = change_resnet18_model(model, num_channels)
+        model = add_classification_layer_v1(model, num_channels)
+    else:
+        print('ERROR. UNKNOWN model.')
+        return
     
     # # # debug code to understand how a ROI passes through the network
     x=torch.rand(16,3,224,224)
@@ -219,7 +214,7 @@ if __name__ == '__main__':
         os.makedirs(args.log_path)
 
     # # save the args
-    with open(os.path.join(args.log_path, 'args.json'), 'a') as fp:
+    with open(os.path.join(args.log_path, 'args.json'), 'w') as fp:
         json.dump(args.__dict__, fp, indent=2)
     # # # ========================================
     train(args)
