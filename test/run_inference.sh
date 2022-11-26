@@ -5,11 +5,11 @@ WEIGHT_ITER="checkpoint__249.pth.tar"
 # #
 # #
 MASTER_LOG="${IN_DIR}/master_log_inference.log"
-# for ARCH in "googlenet" "resnet18" "wide_resnet50_2" "densenet121"
-for ARCH in "googlenet"
+# for ARCH in "googlenet" "resnet18" "wide_resnet50_2" "densenet121" "resnext50_32x4d"
+for ARCH in "resnext50_32x4d"
 do
     # for RAND in 0 1 2 3 4 5 6 7 8 9
-    for RAND in 0
+    for RAND in 0 1 2
     do
         # for FOLD in 0 1 2 3
         for FOLD in 0 1 2 3

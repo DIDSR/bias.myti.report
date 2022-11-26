@@ -15,8 +15,8 @@ NUM_THREADS=8
 SAVE_EVERY_N_EPOCHS=25
 # #
 MASTER_LOG="${IN_DIR}/master_log.log"
-# for ARCH in "googlenet" "resnet18" "wide_resnet50_2" "densenet121"
-for ARCH in "googlenet" "resnet18" "wide_resnet50_2" "densenet121"
+# for ARCH in "googlenet" "resnet18" "wide_resnet50_2" "densenet121" "resnext50_32x4d"
+for ARCH in "wide_resnet50_2" "densenet121"
 do
     # for RAND in 0 1 2 3 4 5 6 7 8 9
     for RAND in 0 1 2 3 4 5 6 7 8 9

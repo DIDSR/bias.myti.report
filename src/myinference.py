@@ -33,6 +33,8 @@ def inference(args):
         model = add_classification_layer_v1(model, num_channels)
     elif args.dcnn == 'densenet121':
         model = add_classification_layer_v1(model, num_channels)
+    elif args.dcnn == 'resnext50_32x4d':
+        model = add_classification_layer_v1(model, num_channels)
     else:
         print('ERROR. UNKNOWN model.')
         return
@@ -44,24 +46,28 @@ def inference(args):
     # model.load_state_dict(torch.load(args.weight_file))
     model.cuda(args.gpu_id)
     # # Create dataset
-    if args.mode:
-        _dataset = Dataset(args.input_list_file, crop_to_224=True, train_flag=True, custom_scale=True)
-    else:
-        _dataset = Dataset(args.input_list_file, crop_to_224=True, train_flag=False, custom_scale=True)
-    # # Create tr and vd data loaders
-    data_loader = DataLoader(_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.threads)
+    # if args.mode:
+    #     _dataset = Dataset(args.input_list_file, crop_to_224=True, train_flag=True, custom_scale=True)
+    # else:
+    #     _dataset = Dataset(args.input_list_file, crop_to_224=True, train_flag=False, custom_scale=True)
+    # # Create data loaders
+    tr_dataset = Dataset(args.input_list_file, crop_to_224=True, train_flag=True, custom_scale=True)
+    vd_dataset = Dataset(args.input_list_file, crop_to_224=True, train_flag=False, custom_scale=True)
+    tr_data_loader = DataLoader(tr_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.threads)
+    vd_data_loader = DataLoader(vd_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.threads)
 
     print('Inference...')
-    auc_val, auc_val2, results_path = run_deploy(data_loader, model, args)
-    print("{} {:1.5f} {:1.5f}".format(results_path, auc_val, auc_val2))
+    auc_val, auc_val2, results_path = run_deploy(tr_data_loader, model, args, True)
+    auc_val_center, auc_val2_center, _ = run_deploy(vd_data_loader, model, args, False)
+    print("{} {:1.5f} {:1.5f} {:1.5f}".format(results_path, auc_val_center, auc_val, auc_val2))
     # # log the final model
     with open(args.log_path, 'a') as fp:
-        fp.write(args.input_list_file + '\t' + args.weight_file +  '\t' +  results_path + '\t' + str(auc_val)  + '\t' + str(auc_val2) + '\n')
+        fp.write(args.input_list_file + '\t' + args.weight_file +  '\t' +  results_path + '\t' + str(auc_val_center) + '\t' + str(auc_val)  + '\t' + str(auc_val2) + '\n')
 
 
-def run_deploy(data_loader, model, args):
+def run_deploy(data_loader, model, args, mode):
 
-    if args.mode:
+    if mode:
         num_augs = 20
     else:
         num_augs = 1
@@ -88,9 +94,10 @@ def run_deploy(data_loader, model, args):
 
     chk_pt_name = os.path.basename(args.weight_file)
     output_dir = os.path.dirname(args.weight_file)
-    result_df1 = pd.DataFrame(list(zip(fnames_all, type_all, scores_all)), columns=['ROI_path', 'type', 'probability'])
     results_path1 = os.path.join(output_dir, 'results_ROI__' + chk_pt_name + '.tsv')
-    result_df1.to_csv(results_path1, sep='\t', index=False)
+    if mode:
+        result_df1 = pd.DataFrame(list(zip(fnames_all, type_all, scores_all)), columns=['ROI_path', 'type', 'probability'])
+        result_df1.to_csv(results_path1, sep='\t', index=False)
     # # ROC by ROI
     print('There are %d ROIs in the lists' % len(fnames_all))
     fpr, tpr, _ = metrics.roc_curve(np.array(type_all), np.array(scores_all), pos_label=1)
@@ -116,7 +123,8 @@ def run_deploy(data_loader, model, args):
     auc_val2 = metrics.roc_auc_score(labels_avg, scores_avg)
     dat = np.column_stack((unq_roi_names, scores_avg, labels_avg))
     results_path2 = os.path.join(output_dir, 'results_ROIaug__' + chk_pt_name + '.tsv')
-    np.savetxt(results_path2, dat, delimiter="\t", fmt='%s')
+    if mode:
+        np.savetxt(results_path2, dat, delimiter="\t", fmt='%s')
 
     # # #
     # case_names = []

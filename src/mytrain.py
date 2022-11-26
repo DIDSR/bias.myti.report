@@ -62,6 +62,8 @@ def train(args):
         model = add_classification_layer_v1(model, num_channels)
     elif args.dcnn == 'densenet121':
         model = add_classification_layer_v1(model, num_channels)
+    elif args.dcnn == 'resnext50_32x4d':
+        model = add_classification_layer_v1(model, num_channels)
     else:
         print('ERROR. UNKNOWN model.')
         return
