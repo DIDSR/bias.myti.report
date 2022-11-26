@@ -1,5 +1,26 @@
 '''
     Program that deploys breast mass ROIs from mammography and DBT to a trained model
+
+    Supported models:
+            "googlenet" 
+            "resnet18" 
+            "wide_resnet50_2" 
+            "densenet121" 
+            "resnext50_32x4d"
+
+    Performance assessment:
+        ROI-centered: Standard deployment, crop the center 224x224 from 256x256 and deploy
+        ROI-aug: Each ROI is augmented 1:20 using random combination of rotation and jittering and deployed
+        ROI-aug-avg: Same as ROI-aug, except the predicted scores are averaged per unique ROI
+    
+    RKS, started Aug 1, 2022. 
+    Git is used to track the versions.
+    
+    Worked in the following virtual environment:
+        >> source /nas/unas25/rsamala/tf/venv_CADPC32_PyTorch171/bin/activate
+        >> export PATH="$PATH:/usr/local/cuda-11.0/bin"
+        >> export LD_LIBRARY_PATH="/usr/local/cuda-11.0/lib64:/usr/local/cuda-11.0/extras/CUPTI/lib64"
+
 '''
 import torch
 import torch.nn as nn
@@ -43,22 +64,19 @@ def inference(args):
     torch.cuda.set_device(args.gpu_id)
     checkpoint = torch.load(args.weight_file)
     model.load_state_dict(checkpoint['state_dict'])
-    # model.load_state_dict(torch.load(args.weight_file))
     model.cuda(args.gpu_id)
     # # Create dataset
-    # if args.mode:
-    #     _dataset = Dataset(args.input_list_file, crop_to_224=True, train_flag=True, custom_scale=True)
-    # else:
-    #     _dataset = Dataset(args.input_list_file, crop_to_224=True, train_flag=False, custom_scale=True)
-    # # Create data loaders
     tr_dataset = Dataset(args.input_list_file, crop_to_224=True, train_flag=True, custom_scale=True)
     vd_dataset = Dataset(args.input_list_file, crop_to_224=True, train_flag=False, custom_scale=True)
+    # # Create data loaders
     tr_data_loader = DataLoader(tr_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.threads)
-    vd_data_loader = DataLoader(vd_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.threads)
+    vd_data_loader = DataLoader(vd_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.threads)
 
     print('Inference...')
+    # # get ROI-aug and ROI-aug-avg
     auc_val, auc_val2, results_path = run_deploy(tr_data_loader, model, args, True)
-    auc_val_center, auc_val2_center, _ = run_deploy(vd_data_loader, model, args, False)
+    # # get ROI-centered
+    auc_val_center, _, _ = run_deploy(vd_data_loader, model, args, False)
     print("{} {:1.5f} {:1.5f} {:1.5f}".format(results_path, auc_val_center, auc_val, auc_val2))
     # # log the final model
     with open(args.log_path, 'a') as fp:

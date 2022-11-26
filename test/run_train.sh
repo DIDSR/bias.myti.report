@@ -1,8 +1,8 @@
 #!/bin/bash
+# # Training program
+# # See the python program for documentation
+# #
 EXE="/udsk11/rsamala/git/reproducibility_empirical/src/mytrain.py"
-# IN_TR_LIST_FILE="/udsk11/rsamala/Lists/DCNN_lists/FeatEnggSplit/atm3/CADx_Tr_MAM_256x256__322USF_585DM_1032CBIS_1283SFM__T3222.lis"
-# IN_VD_LIST_FILE="/udsk11/rsamala/Lists/DCNN_lists/FeatEnggSplit/atm3/CADx_Tr_MAM_256x256__322USF_585DM_1032CBIS_1283SFM__T3222.lis"
-# OUT_DIR="/nas/unas25/rsamala/2022_MAM_CADx_DCNN/alexnet/"
 IN_DIR="/nas/unas25/rsamala/2022_MAM_CADx_DCNN/RAND_sampling_experiments"
 # #
 NUM_EPOCHS=250

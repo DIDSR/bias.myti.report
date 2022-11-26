@@ -1,3 +1,31 @@
+'''
+    Training program based on pytorch
+    All params have brief descriptions in the argparse.ArgumentParser below
+    Tensorboard can be used to track the training process
+    
+    Supported models:
+            "googlenet" 
+            "resnet18" 
+            "wide_resnet50_2" 
+            "densenet121" 
+            "resnext50_32x4d"
+    
+    How are the pre-trained models adapted to a binary output:
+        Implementation in add_classification_layer_v1 function: 
+            - add the following layers in sequence: dropout, linear(1000x512), linear(512x128), linear(128x1)
+
+    RKS, started Aug 1, 2022. 
+    Git is used to track the versions.
+
+    Worked in the following virtual environment:
+        >> source /nas/unas25/rsamala/tf/venv_CADPC32_PyTorch171/bin/activate
+        >> export PATH="$PATH:/usr/local/cuda-11.0/bin"
+        >> export LD_LIBRARY_PATH="/usr/local/cuda-11.0/lib64:/usr/local/cuda-11.0/extras/CUPTI/lib64"
+    
+    Proxy: When running the first time, pytorch will download the pretrained model, 
+    so appropriate proxy settings have to be used
+
+'''
 import torch
 import torch.nn as nn
 import torchvision.models as models
@@ -14,39 +42,17 @@ from sklearn import metrics
 import json
 # #
 
-# # Supported models:
-# # AlexNet (alexnet)
-# # ConvNeXt
-# # DenseNet
-# # EfficientNet
-# # EfficientNetV2
-# # GoogLeNet
-# # Inception V3
-# # MaxVit
-# # MNASNet
-# # MobileNet V2
-# # MobileNet V3
-# # RegNet
-# # ResNet
-# # ResNeXt
-# # ShuffleNet V2
-# # SqueezeNet
-# # SwinTransformer
-# # VGG
-# # VisionTransformer
-# # Wide ResNet
-
 master_iter = 0
+
+
+def save_checkpoint(state, filename='checkpoint.pth.tar'):
+    torch.save(state, filename)
 
 
 def add_classification_layer_v1(model, num_channels, p=0.2):
     new_layers = nn.Sequential(nn.Dropout(p), nn.Linear(1000, 512), nn.Linear(512, 128), nn.Linear(128, num_channels))
     model = nn.Sequential(model, new_layers)
     return model
-
-
-def save_checkpoint(state, filename='checkpoint.pth.tar'):
-    torch.save(state, filename)
 
 
 def train(args):
@@ -68,7 +74,7 @@ def train(args):
         print('ERROR. UNKNOWN model.')
         return
     
-    # # # debug code to understand how a ROI passes through the network
+    # # debug code to understand how a ROI passes through the network
     x=torch.rand(16,3,224,224)
     print(summary(model, x))
     # # 
@@ -81,14 +87,15 @@ def train(args):
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.threads)
     valid_loader = DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.threads)
     num_steps_in_epoch = len(train_loader)
-    # # 
+    # # select the optimizer
     if args.optimizer == 'adam':
         optimizer = torch.optim.Adam(model.parameters(), args.start_learning_rate, weight_decay=args.step_decay)
     elif args.optimizer == 'sgd':
         optimizer = torch.optim.SGD(model.parameters(), lr=args.start_learning_rate, momentum=args.SGDmomentum)
     else:
-        print('ERROR. Uknown optimizer')
+        print('ERROR. UNKNOWN optimizer.')
         return
+    # # learning rate scheduler
     my_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=num_steps_in_epoch*args.decay_every_N_epoch, gamma=args.decay_multiplier)
     # #
     print('Training...')
@@ -97,7 +104,7 @@ def train(args):
     auc_val = -1
     for epoch in range(args.num_epochs):
         # # train for one epoch
-        avg_loss = run_train(train_loader, model, criterion, optimizer, epoch, writer, my_lr_scheduler, num_steps_in_epoch, valid_loader, args)
+        avg_loss = run_train(train_loader, model, criterion, optimizer, writer, my_lr_scheduler)
         # # save
         if epoch % args.save_every_N_epochs == 0 or epoch == args.num_epochs-1:
             # # evaluate on validation set
@@ -110,12 +117,15 @@ def train(args):
                 'auc': auc_val,
                 'optimizer': optimizer.state_dict(),
             }, os.path.join(args.output_base_dir, 'checkpoint__' + str(epoch) + '.pth.tar'))
-    # # log the final model
+    # # log the final model performance
     with open(args.log_path, 'a') as fp:
         fp.write(args.input_train_file + '\t' + args.validation_file +  '\t' +  args.output_base_dir + '\t' + str(auc_val) + '\n')
 
 
-def run_train(train_loader, model, criterion, optimizer, epoch, writer, my_lr_scheduler, num_steps_in_epoch, val_loader, args):
+def run_train(train_loader, model, criterion, optimizer, writer, my_lr_scheduler):
+    '''
+        function that runs the training
+    '''
     global master_iter
 
     # switch to train mode
@@ -142,6 +152,11 @@ def run_train(train_loader, model, criterion, optimizer, epoch, writer, my_lr_sc
 
 
 def run_validate(val_loader, model, writer, args):
+    '''
+        function the deploys on the input data loader
+        calculates sample based AUC
+        saves the scores in a tsv file
+    '''
     global master_iter
 
     # # switch to evaluate mode
@@ -157,18 +172,19 @@ def run_validate(val_loader, model, writer, args):
             output = model(images.float())
             # #
             target_image_pred_probs = torch.sigmoid(torch.flatten(output))
-            # # accumulate
+            # # accumulate the scores
             labl_list = list(target.cpu().numpy())
             type_all += labl_list
             fnames_all += fname
             scr = list(target_image_pred_probs.cpu().numpy())
             scores_all += scr
 
+    # # save the scores, labels in a tsv file
     if args.bsave_valid_results_at_epochs:
         result_df1 = pd.DataFrame(list(zip(fnames_all, type_all, scores_all)), columns=['ROI_path', 'type', 'probability'])
         results_path1 = os.path.join(args.output_base_dir, 'results__' + str(master_iter+1) + '.tsv')
         result_df1.to_csv(results_path1, sep='\t', index=False)
-    # #
+    # # calc AUC from ROC
     fpr, tpr, _ = metrics.roc_curve(np.array(type_all), np.array(scores_all), pos_label=1)
     auc_val = metrics.auc(fpr, tpr)
     with open(os.path.join(args.output_base_dir, 'log.log'), 'a') as fp:
@@ -182,11 +198,11 @@ if __name__ == '__main__':
         description='Training using pytorch')
     parser.add_argument('-i', '--input_train_file', help='input training list file', required=True)
     parser.add_argument('-v', '--validation_file', help='input validation list file', required=True)
-    parser.add_argument('-o', '--output_base_dir', help='output dir', required=True)
-    parser.add_argument('-d', '--dcnn', help="which dcnn to use: 'googlenet', 'resnet18', 'wide_resnet50_2' or 'densenet121'", required=True)
+    parser.add_argument('-o', '--output_base_dir', help='output based dir', required=True)
+    parser.add_argument('-d', '--dcnn', 
+        help="which dcnn to use: 'googlenet', 'resnet18', 'wide_resnet50_2', 'resnext50_32x4d' or 'densenet121'", required=True)
     # parser.add_argument('-f', '--freeze_up_to', help="Must be a freezable layer in the structure e.g. FirstLayer", required=True)
     # Must be one of: 'FirstLayer', 'Mixed_3b', 'Mixed_3c', 'Mixed_4b', 'Mixed_4c', 'Mixed_4d', 'Mixed_4e', 'Mixed_4f', 'Mixed_5b', 'Mixed_5c'
-    # parser.add_argument('-g', '--ckpt_path', help='checkpoint saving path', required=True)
     parser.add_argument('-l', '--log_path', help='log saving path', required=True)
     parser.add_argument('-p', '--optimizer', help='which optimizer to use: \'adam\' or \'sgd\'', required=True)
     parser.add_argument('-b', '--batch_size', type=int, default=64, help='batch size.')
@@ -198,7 +214,8 @@ if __name__ == '__main__':
     parser.add_argument('--decay_every_N_epoch', type=int, default=5, help='Drop the learning rate every N epochs')
     parser.add_argument('--decay_multiplier', type=float, default=0.95, help='Decay multiplier')
     parser.add_argument('-e', '--save_every_N_epochs', type=int, default=1, help='save checkpoint every N number of epochs')
-    parser.add_argument('--bsave_valid_results_at_epochs', type=bool, default=False, help='save validation results csv at every epoch, True/False')
+    parser.add_argument('--bsave_valid_results_at_epochs', type=bool, default=False, 
+        help='save validation results csv at every epoch, True/False')
     parser.add_argument('-g', '--gpu_id', type=int, default=0, help='GPU ID')
 
     args = parser.parse_args()

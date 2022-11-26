@@ -1,5 +1,5 @@
 '''
-    Program that implements a simple version of CNN for understanding and debugging process
+    Program that implements a simple version of CNN for understanding and debugging purpose
 '''
 # # Pytorch
 import torch

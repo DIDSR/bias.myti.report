@@ -1,4 +1,7 @@
 #!/bin/bash
+# # Inference program
+# # See the python script for documentation
+# #
 EXE="/udsk11/rsamala/git/reproducibility_empirical/src/myinference.py"
 IN_DIR="/nas/unas25/rsamala/2022_MAM_CADx_DCNN/RAND_sampling_experiments"
 WEIGHT_ITER="checkpoint__249.pth.tar"
@@ -9,7 +12,7 @@ MASTER_LOG="${IN_DIR}/master_log_inference.log"
 for ARCH in "resnext50_32x4d"
 do
     # for RAND in 0 1 2 3 4 5 6 7 8 9
-    for RAND in 0 1 2
+    for RAND in 3
     do
         # for FOLD in 0 1 2 3
         for FOLD in 0 1 2 3

@@ -1,20 +1,19 @@
-from __future__ import division
+'''
+    Custom data loader for dat images in a list
+'''
 import os
 import numpy as np
 import struct
 import math
 import random
 import os
-import sys
-from skimage.measure import block_reduce
-from torch.utils.data import DataLoader
 from torch.utils.data import Dataset as BaseDataset
-# #
-# #
 
-# #
-# #
+
 def read_dat_rot(imageName, rot_flag, custom_scale):
+    '''
+        custom function to read dat files, provide ratation-based augmentation and custom scaling
+    '''
     with open(imageName, "rb") as f:
         bytes = f.read(4)
         size = struct.unpack('<HH', bytes)
@@ -65,13 +64,14 @@ class Dataset(BaseDataset):
         self.crop_to_224 = crop_to_224
         self.train_flag = train_flag
         self.custom_scale = custom_scale
+        # #
         lines = open(list_file).readlines()
         info = np.array([t.rstrip().split('\t') for t in lines])
         dats = info[:, 0]
         labels = info[:, 1]
 
-        # # Randomize the list
         c = list(zip(dats, labels))
+        # # Randomize the list
         if train_flag:
             random.shuffle(c)
         self.images, self.class_values = zip(*c)
@@ -80,6 +80,7 @@ class Dataset(BaseDataset):
     def __getitem__(self, i):
         # #
         if self.train_flag:
+            # # data augmentation using rotation
             rot_flag = random.randint(0, 7)
             img_o = read_dat_rot(self.images[i], rot_flag, self.custom_scale)
         else:
@@ -88,6 +89,7 @@ class Dataset(BaseDataset):
         # #
         if self.crop_to_224:
             if self.train_flag:
+                # # data augmentation using jittering
                 x = random.randint(0, 256 - 224 - 1)
                 y = random.randint(0, 256 - 224 - 1)
                 img_o = img_o[:, x:x + 224, y:y + 224]
@@ -98,5 +100,3 @@ class Dataset(BaseDataset):
 
     def __len__(self):
         return len(self.images)
-
-
