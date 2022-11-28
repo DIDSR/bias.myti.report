@@ -61,13 +61,17 @@ def train(args):
             tasks = NamedTasks[data_args.custom_tasks]
         else:
             tasks = data_args.custom_tasks.split(",")
+    if 'step' in data_args.csv:
+        step_var = int(data_args.csv.replace(".csv","").split("_")[-1])
+    else:
+        step_var = None
     tracking_info = {
         'Experiment Name':logger_args.experiment_name,
         'Base Weights':args.model_args.ckpt_path,
         'max_epochs':args.optim_args.num_epochs,
         'tasks':tasks,
         'random_state':args.random_state,
-        'step':int(data_args.csv.replace(".csv","").split("_")[-1]),
+        'step':step_var,
         'training started':datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         'training completed':None,
         'best iter info':{
@@ -81,9 +85,7 @@ def train(args):
     # Get logger.
     print ('Getting logger... log to path: {}'.format(logger_args.log_path))
     logger = Logger(logger_args.log_path, logger_args.save_dir)
-
-    step_n =int(data_args.csv.replace(".csv","").split("_")[-1])
-    if step_n == 0:
+    if step_var == 0 or step_var == None:
         # adjusted to allow the use of different pretraining
         if model_args.ckpt_path:
             model_args.pretrained = False # TODO: look into what this does
@@ -103,8 +105,8 @@ def train(args):
             
                 
     else:  # # continual learning evaluation setup
-        cur_step = "step_"+str(step_n)
-        prev_step = "step_"+str(step_n-1)
+        cur_step = "step_"+str(step_var)
+        prev_step = "step_"+str(step_var-1)
         prev_step_mdl = os.path.join(str(logger_args.save_dir).replace(cur_step, prev_step), "best.pth.tar")
         model_args.ckpt_path = prev_step_mdl
         model_args.moco = False
@@ -219,7 +221,7 @@ def train(args):
                           dataset_len=len(train_loader.dataset),
                           logger=logger)
 
-    if model_args.ckpt_path and not model_args.moco and step_n == 0:
+    if model_args.ckpt_path and not model_args.moco and step_var == 0:
         # Load the same optimizer as used in the original training.
         optimizer.load_optimizer(ckpt_path=model_args.ckpt_path,
                                  gpu_ids=args.gpu_ids)
@@ -230,7 +232,7 @@ def train(args):
                                     mask_uncertain=True,
                                     device=args.device)
     
-    if step_n > 0:
+    if step_var is not None and step_var > 0:
         print('Measuring forward transfer capability and logging:')
         # # deploy to get the forward transfer assessment
         if multiple_validation: # Not tested on step > 0
@@ -297,12 +299,6 @@ def train(args):
                                 optimizer=optimizer,
                                 device=args.device,
                                 metric_val=average_metric)
-                        # make predictions on the entire validation set
-                        # import os
-                        # print("Predicting on entire validation set...")
-                        # predictions, gt, path = predictor.predict(valid_loader,by_patient=args.by_patient)
-                        # predictions.to_csv(os.path.join(saver.save_dir, "validation_predictions.csv"))
-                        # gt.to_csv(os.path.join(saver.save_dir, "validation_gt.csv"))
                 else:
                     # Only evaluate every iters_per_eval examples.
                     for id, val_loader in all_valid_loaders.items():
@@ -332,12 +328,6 @@ def train(args):
                                     device=args.device,
                                     metric_val=average_metric,
                                     val_id=id)
-                            # make predictions on the entire validation set
-                            # import os
-                            # print("Predicting on entire validation set...")
-                            # predictions, gt, path = predictor.predict(val_loader,by_patient=args.by_patient)
-                            # predictions.to_csv(os.path.join(saver.save_dir, "validation_predictions.csv"))
-                            # gt.to_csv(os.path.join(saver.save_dir, "validation_gt.csv"))
                 # Step learning rate scheduler.
                 optimizer.step_scheduler(average_metric)
 
@@ -352,13 +342,6 @@ def train(args):
             optimizer.end_iter()
 
         optimizer.end_epoch(metrics)
-
-        # if tracking_info is not None:
-        #     tracking_info["Models"][logger_args.experiment_name]["Training"]["Progress"] = f"{optimizer.epoch}/{optimizer.num_epochs}"
-        #     tracking_info['Last updated'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        #     with open(tracking_fp, 'w') as fp:
-        #         json.dump(tracking_info, fp, indent=1)
-        
 
     logger.log('=== Training Complete ===')
     if tracking_info is not None:
