@@ -9,8 +9,8 @@ import json
 equal_stratification_groups = ['M-White-Yes-CR', 'F-White-Yes-CR','M-Black-Yes-CR', 'F-Black-Yes-CR',
                                'M-White-No-CR', 'F-White-No-CR','M-Black-No-CR', 'F-Black-No-CR']
 custom_composition ={ # to exclude a group from sratification, set all values to 0
-    'sex':{"M":0.5, "F":1},
-    'race':{"White":1, "Black":1},
+    'sex':{"M":1, "F":1},
+    'race':{"White":.50, "Black":.50},
     'COVID_positive':{"Yes":1, "No":1},
     'modality':{"CR":1, "DX":0}
 }
@@ -22,6 +22,7 @@ custom_composition ={ # to exclude a group from sratification, set all values to
         # (ex. 0.20 may change to 0.194)
 train_composition = 'equal'
 validation_composition = 'equal'
+validation_2_composition = 'equal'
 test_composition = 'equal'
 
 # CONSTANTS ===============
@@ -47,6 +48,11 @@ def bootstrapping(args):
             args.test_rand = None
         elif type(args.test_rand) is not int:
             args.test_rand = int(args.test_rand)
+    if args.val_2_rand is not None:
+        if args.val_2_rand == 'None':
+            args.val_2_rand = None
+        elif type(args.val_2_rand) is not int:
+            args.val_2_rand = int(args.val_2_rand)
     if type(args.random_seed) is not int:
         args.random_seed = int(args.random_seed)
     args.min_img_per_patient = int(args.min_img_per_patient)
@@ -55,6 +61,10 @@ def bootstrapping(args):
             args.max_img_per_patient = None
         else:
             args.max_img_per_patient = int(args.max_img_per_patient)
+    if args.remaining_to_test == 'False':
+        args.remaining_to_test = False
+    elif args.remaining_to_test == 'True':
+        args.remaining_to_test = True
     # 1) set up save location, summary files
     save_folder = os.path.join(args.save_dir, args.partition_name)
     if not os.path.exists(save_folder):
@@ -105,22 +115,49 @@ def bootstrapping(args):
         strat_trv_bp_df = adjust_comp(trv_bp_df, validation_composition, args.random_seed + args.random_seed_initial)
         val_n_size = (len(strat_bp_df)/len(strat_trv_bp_df)) * args.validation_size
         val_bp_df = adjust_comp(trv_bp_df, validation_composition, args.random_seed + args.random_seed_initial, split_frac=val_n_size)
-    # 3) c) Train Split ---------------------------------------------------------------------------------------------
-    tr_bp_df = trv_bp_df[~trv_bp_df['patient_id'].isin(val_bp_df['patient_id'])]
+    remaining_bp_df = bp_df[~bp_df['patient_id'].isin(val_bp_df['patient_id'])]
+    remaining_bp_df = remaining_bp_df[~remaining_bp_df['patient_id'].isin(test_bp_df['patient_id'])]
+    # 3) c) Validation part 2 ---------------------------------------------------------------------------------------
+    if args.val_2_rand is None:
+        val_2_random_seed = args.random_seed + args.random_seed_initial
+    else:
+        val_2_random_seed = args.val_2_rand + args.random_seed_initial
+    if os.path.exists(os.path.join(save_folder, 'validation_2.csv')) and args.val_2_rand is not None:
+        print("\narguments indicate a single validation 2 file for all RAND values, and a validation 2 csv already exists, loading...")
+        val_2_bp_df = pd.read_csv(os.path.join(save_folder, 'validation_2.csv')).drop("Path", axis=1).drop_duplicates()
+    else:
+        if args.stratify == 'False':
+            val_num_2 = round(args.validation_size_2*len(bp_df))
+            val_2_bp_df = trv_bp_df.sample(n=val_num_2, random_state=val_2_random_seed)
+        else:
+            strat_bp_df = adjust_comp(bp_df, validation_2_composition, val_2_random_seed)
+            strat_trv_bp_df = adjust_comp(remaining_bp_df, validation_2_composition, val_2_random_seed)
+            val_2_n_size = (len(strat_bp_df)/len(strat_trv_bp_df)) * args.validation_size_2
+            val_2_bp_df = adjust_comp(remaining_bp_df, validation_2_composition, val_2_random_seed, split_frac=val_2_n_size)
+    
+    # 3) d) Train Split ---------------------------------------------------------------------------------------------
+    # tr_bp_df = remaining_bp_df[~remaining_bp_df['patient_id'].isin(val_2_bp_df['patient_id'])]
+    tr_bp_df = bp_df[~bp_df['patient_id'].isin(test_bp_df['patient_id'])]
+    tr_bp_df = tr_bp_df[~tr_bp_df['patient_id'].isin(val_bp_df['patient_id'])]
+    tr_bp_df = tr_bp_df[~tr_bp_df['patient_id'].isin(val_2_bp_df['patient_id'])]
     if args.stratify == "False":
         train_bp_df = tr_bp_df.copy()
     else:
         train_bp_df = adjust_comp(tr_bp_df, train_composition, args.random_seed + args.random_seed_initial)
     # 4) convert from by-patient dataframes back to by-image dataframes =============================================
     # TODO: more than 1 step
-    # TODO: use a specific number of images per patient
     if not os.path.exists(os.path.join(save_folder, f"RAND_{args.random_seed}")):
         os.mkdir(os.path.join(save_folder, f"RAND_{args.random_seed}"))
     if args.steps == 1: # Saving
+        if args.remaining_to_test:
+            test_bp_df = bp_df[~bp_df['patient_id'].isin(train_bp_df['patient_id'])]
+            test_bp_df = test_bp_df[~test_bp_df['patient_id'].isin(val_bp_df['patient_id'])]
+            test_bp_df = test_bp_df[~test_bp_df['patient_id'].isin(val_2_bp_df['patient_id'])]
         test_df = img_df[img_df['patient_id'].isin(test_bp_df['patient_id'])]
         valid_df = img_df[img_df['patient_id'].isin(val_bp_df['patient_id'])]
+        valid_2_df = img_df[img_df['patient_id'].isin(val_2_bp_df['patient_id'])]
         train_df = img_df[img_df['patient_id'].isin(train_bp_df['patient_id'])]
-        bp_summary, img_summary = get_stats(test_df, valid_df, train_df)
+        bp_summary, img_summary = get_stats(test_df, valid_df,valid_2_df, train_df)
         bp_summary.to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", 'by_patient_split_summary.csv'))
         img_summary.to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", 'by_image_split_summary.csv'))
         test_df = convert_to_csv(test_df, args.tasks)
@@ -132,6 +169,13 @@ def bootstrapping(args):
             print("\nsingle joint independent test file already exists")
         valid_df = convert_to_csv(valid_df, args.tasks)
         valid_df.to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", 'validation.csv'), index=False)
+        valid_2_df = convert_to_csv(valid_2_df, args.tasks)
+        if args.val_2_rand is not None and not os.path.exists(os.path.join(save_folder, 'validation_2.csv')): # single validation 2 for all rand
+            valid_2_df.to_csv(os.path.join(save_folder, 'validation_2.csv'),index=False)
+        elif args.val_2_rand is None:
+            valid_2_df.to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", 'validation_2.csv'), index=False)
+        else:
+            print("\nsingle validation 2 file already exists")
         train_df = convert_to_csv(train_df, args.tasks)
         train_df.to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", 'train.csv'), index=False)
     else:
@@ -140,6 +184,7 @@ def bootstrapping(args):
     tracking_info = args.__dict__
     tracking_info['training comp'] = train_composition
     tracking_info['validation comp'] = validation_composition
+    tracking_info['validation 2 comp'] = validation_2_composition
     tracking_info['testing comp'] = test_composition
     tracking_info['custom comp'] = custom_composition
     tracking_info['equal split subgroups'] = equal_stratification_groups
@@ -207,6 +252,10 @@ def convert_to_csv(df, tasks):
     for grp in group_dict:
         temp_df = df[grp].str.get_dummies()
         df = pd.concat([df, temp_df], axis=1)
+    # add columns for tasks that aren't in the df
+    for t in tasks:
+        if t not in df.columns:
+            df[t] = 0
     cols = ['patient_id', 'Path'] + tasks
     return df[cols]
 
@@ -235,17 +284,23 @@ def convert_from_summary(df, conversion_table, min_img, max_img, selection_mode,
     df = df.drop(rm_cols, axis=1)
     return df
         
-def get_stats(test_df, val_df, train_df):
+def get_stats(test_df, val_df, val_2_df, train_df):
     test_df= test_df.copy()
     val_df = val_df.copy()
+    val_2_df = val_2_df.copy()
     train_df = train_df.copy()
     test_df.loc[:,'split'] = 'test'
     val_df.loc[:,'split'] = 'validation'
+    
     train_df.loc[:,'split'] = 'train'
-    df = pd.concat([test_df, val_df, train_df], axis=0)
-    for sp in ['test', 'validation', 'train']: # check that there is no patient_id_overlap
+    if len(val_2_df) != 0:
+        val_2_df.loc[:,'split'] = 'validation_2'
+        df = pd.concat([test_df, val_df, train_df, val_2_df], axis=0)
+    else:
+        df = pd.concat([test_df, val_df, train_df], axis=0)
+    for sp in ['test', 'validation','validation_2', 'train']: # check that there is no patient_id_overlap
         if df[df['split']!=sp]['patient_id'].isin(df[df['split']==sp]['patient_id']).any():
-            print("OOPS")
+            print(f"OOPS: {sp}")
     for grp in group_dict:
         if 'subgroup' not in df.columns:
             df['subgroup'] = df[grp]
@@ -263,10 +318,13 @@ if __name__ == '__main__':
     parser.add_argument("-allow_other", type=str, default="True", help='if False, restricts the patients that can be used to the subgroups listed in group_dict')
     parser.add_argument("-test_size", type=float, required=True)
     parser.add_argument("-validation_size", type=float, required=True)
+    parser.add_argument("-validation_size_2", type=float, default=0.0)
     parser.add_argument("-consistent_test_random_state", default=None, dest='test_rand',
                         help="""If None, each random seed will have it's own independent test set,
                             if an integer is passed, that will be used for the random seed for the
                             single independent test partition""")
+    parser.add_argument("-consistent_validation_2_random_state", default=None, dest='val_2_rand')
+    parser.add_argument("-remaining_to_test", default=False)
     # # settings for multiple steps [WIP]
     parser.add_argument("-steps", default=1)
     # # reproducibility 
