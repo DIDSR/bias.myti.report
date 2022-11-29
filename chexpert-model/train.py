@@ -174,14 +174,23 @@ def train(args):
     else:
         eval_tasks = EVAL_METRIC2TASKS[optim_args.metric_name]
     # Instantiate the saver class for saving model checkpoints.
-    saver = ModelSaver(save_dir=logger_args.save_dir,
-                       iters_per_save=logger_args.iters_per_save,
-                       max_ckpts=logger_args.max_ckpts,
-                       metric_name=optim_args.metric_name,
-                       maximize_metric=optim_args.maximize_metric,
-                       keep_topk=logger_args.keep_topk,
-                       selection_args=args.selection_args,
-                       multiple_validation=all_valid_loaders.keys())
+    if multiple_validation:
+        saver = ModelSaver(save_dir=logger_args.save_dir,
+                        iters_per_save=logger_args.iters_per_save,
+                        max_ckpts=logger_args.max_ckpts,
+                        metric_name=optim_args.metric_name,
+                        maximize_metric=optim_args.maximize_metric,
+                        keep_topk=logger_args.keep_topk,
+                        selection_args=args.selection_args,
+                        multiple_validation=all_valid_loaders.keys())
+    else:
+        saver = ModelSaver(save_dir=logger_args.save_dir,
+                        iters_per_save=logger_args.iters_per_save,
+                        max_ckpts=logger_args.max_ckpts,
+                        metric_name=optim_args.metric_name,
+                        maximize_metric=optim_args.maximize_metric,
+                        keep_topk=logger_args.keep_topk,
+                        selection_args=args.selection_args)
     # get model layers to train
     if model_args.model == 'ResNet18':
         model_layers = [name for name,para in model.named_parameters()]
