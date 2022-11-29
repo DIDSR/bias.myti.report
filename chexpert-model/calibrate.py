@@ -45,6 +45,17 @@ def calibrate_model(args):
         label_cols.append(t)
     preds = torch.tensor(combined[pred_cols].values)
     labels = torch.tensor(combined[label_cols].values)
+    # get prediction with subclass information [info_pred]
+    orig_df = pd.read_csv(data_args.test_csv)
+    # carry-over from older generate_paritions
+    orig_df = orig_df.rename(columns={"Black_or_African_American":"Black"})
+    # set which columns we want to pull from the original csv 
+    info_cols = ['F','M','Black', "White", "Yes", 'No']
+    info_pred = predictions.copy()
+    cols = [c for c in info_pred.columns if c not in ['Path']]
+    info_pred = info_pred.rename(columns={c:f"{c} score" for c in cols})
+    for c in info_cols:
+        info_pred[c] = info_pred['Path'].map(orig_df.set_index("Path")[c])
     # run calibration
     calModel = CalibratedModel(model=None, calibration_mode=args.calibration_mode)
     calModel.set_temperature(valid_results=[preds, labels])
