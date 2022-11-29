@@ -1,5 +1,5 @@
 from itertools import product, combinations, combinations_with_replacement
-from decision_boundaries import get_planeloader, decision_region_analysis
+from decision_boundaries import get_planeloader, decision_region_analysis, DecisionBoundaryEvaluator
 import pandas as pd
 import os
 import random
@@ -12,9 +12,42 @@ from constants import *
 from data import get_loader
 import numpy as np
 
-
 test_input_classes = {'sex':['M','F'], 'race':['White', 'Black_or_African_American'], "COVID_positive":["Yes", "No"]}
 test_output_classes = ['Yes', "No"]
+DB_folder = 'DB_uncertainty_test'
+num_samples = 500
+save_every = 10
+
+def new_run_db_eval(args, db_folder=DB_folder):
+    # load arguments
+    model_args = args.model_args
+    data_args = args.data_args
+    logger_args = args.logger_args
+    # load model
+    ckpt_path = model_args.ckpt_path
+    # # adjust DB folder for validation subsets
+    if "__" in ckpt_path.split("/")[-1]:
+        db_folder = ckpt_path.split("/")[-1].split("__")[0] + "__" + db_folder
+    model_args, transform_args = ModelSaver.get_args(cl_model_args=model_args,
+                                                     dataset=data_args.dataset,
+                                                     ckpt_save_dir=Path(ckpt_path).parent,
+                                                     model_uncertainty=model_args.model_uncertainty)
+    model_args.moco = args.model_args.moco
+    model, ckpt_info = ModelSaver.load_model(ckpt_path=ckpt_path,
+                                             gpu_ids=args.gpu_ids,
+                                             model_args=model_args,
+                                             is_training=False)
+    predictor = Predictor(model=model, device=args.device, code_dir=args.code_dir)
+    # # TRIALS ====================
+    DB = DecisionBoundaryEvaluator(db_folder, Path(ckpt_path).parent,  predictor=predictor,
+                            input_classes=test_input_classes, output_classes=test_output_classes, 
+                            data_args = data_args, model_args=model_args, transform_args=transform_args,
+                            n_samples=num_samples, save_every=save_every)
+    
+# ====================================================================================
+#                              Deprecated Code
+# ====================================================================================
+
 # edit the triplet classes to use - set to None to use all combos from test_input_classes
 # test_input_triplet = [[("M","White","Yes"),("M","White","Yes"),("M","White","Yes")],
 #                       [("M","White","No"),("M","White","No"),("M","White","No")]]
@@ -35,6 +68,7 @@ test_output_classes = ['Yes', "No"]
 #                       [("F","Black_or_African_American","Yes"),("F","Black_or_African_American","Yes"),("F","Black_or_African_American","Yes")],
 #                       [("F","Black_or_African_American","No"),("F","Black_or_African_American","No"),("F","Black_or_African_American","No")]]
 test_input_triplet = None
+# test_input_triplet = [[("M","White","Yes"),("M","White","Yes"),("M","White","Yes")]]
 abbreviation_table = {
     'Female':"F",
     'Male':"M",
@@ -49,7 +83,7 @@ inv_abbreviation_table = {value:key for key,value in abbreviation_table.items()}
 
 # db_folder = 'decision_boundaries_exps'
 # db_folder = "DB_debug"
-db_folder = 'decision_boundaries_all'
+db_folder = 'decision_boundaries_all_scores'
 
 def get_all_combos(input_classes, consistent_triplet):
     interaction_subgroups = list(product(*input_classes))
@@ -132,11 +166,12 @@ def trial_setup(data_args, transform_args,  predictor, save_dir, input_classes=t
     
 
 
-def run_db_eval(args):
+def run_db_eval(args, db_folder=db_folder):
     # TODO: replace placeholders
     input_classes = test_input_classes
     consistent_triplet = True
     n_samples = 500
+    # n_samples = 5
     # n_samples = 10
     output_classes = test_output_classes
     steps = 100
@@ -171,7 +206,12 @@ def run_db_eval(args):
                                              is_training=False)
     predictor = Predictor(model=model, device=args.device, code_dir=args.code_dir)
     # get save_dir
+    # check for validation subset
+    if "__" in ckpt_path.split("/")[-1]:
+        val_sub = ckpt_path.split("/")[-1].split("__")[0]
+        db_folder = val_sub + "_" + db_folder
     save_dir = os.path.join("/".join(ckpt_path.split("/")[:-1]), db_folder)
+    print("\nSAVE DIR: ", save_dir)
     overall_summ_file = os.path.join(save_dir,'overall_summary.csv')
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
@@ -249,6 +289,8 @@ def run_db_eval(args):
                 for pid in ['pid0','pid1','pid2']:
                     current_sample.append(temp_df[temp_df['patient_id'] == idx_df.at[ii,pid]].sample(n=1).index.tolist()[0])
                 # time to generate the decision boundary plots!
+                # DEBUG
+                # current_sample = [4307,2375, 778]
                 inpt_df = pd.read_csv(data_args.test_csv)
                 if not perturb_exp:
                     planeloader = get_planeloader(data_args, dataframe=inpt_df, img_idxs=current_sample, subgroups=input_classes, prediction_tasks=model_args.tasks, steps=steps, shape=plot_shape)
@@ -357,23 +399,10 @@ def update_overall_summary(overall_summary_file, class_summary_df, triplet_class
         df.at[row_num, f"%{out} (mean)"] = class_summary_df[f"%{out}"].mean()
         df.at[row_num, f"%{out} (std)"] = class_summary_df[f"%{out}"].std()
     df.to_csv(overall_summary_file)
-    
-                
+
+
 if __name__ == '__main__':
     print("Beginning Decision Region Evaluation...")
-    # test_gt = pd.read_csv("/gpfs_projects/alexis.burgon/OUT/2022_CXR/model_runs/open_A1_scenario_1_v4/7_steps_custom_split/RAND_0/joint_validation.csv")
     parser = TestArgParser()
-    run_db_eval(parser.parse_args())
-    # trial_setup(parser.parse_args(), input_classes = test_input_classes)
-    # decision_boundary_setup(groundtruth=test_gt,
-    #                         input_classes = test_input_classes,
-    #                         output_classes=['Yes','No'],
-    #                         output_dir="/gpfs_projects/alexis.burgon/OUT/2022_CXR/temp/db_debug",
-    #                         num_samples=20)
-    # test_dataset = plane_dataset_2(dataframe=test_gt,
-    #                                img_idxs=[13,15,17],
-    #                                subgroups=test_input_classes,
-    #                                randomize=1,
-    #                                random_range=(100,105)
-    #                                )
+    new_run_db_eval(parser.parse_args())
         
