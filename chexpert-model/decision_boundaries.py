@@ -17,8 +17,22 @@ import numpy as np
 # import seaborn as sns
 # from shapely.geometry import Polygon, Point
 import os
+import json
+from itertools import product, combinations_with_replacement
+from data import get_loader
+from random import sample
 
-        
+abbreviation_table = {
+    'Female':"F",
+    'Male':"M",
+    'CR':"C",
+    "DX":"D",
+    "White":"W",
+    'Black_or_African_American':"B",
+    "Yes":"P",# positive
+    "No":'N'
+}
+
 def get_plane(img1, img2, img3):
     a = img2 - img1
     b = img3 - img1
@@ -154,7 +168,16 @@ class plane_dataset(BaseDataset):
         labels = [np.array([0]*len(self.prediction_tasks))] * len(images)
         self.images = images
         df = pd.DataFrame(list(zip(images, labels)), columns=['Image', 'Label'])
-        return df
+
+        # images = []
+        # coef_df = pd.DataFrame([self.coefs1, self.coefs2], columns=['coefs1', 'coefs2'])
+        # coef_df = coef_df.assign(Image = lambda row: (self.base_img + row['coefs1']*self.vec1 + row['coefs2']*self.vec2))
+        # if self.normalize:
+        #     coef_df['Image'] = coef_df['Image'].apply(lambda x: self.norm(x)) 
+        # coef_df['Label'] = [np.array([0]*len(self.prediction_tasks))]
+        # self.images = coef_df['Image'].values()
+        # df = coef_df[['Image','Label']]
+        return df # DEBUG
 
     def __len__(self):
         return self.coefs1.shape[0]
@@ -223,9 +246,20 @@ def decision_region_analysis(predictions,
         choices = [outputs[0], outputs[1]]
         predictions[key] = np.select(conditions, choices, default='Unknown')
     predictions['Label'] = predictions.apply(lambda row: catagorize(row, planeloader.dataset.subgroups), axis=1)
+    # print("PREDICTIONS:")
+    # print(predictions)
     predicted_labels = pd.DataFrame({"Label":predictions['Label'].values, 'x':planeloader.dataset.coefs1.numpy(), 'y':planeloader.dataset.coefs2.numpy()})
-    output_array = predicted_labels.to_numpy()
+    # output_array = predicted_labels.to_numpy()
     predicted_classes = predicted_labels['Label'].unique().tolist()
+    # TODO: remove hardcoding
+    score_dict = {}
+    for cls in classes:
+        score_dict[f"{cls} Score"] = predictions[cls].values
+    score_dict['x'] = planeloader.dataset.coefs1.numpy()
+    score_dict['y'] = planeloader.dataset.coefs2.numpy()
+    # predicted_scores = pd.DataFrame({"Score":predictions['Yes'].values, 'x':planeloader.dataset.coefs1.numpy(), 'y':planeloader.dataset.coefs2.numpy()})
+    predicted_scores = pd.DataFrame(score_dict)
+    output_array = predicted_scores.to_numpy()
     # get the number of predictions for each class
     for ii, row in class_df.iterrows():
         temp_df = predictions.copy()
@@ -296,3 +330,275 @@ def decision_region_analysis(predictions,
             plt.savefig(save_loc, bbox_inches='tight', dpi=300)
             plt.close(fig)
     return summary_df, output_array
+
+
+class DecisionBoundaryEvaluator():
+    def __init__(self, experiment_name, save_location, predictor, transform_args, data_args, model_args, input_classes, output_classes,overwrite=False, **kwargs):
+        if overwrite:
+            print("\noverwrite is on\n")
+        self.input_classes = input_classes
+        self.output_classes = output_classes
+        self.experiment_name = experiment_name
+        self.experiment_dir = os.path.join(save_location, experiment_name)
+        if not os.path.exists(self.experiment_dir):
+            os.mkdir(self.experiment_dir)
+        self.sample_fp = os.path.join(self.experiment_dir, "DB_samples.csv")
+        if os.path.exists(self.sample_fp):
+            sample_df = pd.read_csv(self.sample_fp, index_col=0)
+        else:
+            original_gt = pd.read_csv(data_args.test_csv)
+            loader = get_loader(phase=data_args.phase,
+                                data_args=data_args,
+                                transform_args=transform_args,
+                                is_training=False,
+                                return_info_dict=True)
+            base_predictions, base_groundtruth, base_paths = predictor.predict(loader)
+            # set up sample dataframe
+            sample_df = original_gt[['patient_id', 'Path']].copy()
+            for subclasses in self.input_classes.values():
+                for ic in subclasses:
+                    sample_df[ic] = sample_df.Path.map(original_gt.set_index("Path")[ic])
+            for oc in self.output_classes:
+                sample_df[f"{oc} score"] = sample_df.Path.map(base_predictions.set_index("Path")[oc])
+            sample_df.to_csv(self.sample_fp)
+        self.sample_df = sample_df
+        if os.path.exists(os.path.join(self.experiment_dir, 'decision_boundary_args.json')) and overwrite == False:
+            # resume trial
+            print("resuming trial..")
+            self.load()
+        else:
+            # set up trial
+            print("setting up trial..")
+            self.trial_setup(**kwargs)
+        self.sample_df = sample_df
+        for ii, triplet in enumerate(self.triplets):
+            if ii not in self.triplet_information:
+                ii = str(ii)
+            self.run_trial(ii, predictor, data_args, model_args, sample_df)
+            self.uncertainty_analysis(self.triplet_information[ii]['triplet id'])
+            self.thresholded_analysis(self.triplet_information[ii]['triplet id'])
+
+    def run_trial(self, trip_idx, predictor, data_args, model_args, sample_df):
+        if self.triplet_information[trip_idx]['samples'] >= self.max_samples:
+            # print(f"{self.triplet_information[trip_idx]['triplet id']} already complete")
+            return
+        # load triplet information
+        img_triplets = pd.read_json(self.triplet_information[trip_idx]['triplet fp'], orient='table')
+        if os.path.exists(self.triplet_information[trip_idx]['array fp']):
+            DB_arrays = np.load(self.triplet_information[trip_idx]['array fp'], allow_pickle=True)
+            DB_arrays = dict(DB_arrays)
+        else:
+            DB_arrays = {}
+        for i in range(self.triplet_information[trip_idx]['samples'], self.max_samples):
+            self.sample_df = sample_df
+            print(f"{self.triplet_information[trip_idx]['triplet id']}: {i+1}/{self.max_samples}")
+            # evaluate for each triplet
+            current_sample = self.get_triplet_img_idxs(img_triplets.iloc[i].values)
+            for pl_setting in self.planeloader_settings: # TODO: save arrays for multiple trial settings
+                # different options (such as random image shuffling, noise replacement, etc.)
+                planeloader = get_planeloader(data_args, dataframe=self.sample_df, img_idxs=current_sample, subgroups=self.input_classes, 
+                                              prediction_tasks=model_args.tasks, **pl_setting)
+                predictions, groundtruth = predictor.predict(planeloader)
+                for al_setting in self.analysis_settings:
+                    db_results, db_array = decision_region_analysis(predictions, planeloader, title_with='both', label_with='none',
+                                                                    classes=self.output_classes,**al_setting)
+                    DB_arrays[f"{i+1}__{current_sample[0]}_{current_sample[1]}_{current_sample[2]}"] = db_array
+            self.triplet_information[trip_idx]['samples'] += 1
+            if (i+1) % self.save_every == 0: # save progress
+                np.savez_compressed(self.triplet_information[trip_idx]['array fp'], **DB_arrays)
+                self.save()
+
+    def trial_setup(self, planeloader_settings={}, analysis_settings={}, triplets=None, n_samples=10, save_every=1):
+        # assign variables as attributes
+        self.max_samples = n_samples
+        self.save_every = save_every
+        # different trial settings
+        default_planeloader_settings = {
+            'steps':100,
+            'shape':'triangle'
+        }
+        self.planeloader_settings = []
+        if planeloader_settings is not None:
+            if type(planeloader_settings) is not list:
+                planeloader_settings = [planeloader_settings]
+            for pl in planeloader_settings:
+                for i, j in default_planeloader_settings.items():
+                    if i not in pl:
+                        pl[i] = j
+                self.planeloader_settings.append(pl)
+        
+        default_analysis_settings = {
+            "generate_plot":False
+        }
+        self.analysis_settings = []
+        if analysis_settings is not None:
+            if type(analysis_settings) is not list:
+                analysis_settings = [analysis_settings]
+            for al in analysis_settings:
+                for i, j in default_analysis_settings.items():
+                    if i not in al:
+                        al[i] = j
+                self.analysis_settings.append(al)
+        if triplets is None:
+            self.get_class_triplets()
+        else:
+            self.triplets = triplets
+        self.triplet_information = {}
+        for ii, triplet in enumerate(self.triplets):
+            self.triplet_information[ii] = {'triplet':triplet,
+                                            'samples':0}
+        # load in samples from dataframe
+            # Note: df columns should contain: patient id, Path, truth values for each of the input classes, and output SCORES for each of the output classes
+        # classify each as w/in a subgroup
+        self.sample_df['subgroup'] = None
+        for isub in self.interaction_subgroups:
+            temp_df = self.sample_df.copy()
+            for x in isub:
+                temp_df = temp_df[temp_df[x] == 1]
+            idxs = temp_df.index
+            self.sample_df.loc[idxs, 'subgroup'] = "-".join(isub)
+        # generate triplets for each subgroup
+        # TODO: correct-only / incorrect only restrictions
+        for ii, triplet in enumerate(self.triplets): # TODO: non-consistent triplets (?)
+            isub = triplet[0]
+            sub_id = "".join(isub)
+            for i, j in abbreviation_table.items():
+                sub_id = sub_id.replace(i,j)
+            self.triplet_information[ii]['triplet id'] = sub_id
+            sub_trip_fp = os.path.join(self.experiment_dir, f"{sub_id}_triplets.json")
+            sub_array_fp = os.path.join(self.experiment_dir, f"{sub_id}_arrays.npz")
+            sub_df = self.sample_df[self.sample_df['subgroup'] == "-".join(isub)]
+            sub_pids = sub_df['patient_id'].unique()
+            sub_pid_triplets = self.get_pid_combos(sub_pids)
+            if len(sub_pid_triplets) < self.max_samples:
+                raise Exception(f"patient id triplet generation only made {len(sub_pid_triplets)} triplets, cannot generate {self.max_samples} samples")
+            sub_img_triplets = self.pid_to_img(sub_pid_triplets, sub_df)
+            sub_img_triplets.to_json(sub_trip_fp, orient='table', indent=1)
+            self.triplet_information[ii]['triplet fp'] = sub_trip_fp
+            self.triplet_information[ii]['array fp'] = sub_array_fp
+        self.save()
+    
+    def get_triplet_img_idxs(self, triplet):
+        idxs = []
+        for t in triplet:
+            idxs.append(self.sample_df[self.sample_df['Path'] == t].index.values[0])
+        return idxs
+
+    def pid_to_img(self, pid_triplets, df): # returns triplets of img paths
+        img_triplets = []
+        for trip in pid_triplets:
+            curr_triplet = []
+            for pid in trip:
+                img_idx = df[df['patient_id'] == pid].sample(1).Path.values[0] # TODO: random state control (?)
+                curr_triplet.append(img_idx)
+            img_triplets.append(curr_triplet)
+        return pd.DataFrame(img_triplets, columns=['img0','img1','img2'])
+
+    def get_pid_combos(self, pids):
+        out_pids = []
+        # figure out how many times we have to repeat each pid
+        n_pid_reuse =int((self.max_samples/(len(pids)/3))+2)
+        # get pid combos
+        for r in range(n_pid_reuse):
+            r_pids = [p for p in pids]
+            for n in range(int(len(pids)/3)):
+                item = sample(r_pids, 3)
+                while set(item) in out_pids: # don't allow the exact same set of patients to be used more than once
+                    item = sample(r_pids, 3)
+                for i in item:
+                    r_pids.remove(i)
+                out_pids.append(set(item))
+        return [list(p) for p in out_pids]
+
+    def get_class_triplets(self, consistent_only=True): # TODO: inconsistent triplets?
+        self.interaction_subgroups = list(product(*self.input_classes.values()))
+        if not consistent_only:
+            self.triplets = list(combinations_with_replacement(self.interaction_subgroups, 3))
+        else:
+            self.triplets = [[item]*3 for item in self.interaction_subgroups]
+
+    def save(self):
+        '''
+        Save experiment attributes to json file
+        '''
+        with open(os.path.join(self.experiment_dir, 'decision_boundary_args.json'), 'w') as outfile:
+            variables = vars(self)
+            variables.pop('sample_df')
+            json.dump(variables, outfile, indent=2)
+    
+    def load(self):
+        '''
+        Load experiemnt from json file
+        '''
+        with open(os.path.join(self.experiment_dir, 'decision_boundary_args.json'), 'r') as infile:
+            input_atts = json.load(infile)
+        for key in input_atts:
+            setattr(self, key, input_atts[key])
+
+    def plot_sample(self, triplet_id, idx, plot_mode='colorbar'):
+        import seaborn as sns
+        save_name = os.path.join(self.experiment_dir, 'test_img.png') # TODO
+        # get sample
+        for ii, trip_dict in self.triplet_information.items():
+            if trip_dict['triplet id'] == triplet_id:
+                DB_arrays = dict(np.load(trip_dict['array fp'], allow_pickle=True))
+        for DB in DB_arrays:
+            if int(DB.split("__")[0]) == idx:
+                arr = DB_arrays[DB]
+                DB_title = DB
+        cols = [f"{out} Score" for out in self.output_classes] + ['x','y']
+        df = pd.DataFrame(arr, columns=cols)
+        if plot_mode == 'threshold': # TODO: threshold and label
+            print("WIP")
+        elif plot_mode == 'colorbar':
+            fig, ax = plt.subplots(figsize=(8,6))
+            # currently hardcoded to P/N prediction
+            if "N" in triplet_id:
+                scatter = ax.scatter(x=df['x'], y=df['y'], c=df['No Score'],cmap=sns.color_palette("viridis_r", as_cmap=True),vmin=0,vmax=1, s=10)
+            elif 'P' in triplet_id:
+                scatter = ax.scatter(x=df['x'], y=df['y'], c=df['Yes Score'],cmap=sns.color_palette("viridis", as_cmap=True),vmin=0,vmax=1, s=10)
+            plt.colorbar(scatter)
+            ax.axis("off")
+            plt.title(DB_title.split("__")[-1])
+            plt.savefig(save_name, dpi=300, bbox_inches='tight')
+
+    def uncertainty_analysis(self, triplet_id):
+        save_name = os.path.join(self.experiment_dir, f"{triplet_id}_uncertainty.csv")
+        if "N" in triplet_id:
+            cls = "No"
+        elif "P" in triplet_id:
+            cls = 'Yes'
+        else:
+            print(f"couldn't get class from {triplet_id}")
+        for ii, trip_dict in self.triplet_information.items():
+            if trip_dict['triplet id'] == triplet_id:
+                DB_arrays = dict(np.load(trip_dict['array fp'], allow_pickle=True))
+        df = pd.DataFrame(columns=['subgroup','id','median', 'IQR'])
+        for ii, arr in DB_arrays.items():
+            cols = [f"{out} Score" for out in self.output_classes] + ['x','y']
+            DB_df = pd.DataFrame(arr, columns=cols)
+            # get IQR
+            Q3 = np.quantile(DB_df[f"{cls} Score"], 0.75)
+            Q1 = np.quantile(DB_df[f"{cls} Score"], 0.25)
+            df.loc[len(df)] = [triplet_id, ii, DB_df[f"{cls} Score"].median(), Q3-Q1]
+        df.to_csv(save_name, index=False)
+
+    def thresholded_analysis(self, triplet_id):
+        save_name = os.path.join(self.experiment_dir, f"{triplet_id}_thresholded_summary.csv")
+        if "N" in triplet_id:
+            cls = "No"
+        elif "P" in triplet_id:
+            cls = 'Yes'
+        else:
+            print(f"couldn't get class from {triplet_id}")
+        for ii, trip_dict in self.triplet_information.items():
+            if trip_dict['triplet id'] == triplet_id:
+                DB_arrays = dict(np.load(trip_dict['array fp'], allow_pickle=True))
+        df = pd.DataFrame(columns=['subgroup','id', 'difference'])
+        for ii, arr in DB_arrays.items():
+            cols = [f"{out} Score" for out in self.output_classes] + ['x','y']
+            DB_df = pd.DataFrame(arr, columns=cols)
+            DB_df[f"{cls} Score"] = DB_df[f"{cls} Score"].round()
+            percent = (DB_df[f"{cls} Score"].sum()/len(DB_df)) * 100
+            df.loc[len(df)] = [triplet_id, ii, 100-percent]
+        df.to_csv(save_name, index=False)
