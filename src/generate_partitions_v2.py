@@ -10,7 +10,7 @@ equal_stratification_groups = ['M-White-Yes-CR', 'F-White-Yes-CR','M-Black-Yes-C
                                'M-White-No-CR', 'F-White-No-CR','M-Black-No-CR', 'F-Black-No-CR']
 custom_composition ={ # to exclude a group from sratification, set all values to 0
     'sex':{"M":1, "F":1},
-    'race':{"White":.50, "Black":.50},
+    'race':{"White":1, "Black":0},
     'COVID_positive':{"Yes":1, "No":1},
     'modality':{"CR":1, "DX":0}
 }
@@ -20,8 +20,8 @@ custom_composition ={ # to exclude a group from sratification, set all values to
     # None - no stratification used for this partition
     # Note: due to required rounding at different times, using a custom split results in slight changes to testing and validation sizes
         # (ex. 0.20 may change to 0.194)
-train_composition = 'equal'
-validation_composition = 'equal'
+train_composition = 'custom'
+validation_composition = 'custom'
 validation_2_composition = 'equal'
 test_composition = 'equal'
 
@@ -106,6 +106,9 @@ def bootstrapping(args):
             test_bp_df = adjust_comp(bp_df, test_composition, test_random_seed, split_frac=args.test_size)
         # remove the patients used in the test partition
         trv_bp_df = bp_df[~bp_df['patient_id'].isin(test_bp_df['patient_id'])]
+    if os.path.exists(os.path.join(save_folder, 'validation_2.csv')) and args.val_2_rand is not None:
+        val_2_bp_df = pd.read_csv(os.path.join(save_folder, 'validation_2.csv')).drop("Path", axis=1).drop_duplicates()
+        trv_bp_df = trv_bp_df[~trv_bp_df['patient_id'].isin(val_2_bp_df['patient_id'])]
     # 3) b) Validation split ----------------------------------------------------------------------------------------
     if args.stratify == 'False':
         val_num = round(args.validation_size*len(bp_df))
@@ -224,6 +227,7 @@ def adjust_comp(in_df, comp, random_seed, split_frac=None):
                 df['subgroup'] = df[grp]
             else:
                 df.loc[:,'subgroup'] = df['subgroup'] + "-" + df[grp]
+            df = df[df[grp].isin(custom_composition[grp])]
             for subgrp in custom_composition[grp]:
                 sub_dict[subgrp] = (custom_composition[grp][subgrp] / grp_max)
                 # remove subgroups that we aren't using
