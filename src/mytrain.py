@@ -41,12 +41,45 @@ import pandas as pd
 from sklearn import metrics
 import json
 # #
-
+# # CONSTANTS
+resnet18_ordered_layer_names = ['conv1', 'layer1', 'layer2', 'layer3', 'layer4', 'fc']
 master_iter = 0
 
 
 def save_checkpoint(state, filename='checkpoint.pth.tar'):
     torch.save(state, filename)
+
+
+def apply_custom_transfer_learning__resnet18(net, custom_layer_name):
+    first_non_frozen_layer_name = custom_layer_name[args.upto_freeze + 1]
+    spacer = ''
+    start_not_freezing_from_next_layer = False
+    # # set the requires_grad to False to all first
+    for param in net.parameters():
+        param.requires_grad = False
+    print('Partial fine tuning selected')
+    print('Will freeze upto {} with the layer name of {}'.format(args.upto_freeze, first_non_frozen_layer_name))
+    # # while iterating over the layers, check with the 
+    for name, param in net.named_parameters():
+        # # check if the names in custom_layer_name is in this name
+        if len(custom_layer_name) > 0:
+            for ii, each_layer_name in enumerate(custom_layer_name):
+                # # the index in the name.split is important and may change
+                # # based on the pretrained model
+                if each_layer_name == name.split('.')[1]:
+                    if each_layer_name == first_non_frozen_layer_name:
+                        # # start un-freezing from here onwards
+                        start_not_freezing_from_next_layer = True
+                    # # found it
+                    custom_layer_name.pop(ii)
+                    spacer += '\t'
+                    break
+        if start_not_freezing_from_next_layer:
+            param.requires_grad = True
+            print('{} {} {}'.format(spacer, 'T', name))
+        else:
+            print('{} {} {}'.format(spacer, 'F', name))
+    return net
 
 
 def add_classification_layer_v1(model, num_channels, p=0.2):
@@ -60,10 +93,12 @@ def train(args):
     # # based on the selected DNN N/W, modify the last layer of the ImageNet pre-trained DNN
     model = models.__dict__[args.dcnn](pretrained=True)
     num_channels = 1
+    custom_layer_name = []
     if args.dcnn == 'googlenet':
         model = add_classification_layer_v1(model, num_channels)
     elif args.dcnn == 'resnet18':
         model = add_classification_layer_v1(model, num_channels)
+        custom_layer_name = resnet18_ordered_layer_names.copy()
     elif args.dcnn == 'wide_resnet50_2':
         model = add_classification_layer_v1(model, num_channels)
     elif args.dcnn == 'densenet121':
@@ -73,6 +108,29 @@ def train(args):
     else:
         print('ERROR. UNKNOWN model.')
         return
+    
+
+    # # custom transfer learning >>
+    if args.fine_tuning == 'partial':
+        if args.dcnn == 'googlenet':
+            print('ERROR. Custom transfer learning not implemented for this model.')
+        elif args.dcnn == 'resnet18':
+            model = apply_custom_transfer_learning__resnet18(model, custom_layer_name)
+        elif args.dcnn == 'wide_resnet50_2':
+            print('ERROR. Custom transfer learning not implemented for this model.')
+        elif args.dcnn == 'densenet121':
+            print('ERROR. Custom transfer learning not implemented for this model.')
+        elif args.dcnn == 'resnext50_32x4d':
+            print('ERROR. Custom transfer learning not implemented for this model.')
+        else:
+            print('ERROR. UNKNOWN model.')
+            return
+    elif args.fine_tuning == 'full':
+        print('Full fine tuning selected')
+    else:
+        print('ERROR. UNKNOWN option for fine_tuning')
+        return
+    # # <<
     
     # # debug code to understand how a ROI passes through the network
     x=torch.rand(16,3,224,224)
@@ -203,6 +261,9 @@ if __name__ == '__main__':
         help="which dcnn to use: 'googlenet', 'resnet18', 'wide_resnet50_2', 'resnext50_32x4d' or 'densenet121'", required=True)
     # parser.add_argument('-f', '--freeze_up_to', help="Must be a freezable layer in the structure e.g. FirstLayer", required=True)
     # Must be one of: 'FirstLayer', 'Mixed_3b', 'Mixed_3c', 'Mixed_4b', 'Mixed_4c', 'Mixed_4d', 'Mixed_4e', 'Mixed_4f', 'Mixed_5b', 'Mixed_5c'
+    parser.add_argument('-f', '--fine_tuning', default='full', help="options: 'full' or 'partial'")
+    parser.add_argument('-u', '--upto_freeze', type=int, default=0, 
+        help="options: provide the layer number upto which to freeze")
     parser.add_argument('-l', '--log_path', help='log saving path', required=True)
     parser.add_argument('-p', '--optimizer', help='which optimizer to use: \'adam\' or \'sgd\'', required=True)
     parser.add_argument('-b', '--batch_size', type=int, default=64, help='batch size.')
