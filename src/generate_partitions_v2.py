@@ -100,7 +100,7 @@ def bootstrapping(args):
         test_bp_df = pd.read_csv(os.path.join(save_folder, 'independent_test.csv')).drop("Path", axis=1).drop_duplicates()
         trv_bp_df = bp_df[~bp_df['patient_id'].isin(test_bp_df['patient_id'])]
     else:
-        if args.stratify == 'False':
+        if args.stratify == 'False': 
             test_bp_df = bp_df.sample(frac=args.test_size, random_state=test_random_seed)
         else:
             test_bp_df = adjust_comp(bp_df, test_composition, test_random_seed, split_frac=args.test_size)
@@ -269,8 +269,19 @@ def convert_from_summary(df, conversion_table, min_img, max_img, selection_mode,
         df[x[1]] = df.apply(lambda row: row[x[0]][0][x[1]], axis=1)
     df['race'] = df['race'].replace({" ":"_"},regex=True)
     df['race'] = df['race'].replace({"Black_or_African_American":"Black"}, regex=True)
-    df = df.explode('images')
+    # df = df.explode('images')
+    # to get the study date with the image, we need to joint-explode images and images_information
+    exp_cols = {'images', 'images_info'}
+    other_cols = list(set(df.columns)-set(exp_cols))
+    exploded = [df[col].explode() for col in exp_cols]
+    temp_df = pd.DataFrame(dict(zip(exp_cols, exploded)))
+    temp_df = df[other_cols].merge(temp_df, how='right', left_index=True, right_index=True)
+    temp_df = temp_df.loc[:, df.columns] # get original column order
+    df = temp_df.copy()
     df['Path'] = df['images'].map(conversion_table.set_index('dicom')['jpeg'])
+    # get study date
+    df['study date'] = df['images_info'].apply(lambda x: x['study date'])
+    df = df.sort_values(['study date'])
     # remove patients with fewer than min_img images
     df = df[df['num_images']>min_img]
     if max_img is not None: # select images from patients with more than max_img imgs
