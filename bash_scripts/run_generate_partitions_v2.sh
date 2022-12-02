@@ -1,6 +1,6 @@
 #!/bin/bash
 # ===================   NOTES   ===================
-# Not Yet Implemented:
+# Not Yet Implemented: 
     # stratification by repository
 # Not yet tested:
     # repositories other than open_A1
@@ -49,9 +49,12 @@ OUT_dir="/gpfs_projects/alexis.burgon/OUT/2022_CXR/temp"
 
 # Number of imgs/patient selection_modes = random, first, last (how to select images if a max is specified)
     # NOTE: random selection mode will potentially cause issues with TEST_RAND != None, use with caution
+    # NOTE: currently, MIN_IMG will be applied to ALL splits, even if not listed in IMG_SELECTION_SPLITS
+declare -a IMG_SELECTION_SPLITS=('train') # which splits will follow the specified image selection settings, all other splits will include all imgs/patients
+
 MIN_IMG=0
 MAX_IMG=None
-IMG_SELECTION=random
+IMG_SELECTION=last
 
 for RAND in 0
 do
@@ -72,10 +75,18 @@ do
     do
         param_TASKS="${param_TASKS} -tasks ${TASKS[$i]}"
     done
+# # image selection splits processing
+    arraylength=${#IMG_SELECTION_SPLITS[@]}
+    param_IMG_SELECTION_SPLITS=""
+    for (( i=0; i<${arraylength}; i++));
+    do
+        param_IMG_SELECTION_SPLITS="${param_IMG_SELECTION_SPLITS} -img_splits ${IMG_SELECTION_SPLITS[$i]}"
+    done
 # # ======================================
 echo ================ RAND ${RAND} ================
 python ../src/generate_partitions_v2.py $param_IN_summary \
                                          $param_TASKS \
+                                         $param_IMG_SELECTION_SPLITS \
                                          -random_seed $RAND \
                                          -test_size $TEST_SIZE \
                                          -validation_size_2 $VAL_2_SIZE \

@@ -79,6 +79,8 @@ def bootstrapping(args):
     for in_summ in args.input_list:
         input_summaries.append(pd.read_json(in_summ, orient='table'))
     df = convert_from_summary(pd.concat(input_summaries, axis=0), conversion_tables, args.min_img_per_patient, args.max_img_per_patient, args.patient_img_selection_mode, args.random_seed + args.random_seed_initial)
+    # get a version of the df with all images/patient
+    all_df = convert_from_summary(pd.concat(input_summaries, axis=0), conversion_tables, 0, None, 'random', args.random_seed + args.random_seed_initial)
     # 2) b) limit to labels in group_dict (remove others or not depending on arguments passed) ======================
     for grp in group_dict:
         if len(df[df[grp].isin(args.tasks)]) == 0: # not interested in this group as an output task, don't restrict
@@ -89,37 +91,36 @@ def bootstrapping(args):
     img_df = df.copy()
     bp_df = df.drop('Path', axis=1).drop_duplicates() # by-patient df for splitting/stratifying
     # 3) train/validation/test split ================================================================================
+    bp_split_dfs = {}
     # 3) a) Test split ----------------------------------------------------------------------------------------------
     if args.test_rand is None:
         test_random_seed = args.random_seed + args.random_seed_initial # same seed used for validation/training
     else:
         test_random_seed = args.test_rand + args.random_seed_initial
-        
+    
     if os.path.exists(os.path.join(save_folder, 'independent_test.csv')) and args.test_rand is not None:
         print("\narguments indicate a single independent test for all RAND values, and a test csv already exists, loading...")
-        test_bp_df = pd.read_csv(os.path.join(save_folder, 'independent_test.csv')).drop("Path", axis=1).drop_duplicates()
-        trv_bp_df = bp_df[~bp_df['patient_id'].isin(test_bp_df['patient_id'])]
+        bp_split_dfs['independent_test'] = pd.read_csv(os.path.join(save_folder, 'independent_test.csv')).drop("Path", axis=1).drop_duplicates()
+
     else:
         if args.stratify == 'False': 
-            test_bp_df = bp_df.sample(frac=args.test_size, random_state=test_random_seed)
+            bp_split_dfs['independent_test'] = bp_df.sample(frac=args.test_size, random_state=test_random_seed)
         else:
-            test_bp_df = adjust_comp(bp_df, test_composition, test_random_seed, split_frac=args.test_size)
-        # remove the patients used in the test partition
-        trv_bp_df = bp_df[~bp_df['patient_id'].isin(test_bp_df['patient_id'])]
+            bp_split_dfs['independent_test']= adjust_comp(bp_df, test_composition, test_random_seed, split_frac=args.test_size)
+    trv_bp_df = prevent_data_leakage(bp_df, bp_split_dfs.values())
     if os.path.exists(os.path.join(save_folder, 'validation_2.csv')) and args.val_2_rand is not None:
-        val_2_bp_df = pd.read_csv(os.path.join(save_folder, 'validation_2.csv')).drop("Path", axis=1).drop_duplicates()
-        trv_bp_df = trv_bp_df[~trv_bp_df['patient_id'].isin(val_2_bp_df['patient_id'])]
+        bp_split_dfs['validation_2'] = pd.read_csv(os.path.join(save_folder, 'validation_2.csv')).drop("Path", axis=1).drop_duplicates()
+        trv_bp_df = prevent_data_leakage(bp_df, bp_split_dfs.values())
     # 3) b) Validation split ----------------------------------------------------------------------------------------
     if args.stratify == 'False':
         val_num = round(args.validation_size*len(bp_df))
-        val_bp_df = trv_bp_df.sample(n=val_num, random_state=args.random_seed + args.random_seed_initial)
+        bp_split_dfs['validation'] = trv_bp_df.sample(n=val_num, random_state=args.random_seed + args.random_seed_initial)
     else:
         strat_bp_df = adjust_comp(bp_df, validation_composition, args.random_seed + args.random_seed_initial)
         strat_trv_bp_df = adjust_comp(trv_bp_df, validation_composition, args.random_seed + args.random_seed_initial)
         val_n_size = (len(strat_bp_df)/len(strat_trv_bp_df)) * args.validation_size
-        val_bp_df = adjust_comp(trv_bp_df, validation_composition, args.random_seed + args.random_seed_initial, split_frac=val_n_size)
-    remaining_bp_df = bp_df[~bp_df['patient_id'].isin(val_bp_df['patient_id'])]
-    remaining_bp_df = remaining_bp_df[~remaining_bp_df['patient_id'].isin(test_bp_df['patient_id'])]
+        bp_split_dfs['validation'] = adjust_comp(trv_bp_df, validation_composition, args.random_seed + args.random_seed_initial, split_frac=val_n_size)
+    remaining_bp_df =prevent_data_leakage(bp_df, bp_split_dfs.values())
     # 3) c) Validation part 2 ---------------------------------------------------------------------------------------
     if args.val_2_rand is None:
         val_2_random_seed = args.random_seed + args.random_seed_initial
@@ -127,60 +128,56 @@ def bootstrapping(args):
         val_2_random_seed = args.val_2_rand + args.random_seed_initial
     if os.path.exists(os.path.join(save_folder, 'validation_2.csv')) and args.val_2_rand is not None:
         print("\narguments indicate a single validation 2 file for all RAND values, and a validation 2 csv already exists, loading...")
-        val_2_bp_df = pd.read_csv(os.path.join(save_folder, 'validation_2.csv')).drop("Path", axis=1).drop_duplicates()
+        bp_split_dfs['validation_2'] = pd.read_csv(os.path.join(save_folder, 'validation_2.csv')).drop("Path", axis=1).drop_duplicates()
     else:
         if args.stratify == 'False':
             val_num_2 = round(args.validation_size_2*len(bp_df))
-            val_2_bp_df = trv_bp_df.sample(n=val_num_2, random_state=val_2_random_seed)
+            bp_split_dfs['validation_2'] = trv_bp_df.sample(n=val_num_2, random_state=val_2_random_seed)
         else:
             strat_bp_df = adjust_comp(bp_df, validation_2_composition, val_2_random_seed)
             strat_trv_bp_df = adjust_comp(remaining_bp_df, validation_2_composition, val_2_random_seed)
             val_2_n_size = (len(strat_bp_df)/len(strat_trv_bp_df)) * args.validation_size_2
-            val_2_bp_df = adjust_comp(remaining_bp_df, validation_2_composition, val_2_random_seed, split_frac=val_2_n_size)
+            bp_split_dfs['validation_2'] = adjust_comp(remaining_bp_df, validation_2_composition, val_2_random_seed, split_frac=val_2_n_size)
     
     # 3) d) Train Split ---------------------------------------------------------------------------------------------
     # tr_bp_df = remaining_bp_df[~remaining_bp_df['patient_id'].isin(val_2_bp_df['patient_id'])]
-    tr_bp_df = bp_df[~bp_df['patient_id'].isin(test_bp_df['patient_id'])]
-    tr_bp_df = tr_bp_df[~tr_bp_df['patient_id'].isin(val_bp_df['patient_id'])]
-    tr_bp_df = tr_bp_df[~tr_bp_df['patient_id'].isin(val_2_bp_df['patient_id'])]
+    tr_bp_df = prevent_data_leakage(bp_df, bp_split_dfs.values())
     if args.stratify == "False":
-        train_bp_df = tr_bp_df.copy()
+        bp_split_dfs['train'] = tr_bp_df.copy()
     else:
-        train_bp_df = adjust_comp(tr_bp_df, train_composition, args.random_seed + args.random_seed_initial)
+        bp_split_dfs['train'] = adjust_comp(tr_bp_df, train_composition, args.random_seed + args.random_seed_initial)
     # 4) convert from by-patient dataframes back to by-image dataframes =============================================
     # TODO: more than 1 step
     if not os.path.exists(os.path.join(save_folder, f"RAND_{args.random_seed}")):
         os.mkdir(os.path.join(save_folder, f"RAND_{args.random_seed}"))
     if args.steps == 1: # Saving
-        if args.remaining_to_test:
-            test_bp_df = bp_df[~bp_df['patient_id'].isin(train_bp_df['patient_id'])]
-            test_bp_df = test_bp_df[~test_bp_df['patient_id'].isin(val_bp_df['patient_id'])]
-            test_bp_df = test_bp_df[~test_bp_df['patient_id'].isin(val_2_bp_df['patient_id'])]
-        test_df = img_df[img_df['patient_id'].isin(test_bp_df['patient_id'])]
-        valid_df = img_df[img_df['patient_id'].isin(val_bp_df['patient_id'])]
-        valid_2_df = img_df[img_df['patient_id'].isin(val_2_bp_df['patient_id'])]
-        train_df = img_df[img_df['patient_id'].isin(train_bp_df['patient_id'])]
-        bp_summary, img_summary = get_stats(test_df, valid_df,valid_2_df, train_df)
+        output_files = {}
+        for split_id, split_df in bp_split_dfs.items():
+            if args.remaining_to_test and split_id == 'independent_test':
+                other_splits = [s_df for s_id, s_df in bp_split_dfs.items() if s_id != 'independent_test']
+                if split_id in args.img_splits:
+                    output_files[split_id] = prevent_data_leakage(df, other_splits)
+                else:
+                    output_files[split_id] = prevent_data_leakage(all_df, other_splits)
+            elif split_id in args.img_splits:
+                output_files[split_id] = df[df['patient_id'].isin(split_df['patient_id'])]
+            else:
+                output_files[split_id] = all_df[all_df['patient_id'].isin(split_df['patient_id'])]
+            # save files
+            if args.test_rand is not None and split_id == 'independent_test':
+                if os.path.exists(os.path.join(save_folder, 'independent_test.csv')): # already have single independent test
+                    print("single independent test file already exists")
+                    continue
+                output_files[split_id].to_csv(os.path.join(save_folder, f'{split_id}.csv'), index=False)
+            elif args.val_2_rand is not None and split_id == 'validation_2':
+                if os.path.exists(os.path.join(save_folder, 'validation_2.csv')): # already have single validation_2
+                    print("single validation 2 file already exists")
+                    continue
+                output_files[split_id].to_csv(os.path.join(save_folder, f'{split_id}.csv'), index=False)
+            output_files[split_id].to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", f'{split_id}.csv'), index=False)
+        bp_summary, img_summary = get_stats(output_files)
         bp_summary.to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", 'by_patient_split_summary.csv'))
         img_summary.to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", 'by_image_split_summary.csv'))
-        test_df = convert_to_csv(test_df, args.tasks)
-        if args.test_rand is not None and not os.path.exists(os.path.join(save_folder, 'independent_test.csv')): # single independent test for all RAND
-            test_df.to_csv(os.path.join(save_folder, 'independent_test.csv'), index=False)
-        elif args.test_rand is None:
-            test_df.to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", 'independent_test.csv'), index=False)
-        else:
-            print("\nsingle joint independent test file already exists")
-        valid_df = convert_to_csv(valid_df, args.tasks)
-        valid_df.to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", 'validation.csv'), index=False)
-        valid_2_df = convert_to_csv(valid_2_df, args.tasks)
-        if args.val_2_rand is not None and not os.path.exists(os.path.join(save_folder, 'validation_2.csv')): # single validation 2 for all rand
-            valid_2_df.to_csv(os.path.join(save_folder, 'validation_2.csv'),index=False)
-        elif args.val_2_rand is None:
-            valid_2_df.to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", 'validation_2.csv'), index=False)
-        else:
-            print("\nsingle validation 2 file already exists")
-        train_df = convert_to_csv(train_df, args.tasks)
-        train_df.to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", 'train.csv'), index=False)
     else:
         print("Not yet implemented for more than one step")
     # 5) save arguments and settings for future reference
@@ -252,6 +249,12 @@ def adjust_comp(in_df, comp, random_seed, split_frac=None):
             sub_dfs.append(out_df[out_df['subgroup'] == sub].sample(frac=split_frac, random_state=random_seed))
         return pd.concat(sub_dfs, axis=0)
 
+def prevent_data_leakage(base_df, df_list:list):
+    out_df = base_df.copy()
+    for df in df_list:
+        out_df = out_df[~out_df['patient_id'].isin(df['patient_id'])]
+    return out_df
+
 def convert_to_csv(df, tasks):
     for grp in group_dict:
         temp_df = df[grp].str.get_dummies()
@@ -298,8 +301,26 @@ def convert_from_summary(df, conversion_table, min_img, max_img, selection_mode,
     rm_cols = [col for col in df.columns if col not in cols]
     df = df.drop(rm_cols, axis=1)
     return df
-        
-def get_stats(test_df, val_df, val_2_df, train_df):
+
+def get_stats(df_dict):
+    df_list = []
+    for id, split_df in df_dict.items():
+        temp_df = split_df.copy()
+        temp_df['split'] = id
+        df_list.append(temp_df)
+    df = pd.concat(df_list, axis=0)
+    for sp in df['split'].unique():
+        if df[df['split']!=sp]['patient_id'].isin(df[df['split']==sp]['patient_id']).any():
+            print(f"OOPS: {sp}")
+    for grp in group_dict:
+        if 'subgroup' not in df.columns:
+            df['subgroup'] = df[grp]
+        else:
+            df.loc[:,'subgroup'] = df['subgroup'] + "-" + df[grp]
+    return df.rename(columns = {'patient_id':'number of patients'}).groupby(['split','subgroup'])['number of patients'].nunique(), df.rename(columns={'patient_id':'number of images'}).groupby(['split','subgroup'])['number of images'].count()
+    
+
+def old_get_stats(test_df, val_df, val_2_df, train_df):
     test_df= test_df.copy()
     val_df = val_df.copy()
     val_2_df = val_2_df.copy()
@@ -349,6 +370,7 @@ if __name__ == '__main__':
     parser.add_argument("-partition_name", type=str, required=True)
     parser.add_argument("-save_dir", type=str, required=True)
     # # number of images per patient
+    parser.add_argument("-img_splits", default=[], action='append', help="the splits that the img selection settings will be applied to")
     parser.add_argument("-min_img_per_patient", default=0)
     parser.add_argument("-max_img_per_patient", default=None)
     parser.add_argument("-patient_img_selection_mode", default='random', choices=['random', 'first','last'])
