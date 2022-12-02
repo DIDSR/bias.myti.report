@@ -43,6 +43,7 @@ import json
 # #
 # # CONSTANTS
 resnet18_ordered_layer_names = ['conv1', 'layer1', 'layer2', 'layer3', 'layer4', 'fc']
+densenet121_ordered_layer_names = ['Conv2d_conv0', 'denseblock1', 'denseblock2', 'denseblock3', 'denseblock4', 'classifier']
 master_iter = 0
 
 
@@ -82,6 +83,38 @@ def apply_custom_transfer_learning__resnet18(net, custom_layer_name):
     return net
 
 
+def apply_custom_transfer_learning__densenet121(net, custom_layer_name):
+    first_non_frozen_layer_name = custom_layer_name[args.upto_freeze + 1]
+    spacer = ''
+    start_not_freezing_from_next_layer = False
+    # # set the requires_grad to False to all first
+    for param in net.parameters():
+        param.requires_grad = False
+    print('Partial fine tuning selected')
+    print('Will freeze upto {} with the layer name of {}'.format(args.upto_freeze, first_non_frozen_layer_name))
+    # # while iterating over the layers, check with the 
+    for name, param in net.named_parameters():
+        # # check if the names in custom_layer_name is in this name
+        if len(custom_layer_name) > 0:
+            for ii, each_layer_name in enumerate(custom_layer_name):
+                # # the index in the name.split is important and may change
+                # # based on the pretrained model
+                if each_layer_name == name.split('.')[2] or each_layer_name == name.split('.')[1]:
+                    if each_layer_name == first_non_frozen_layer_name:
+                        # # start un-freezing from here onwards
+                        start_not_freezing_from_next_layer = True
+                    # # found it
+                    custom_layer_name.pop(ii)
+                    spacer += '\t'
+                    break
+        if start_not_freezing_from_next_layer:
+            param.requires_grad = True
+            print('{} {} {}'.format(spacer, 'T', name))
+        else:
+            print('{} {} {}'.format(spacer, 'F', name))
+    return net
+
+
 def add_classification_layer_v1(model, num_channels, p=0.2):
     new_layers = nn.Sequential(nn.Dropout(p), nn.Linear(1000, 512), nn.Linear(512, 128), nn.Linear(128, num_channels))
     model = nn.Sequential(model, new_layers)
@@ -103,6 +136,7 @@ def train(args):
         model = add_classification_layer_v1(model, num_channels)
     elif args.dcnn == 'densenet121':
         model = add_classification_layer_v1(model, num_channels)
+        custom_layer_name = densenet121_ordered_layer_names.copy()
     elif args.dcnn == 'resnext50_32x4d':
         model = add_classification_layer_v1(model, num_channels)
     else:
@@ -119,7 +153,7 @@ def train(args):
         elif args.dcnn == 'wide_resnet50_2':
             print('ERROR. Custom transfer learning not implemented for this model.')
         elif args.dcnn == 'densenet121':
-            print('ERROR. Custom transfer learning not implemented for this model.')
+            model = apply_custom_transfer_learning__densenet121(model, custom_layer_name)
         elif args.dcnn == 'resnext50_32x4d':
             print('ERROR. Custom transfer learning not implemented for this model.')
         else:

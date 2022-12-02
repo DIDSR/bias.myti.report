@@ -22,6 +22,7 @@ from dat_data_load import Dataset
 # # 
 # # CONSTANTS
 resnet18_ordered_layer_names = ['conv1', 'layer1', 'layer2', 'layer3', 'layer4', 'fc']
+densenet121_ordered_layer_names = ['Conv2d_conv0', 'denseblock1', 'denseblock2', 'denseblock3', 'denseblock4', 'classifier']
 
 # # --------------------------------------------------------------------
 # # START HERE
@@ -30,8 +31,9 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 # print(device)
 input_tr_lis = '/nas/unas25/rsamala/2022_MAM_CADx_DCNN/RAND_sampling_experiments/R0/f0/tr.lis'
 input_ts_lis = '/nas/unas25/rsamala/2022_MAM_CADx_DCNN/RAND_sampling_experiments/R0/f0/ts.lis'
-fine_tuning = 'full'    # # options: 'full' or 'partial'
-freeze_upto = 0     # # options will be 0 to number of layers
+dcnn_arch = 'densenet121'  # # resnet18, densenet121
+fine_tuning = 'partial'    # # options: 'full' or 'partial'
+freeze_upto = 3     # # options will be 0 to number of layers
 # # 
 def main():
     train_dataset = Dataset(input_tr_lis, crop_to_224=True, train_flag=True, custom_scale=True)
@@ -41,58 +43,97 @@ def main():
     num_steps_in_epoch = len(train_loader)
     # #
     # #
-    net = models.resnet18(pretrained=True)
+    # net = models.resnet18(pretrained=True)
+    net = models.__dict__[dcnn_arch](pretrained=True)
     # num_ftrs = net.fc.in_features
     # net.fc = nn.Linear(num_ftrs, 1)
     new_layers = nn.Sequential(nn.Dropout(0.2), nn.Linear(1000, 512), nn.Linear(512, 128), nn.Linear(128, 1))
     net = nn.Sequential(net, new_layers)
 
-    custom_layer_name = resnet18_ordered_layer_names.copy()
-    if freeze_upto + 1 >= len(resnet18_ordered_layer_names):
+    if dcnn_arch == 'resnet18':
+        custom_layer_name = resnet18_ordered_layer_names.copy()
+    elif dcnn_arch == 'densenet121':
+        custom_layer_name = densenet121_ordered_layer_names.copy()
+    if freeze_upto + 1 >= len(custom_layer_name):
         print('ERROR with choice of freeze_upto')
         return
+
+    # # # debug code to understand how a ROI passes through the network
+    # x=torch.rand(16,3,224,224)
+    # print(summary(net, x))
+    # return
 
     first_non_frozen_layer_name = custom_layer_name[freeze_upto + 1]
     # # custom transfer learning >>
     if fine_tuning == 'partial':
-        spacer = ''
-        start_not_freezing_from_next_layer = False
-        # # set the requires_grad to False to all first
-        for param in net.parameters():
-            param.requires_grad = False
-        print('Partial fine tuning selected')
-        print('Will freeze upto {} with the layer name of {}'.format(freeze_upto, first_non_frozen_layer_name))
-        # # while iterating over the layers, check with the 
-        for name, param in net.named_parameters():
-            # # check if the names in custom_layer_name is in this name
-            if len(custom_layer_name) > 0:
-                for ii, each_layer_name in enumerate(custom_layer_name):
-                    # # the index in the name.split is important and may change
-                    # # based on the pretrained model
-                    if each_layer_name == name.split('.')[1]:
-                        if each_layer_name == first_non_frozen_layer_name:
-                            # # start un-freezing from here onwards
-                            start_not_freezing_from_next_layer = True
-                        # # found it
-                        custom_layer_name.pop(ii)
-                        spacer += '\t'
-                        break
-            if start_not_freezing_from_next_layer:
-                param.requires_grad = True
-                print('{} {} {}'.format(spacer, 'T', name))
-            else:
-                print('{} {} {}'.format(spacer, 'F', name))
+        if dcnn_arch == 'resnet18':
+            spacer = ''
+            start_not_freezing_from_next_layer = False
+            # # set the requires_grad to False to all first
+            for param in net.parameters():
+                param.requires_grad = False
+            print('Partial fine tuning selected')
+            print('Will freeze upto {} with the layer name of {}'.format(freeze_upto, first_non_frozen_layer_name))
+            # # while iterating over the layers, check with the 
+            for name, param in net.named_parameters():
+                # # check if the names in custom_layer_name is in this name
+                if len(custom_layer_name) > 0:
+                    for ii, each_layer_name in enumerate(custom_layer_name):
+                        # # the index in the name.split is important and may change
+                        # # based on the pretrained model
+                        if each_layer_name == name.split('.')[1]:
+                            if each_layer_name == first_non_frozen_layer_name:
+                                # # start un-freezing from here onwards
+                                start_not_freezing_from_next_layer = True
+                            # # found it
+                            custom_layer_name.pop(ii)
+                            spacer += '\t'
+                            break
+                if start_not_freezing_from_next_layer:
+                    param.requires_grad = True
+                    print('{} {} {}'.format(spacer, 'T', name))
+                else:
+                    print('{} {} {}'.format(spacer, 'F', name))
+        elif dcnn_arch == 'densenet121':
+            spacer = ''
+            start_not_freezing_from_next_layer = False
+            # # set the requires_grad to False to all first
+            for param in net.parameters():
+                param.requires_grad = False
+            print('Partial fine tuning selected')
+            print('Will freeze upto {} with the layer name of {}'.format(freeze_upto, first_non_frozen_layer_name))
+            # # while iterating over the layers, check with the 
+            for name, param in net.named_parameters():
+                # # check if the names in custom_layer_name is in this name
+                if len(custom_layer_name) > 0:
+                    for ii, each_layer_name in enumerate(custom_layer_name):
+                        # # the index in the name.split is important and may change
+                        # # based on the pretrained model
+                        if each_layer_name == name.split('.')[2] or each_layer_name == name.split('.')[1]:
+                            if each_layer_name == first_non_frozen_layer_name:
+                                # # start un-freezing from here onwards
+                                start_not_freezing_from_next_layer = True
+                            # # found it
+                            custom_layer_name.pop(ii)
+                            spacer += '\t'
+                            break
+                if start_not_freezing_from_next_layer:
+                    param.requires_grad = True
+                    print('{} {} {}'.format(spacer, 'T', name))
+                else:
+                    print('{} {} {}'.format(spacer, 'F', name))
     elif fine_tuning == 'full':
         print('Full fine tuning selected')
     else:
         print('ERROR. UNKNOWN option for fine_tuning')
         return
     # # <<
+    # return
 
     # # debug code to understand how a ROI passes through the network
     x=torch.rand(16,3,224,224)
     print(summary(net, x))
-    # return
+    return
 
     model_ft = net.to(device)
     criterion = nn.BCELoss()
