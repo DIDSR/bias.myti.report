@@ -8,8 +8,7 @@ IN_DIR="/nas/unas25/rsamala/2022_MAM_CADx_DCNN/RAND_sampling_experiments"
 NUM_EPOCHS=250
 BATCH_SIZE=64
 # #
-FINETUNE="partial"     # # "full" or "partial"
-FREEZE_UPTO=4       # # Works only for FINETUNE="partial"
+FINETUNE="partial"     # # "full" or "partial", FREEZE_UPTO works only for FINETUNE="partial"
 # #
 OPTIMIZER="sgd"
 START_LR=0.001
@@ -18,16 +17,13 @@ NUM_THREADS=8
 SAVE_EVERY_N_EPOCHS=25
 # #
 MASTER_LOG="${IN_DIR}/master_log_custom_transfer_learning.log"
-# for ARCH in "googlenet" "resnet18" "wide_resnet50_2" "densenet121" "resnext50_32x4d"
-for ARCH in "resnet18"
+for ARCH in "googlenet" "resnet18" "wide_resnet50_2" "densenet121" "resnext50_32x4d"
 do
     for FREEZE_UPTO in 0 1 2 3 4
     do
-        # for RAND in 0 1 2 3 4 5 6 7 8 9
-        for RAND in 0
+        for RAND in 0 1 2 3 4 5 6 7 8 9
         do
-            # for FOLD in 0 1 2 3
-            for FOLD in 1 2 3
+            for FOLD in 0 1 2 3
             do
                 IN_TR_LIST_FILE="${IN_DIR}/R${RAND}/f${FOLD}/tr.lis"
                 IN_VD_LIST_FILE="${IN_DIR}/R${RAND}/f${FOLD}/ts.lis"

@@ -12,7 +12,12 @@
     
     How are the pre-trained models adapted to a binary output:
         Implementation in add_classification_layer_v1 function: 
-            - add the following layers in sequence: dropout, linear(1000x512), linear(512x128), linear(128x1)
+            - add the following layers in sequence: dropout (default p=0.2), linear(1000x512), linear(512x128), linear(128x1)
+    
+    Added functionality to do custom transfer learning, freezing at different points. Each DCNN structure requires
+    custom code to work. The following are the supported models. This list will be updated as additional DCNNs are added.
+            "resnet18"
+            "densenet121"
 
     RKS, started Aug 1, 2022. 
     Git is used to track the versions.
