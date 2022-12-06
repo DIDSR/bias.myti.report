@@ -10,7 +10,7 @@ equal_stratification_groups = ['M-White-Yes-CR', 'F-White-Yes-CR','M-Black-Yes-C
                                'M-White-No-CR', 'F-White-No-CR','M-Black-No-CR', 'F-Black-No-CR']
 custom_composition ={ # to exclude a group from sratification, set all values to 0
     'sex':{"M":1, "F":1},
-    'race':{"White":1, "Black":0},
+    'race':{"White":1, "Black":1},
     'COVID_positive':{"Yes":1, "No":1},
     'modality':{"CR":1, "DX":0}
 }
@@ -91,90 +91,69 @@ def bootstrapping(args):
     img_df = df.copy()
     bp_df = df.drop('Path', axis=1).drop_duplicates() # by-patient df for splitting/stratifying
     # 3) train/validation/test split ================================================================================
+    # # process into easier format
+    split_list = ['train', 'validation', 'validation_2', 'independent_test']
+    splits = pd.DataFrame(columns=['size', 'comp', 'limit_img', 'rand_seed', 'limit_pid', 'get_remaining'],
+    index=['train','validation','validation_2','independent_test'])
+    splits.at['validation',:] = [args.validation_size, validation_composition, False, None, False, False]
+    splits.at['validation_2',:] = [args.validation_size_2, validation_2_composition,False,args.val_2_rand, False, False]
+    splits.at['independent_test',:] = [args.test_size, test_composition,False, args.test_rand, False, args.remaining_to_test]
+    splits.at['train',:] = [1-splits['size'].sum(), train_composition, False, None, False, False]
+    for s in splits.index:
+        if s in args.img_splits:
+            splits.at[s,"limit_img"] = True
+        if s in args.limit_samples:
+            splits.at[s, "limit_pid"] = True
     bp_split_dfs = {}
-    # 3) a) Test split ----------------------------------------------------------------------------------------------
-    if args.test_rand is None:
-        test_random_seed = args.random_seed + args.random_seed_initial # same seed used for validation/training
-    else:
-        test_random_seed = args.test_rand + args.random_seed_initial
-    
-    if os.path.exists(os.path.join(save_folder, 'independent_test.csv')) and args.test_rand is not None:
-        print("\narguments indicate a single independent test for all RAND values, and a test csv already exists, loading...")
-        bp_split_dfs['independent_test'] = pd.read_csv(os.path.join(save_folder, 'independent_test.csv')).drop("Path", axis=1).drop_duplicates()
-
-    else:
-        if args.stratify == 'False': 
-            bp_split_dfs['independent_test'] = bp_df.sample(frac=args.test_size, random_state=test_random_seed)
+    # 3) a) load any existing partitions
+    for s in splits.index:
+        if splits.at[s,'rand_seed'] is not None and os.path.exists(os.path.join(save_folder, f"{s}.csv")):
+            print(f"Loading {s} split from file...")
+            bp_split_dfs[s] = pd.read_csv(os.path.join(save_folder, f"{s}.csv")).drop("Path",axis=1).drop_duplicates()
+    # 3) b) check if any partitions limit total number of patients, if so, get that number
+    if splits['limit_pid'].any():
+        limit_pid_total_num = adjust_comp(bp_df, 'equal', args.random_seed + args.random_seed_initial).groupby('subgroup')['patient_id'].count().min()*int(args.min_num_subgroups)
+    # 3) c) get remaining partitions
+    for s in splits.index:
+        remaining_bp_df = prevent_data_leakage(bp_df, bp_split_dfs.values())
+        if s in bp_split_dfs:
+            continue
+        if splits.at[s,'rand_seed'] is None:
+            random_seed = args.random_seed_initial + args.random_seed
         else:
-            bp_split_dfs['independent_test']= adjust_comp(bp_df, test_composition, test_random_seed, split_frac=args.test_size)
-    trv_bp_df = prevent_data_leakage(bp_df, bp_split_dfs.values())
-    if os.path.exists(os.path.join(save_folder, 'validation_2.csv')) and args.val_2_rand is not None:
-        bp_split_dfs['validation_2'] = pd.read_csv(os.path.join(save_folder, 'validation_2.csv')).drop("Path", axis=1).drop_duplicates()
-        trv_bp_df = prevent_data_leakage(bp_df, bp_split_dfs.values())
-    # 3) b) Validation split ----------------------------------------------------------------------------------------
-    if args.stratify == 'False':
-        val_num = round(args.validation_size*len(bp_df))
-        bp_split_dfs['validation'] = trv_bp_df.sample(n=val_num, random_state=args.random_seed + args.random_seed_initial)
-    else:
-        strat_bp_df = adjust_comp(bp_df, validation_composition, args.random_seed + args.random_seed_initial)
-        strat_trv_bp_df = adjust_comp(trv_bp_df, validation_composition, args.random_seed + args.random_seed_initial)
-        val_n_size = (len(strat_bp_df)/len(strat_trv_bp_df)) * args.validation_size
-        bp_split_dfs['validation'] = adjust_comp(trv_bp_df, validation_composition, args.random_seed + args.random_seed_initial, split_frac=val_n_size)
-    remaining_bp_df =prevent_data_leakage(bp_df, bp_split_dfs.values())
-    # 3) c) Validation part 2 ---------------------------------------------------------------------------------------
-    if args.val_2_rand is None:
-        val_2_random_seed = args.random_seed + args.random_seed_initial
-    else:
-        val_2_random_seed = args.val_2_rand + args.random_seed_initial
-    if os.path.exists(os.path.join(save_folder, 'validation_2.csv')) and args.val_2_rand is not None:
-        print("\narguments indicate a single validation 2 file for all RAND values, and a validation 2 csv already exists, loading...")
-        bp_split_dfs['validation_2'] = pd.read_csv(os.path.join(save_folder, 'validation_2.csv')).drop("Path", axis=1).drop_duplicates()
-    else:
+            random_seed = args.random_seed_initial + splits.at[s, 'rand_seed']
         if args.stratify == 'False':
-            val_num_2 = round(args.validation_size_2*len(bp_df))
-            bp_split_dfs['validation_2'] = trv_bp_df.sample(n=val_num_2, random_state=val_2_random_seed)
+            num = round(splits.at[s,'size']*len(bp_df))
+            bp_split_dfs[s] = remaining_bp_df.sample(n=num, random_state=random_seed)
+        elif splits.at[s, 'limit_pid']:
+            split_number = splits.at[s, 'size'] * limit_pid_total_num
+            bp_split_dfs[s] = adjust_comp(remaining_bp_df, splits.at[s,'comp'], random_seed, split_num=split_number)
         else:
-            strat_bp_df = adjust_comp(bp_df, validation_2_composition, val_2_random_seed)
-            strat_trv_bp_df = adjust_comp(remaining_bp_df, validation_2_composition, val_2_random_seed)
-            val_2_n_size = (len(strat_bp_df)/len(strat_trv_bp_df)) * args.validation_size_2
-            bp_split_dfs['validation_2'] = adjust_comp(remaining_bp_df, validation_2_composition, val_2_random_seed, split_frac=val_2_n_size)
-    
-    # 3) d) Train Split ---------------------------------------------------------------------------------------------
-    # tr_bp_df = remaining_bp_df[~remaining_bp_df['patient_id'].isin(val_2_bp_df['patient_id'])]
-    tr_bp_df = prevent_data_leakage(bp_df, bp_split_dfs.values())
-    if args.stratify == "False":
-        bp_split_dfs['train'] = tr_bp_df.copy()
-    else:
-        bp_split_dfs['train'] = adjust_comp(tr_bp_df, train_composition, args.random_seed + args.random_seed_initial)
+            # get new split fraction based on what splits have already been taken
+            split_fraction = splits.at[s,'size'] / splits[~splits.index.isin(bp_split_dfs)]['size'].sum()
+            bp_split_dfs[s] = adjust_comp(remaining_bp_df, splits.at[s,'comp'], random_seed, split_frac=split_fraction)
     # 4) convert from by-patient dataframes back to by-image dataframes =============================================
     # TODO: more than 1 step
     if not os.path.exists(os.path.join(save_folder, f"RAND_{args.random_seed}")):
         os.mkdir(os.path.join(save_folder, f"RAND_{args.random_seed}"))
     if args.steps == 1: # Saving
         output_files = {}
-        for split_id, split_df in bp_split_dfs.items():
-            if args.remaining_to_test and split_id == 'independent_test':
-                other_splits = [s_df for s_id, s_df in bp_split_dfs.items() if s_id != 'independent_test']
-                if split_id in args.img_splits:
-                    output_files[split_id] = prevent_data_leakage(df, other_splits)
-                else:
-                    output_files[split_id] = prevent_data_leakage(all_df, other_splits)
-            elif split_id in args.img_splits:
-                output_files[split_id] = df[df['patient_id'].isin(split_df['patient_id'])]
+        for s in splits.index:
+            if splits.at[s,'get_remaining']: # this is the split that gets samples that do not belong to one of the equal_stratification_groups
+                temp_df = all_df[~all_df['subgroup'].isin(equal_stratification_groups)]
+                bp_split_dfs[s] = pd.concat([bp_split_dfs[s], temp_df])
+            if splits.at[s, 'limit_img']:
+                output_files[s] = df[df['patient_id'].isin(bp_split_dfs[s]['patient_id'])]
             else:
-                output_files[split_id] = all_df[all_df['patient_id'].isin(split_df['patient_id'])]
-            # save files
-            if args.test_rand is not None and split_id == 'independent_test':
-                if os.path.exists(os.path.join(save_folder, 'independent_test.csv')): # already have single independent test
-                    print("single independent test file already exists")
-                    continue
-                output_files[split_id].to_csv(os.path.join(save_folder, f'{split_id}.csv'), index=False)
-            elif args.val_2_rand is not None and split_id == 'validation_2':
-                if os.path.exists(os.path.join(save_folder, 'validation_2.csv')): # already have single validation_2
-                    print("single validation 2 file already exists")
-                    continue
-                output_files[split_id].to_csv(os.path.join(save_folder, f'{split_id}.csv'), index=False)
-            output_files[split_id].to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", f'{split_id}.csv'), index=False)
+                output_files[s] = all_df[all_df['patient_id'].isin(bp_split_dfs[s]['patient_id'])]
+            # save output files
+            if splits.at[s, 'rand_seed'] is not None:
+                if os.path.exists(os.path.join(save_folder, f"{s}.csv")):
+                    print(f"Joint {s} file already exists, not overwriting")
+                else:
+                    output_files[s].to_csv(os.path.join(save_folder, f"{s}.csv"), index=False)
+            else:
+                output_files[s].to_csv(os.path.join(save_folder,f"RAND_{args.random_seed}", f"{s}.csv"), index=False)
         bp_summary, img_summary = get_stats(output_files)
         bp_summary.to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", 'by_patient_split_summary.csv'))
         img_summary.to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", 'by_image_split_summary.csv'))
@@ -192,7 +171,7 @@ def bootstrapping(args):
     with open(os.path.join(save_folder, f"RAND_{args.random_seed}", "partition_info.log"), 'w') as fp:
         json.dump(tracking_info, fp, indent=4)
 
-def adjust_comp(in_df, comp, random_seed, split_frac=None):
+def adjust_comp(in_df, comp, random_seed, split_frac=None, split_num=None):
     df = in_df.copy()
     if comp is None:
         return df
@@ -213,6 +192,7 @@ def adjust_comp(in_df, comp, random_seed, split_frac=None):
         for ii, sub in enumerate(sub_dfs):
             sub_dfs[ii] = sub.sample(n=n_each_group, random_state=random_seed)
         out_df = pd.concat(sub_dfs, axis=0)
+        isub_portions = {x:1 for x in equal_stratification_groups}
     elif comp == 'custom': # TODO: adjust to optimize number of patients in each subgroup, currently sets them equal and then adjusts to composition (except groups not being used)
         sub_dict = {}
         for grp in custom_composition:
@@ -235,14 +215,20 @@ def adjust_comp(in_df, comp, random_seed, split_frac=None):
         if n_each_group < 1:
             raise Exception(f"cannot stratify by these subgroups, smallest subgroup has fewer than {subtract_from_smallest_subgroup} patients")
         sub_dfs = []
+        isub_portions = {}
         for sub in df['subgroup'].unique():
-            isub_portion = 1
+            isub_portions[sub] = 1
             for s in sub.split("-"):
-                isub_portion *= sub_dict[s]
-            sub_dfs.append(df[df['subgroup'] == sub].sample(n=round(n_each_group*isub_portion), random_state=random_seed))
+                isub_portions[sub] *= sub_dict[s]
+            sub_dfs.append(df[df['subgroup'] == sub].sample(n=round(n_each_group*isub_portions[sub]), random_state=random_seed))
         out_df = pd.concat(sub_dfs, axis=0)
-    if split_frac is None:
+    if split_frac is None and split_num is None:
         return out_df
+    elif split_num is not None:
+        sub_dfs = []
+        for sub in out_df['subgroup'].unique():
+            sub_dfs.append(out_df[out_df['subgroup'] == sub].sample(n=round(split_num*(isub_portions[sub]/sum(isub_portions.values()))), random_state=random_seed))
+        return pd.concat(sub_dfs, axis=0)
     else:
         sub_dfs = []
         for sub in out_df['subgroup'].unique():
@@ -300,7 +286,18 @@ def convert_from_summary(df, conversion_table, min_img, max_img, selection_mode,
     cols = ['patient_id','Path']+[grp for grp in group_dict]
     rm_cols = [col for col in df.columns if col not in cols]
     df = df.drop(rm_cols, axis=1)
+    df['subgroup'] = df.apply(lambda row: get_subgroup(row), axis=1)
     return df
+
+def get_subgroup(row):
+    subgroup = ""
+    for g in group_dict:
+        if len(subgroup) == 0:
+            subgroup = row[g]
+        else:
+            subgroup = subgroup + "-" + row[g]
+    return subgroup
+
 
 def get_stats(df_dict):
     df_list = []
@@ -312,11 +309,11 @@ def get_stats(df_dict):
     for sp in df['split'].unique():
         if df[df['split']!=sp]['patient_id'].isin(df[df['split']==sp]['patient_id']).any():
             print(f"OOPS: {sp}")
-    for grp in group_dict:
-        if 'subgroup' not in df.columns:
-            df['subgroup'] = df[grp]
-        else:
-            df.loc[:,'subgroup'] = df['subgroup'] + "-" + df[grp]
+    # for grp in group_dict:
+    #     if 'subgroup' not in df.columns:
+    #         df['subgroup'] = df[grp]
+    #     else:
+    #         df.loc[:,'subgroup'] = df['subgroup'] + "-" + df[grp]
     return df.rename(columns = {'patient_id':'number of patients'}).groupby(['split','subgroup'])['number of patients'].nunique(), df.rename(columns={'patient_id':'number of images'}).groupby(['split','subgroup'])['number of images'].count()
     
 
@@ -374,6 +371,9 @@ if __name__ == '__main__':
     parser.add_argument("-min_img_per_patient", default=0)
     parser.add_argument("-max_img_per_patient", default=None)
     parser.add_argument("-patient_img_selection_mode", default='random', choices=['random', 'first','last'])
+    # # limiting overall number of patients
+    parser.add_argument("-limit_samples", default=[], action='append')
+    parser.add_argument("-min_num_subgroups", default=None)
     
     bootstrapping(parser.parse_args())
     print("\nDONE\n")

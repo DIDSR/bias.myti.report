@@ -56,7 +56,12 @@ MIN_IMG=0
 MAX_IMG=None
 IMG_SELECTION=last
 
-for RAND in 0
+# limiting the overall number of patients
+declare -a LIMIT_SPLITS=('train' 'validation')
+
+MIN_NUM_SUBGROUPS=4  # to ensure the same number of patients in experiments with differing numbers of subgroups
+
+for RAND in 0 1 2
 do
 # # ==================================================================
 # # Nothing below this point should need to be edited for regular use
@@ -82,11 +87,19 @@ do
     do
         param_IMG_SELECTION_SPLITS="${param_IMG_SELECTION_SPLITS} -img_splits ${IMG_SELECTION_SPLITS[$i]}"
     done
+# # limit total number of patients processing
+    arraylength=${#LIMIT_SPLITS[@]}
+    param_LIMIT_SPLITS=""
+    for (( i=0; i<${arraylength}; i++));
+    do
+        param_LIMIT_SPLITS="${param_LIMIT_SPLITS} -limit_samples ${LIMIT_SPLITS[$i]}"
+    done
 # # ======================================
 echo ================ RAND ${RAND} ================
 python ../src/generate_partitions_v2.py $param_IN_summary \
                                          $param_TASKS \
                                          $param_IMG_SELECTION_SPLITS \
+                                         $param_LIMIT_SPLITS \
                                          -random_seed $RAND \
                                          -test_size $TEST_SIZE \
                                          -validation_size_2 $VAL_2_SIZE \
@@ -100,6 +113,7 @@ python ../src/generate_partitions_v2.py $param_IN_summary \
                                          -min_img_per_patient $MIN_IMG \
                                          -max_img_per_patient $MAX_IMG \
                                          -patient_img_selection_mode $IMG_SELECTION \
-                                         -remaining_to_test $REMAINING_TO_TEST
+                                         -remaining_to_test $REMAINING_TO_TEST \
+                                         -min_num_subgroups $MIN_NUM_SUBGROUPS
 
 done
