@@ -234,70 +234,6 @@ def adjust_comp(in_df, comp, random_seed, split_frac=1, split_num=None, subtract
     adjusted_df = pd.concat(sub_dfs, axis=0)
     return adjusted_df
 
-
-def old_adjust_comp(in_df, comp, random_seed, split_frac=None, split_num=None):
-    df = in_df.copy()
-    if comp is None:
-        return df
-    elif comp == 'equal':
-        sub_dfs = []
-        for sub in equal_stratification_groups:
-            temp_df = df.copy()
-            for s in sub.split("-"):
-                for grp, vals in group_dict.items():
-                    if s in vals['subgroups']:
-                        temp_df = temp_df[temp_df[grp] == s]
-            temp_df['subgroup'] = sub
-            sub_dfs.append(temp_df)
-        subgroup_df = pd.concat(sub_dfs, axis=0)
-        n_each_group = subgroup_df.groupby('subgroup')['patient_id'].count().min() - subtract_from_smallest_subgroup
-        if n_each_group < 1:
-            raise Exception(f"cannot stratify by these subgroups, smallest subgroup has fewer than {subtract_from_smallest_subgroup} patients")
-        for ii, sub in enumerate(sub_dfs):
-            sub_dfs[ii] = sub.sample(n=n_each_group, random_state=random_seed)
-        out_df = pd.concat(sub_dfs, axis=0)
-        isub_portions = {x:1 for x in equal_stratification_groups}
-    elif comp == 'custom': # TODO: adjust to optimize number of patients in each subgroup, currently sets them equal and then adjusts to composition (except groups not being used)
-        sub_dict = {}
-        for grp in custom_composition:
-            grp_total = sum(custom_composition[grp].values())
-            grp_max = max(custom_composition[grp].values())
-            if grp_total == 0: # Not stratifying by this group
-                continue
-            df = df[df[grp].isin(custom_composition[grp])]
-            for subgrp in custom_composition[grp]:
-                sub_dict[subgrp] = (custom_composition[grp][subgrp] / grp_max)
-                # remove subgroups that we aren't using
-                if sub_dict[subgrp] == 0:
-                    df = df[df[grp]!=subgrp]
-        # set remaining subgroups equal -> adjust to fit comp
-        n_each_group = df.groupby('subgroup')['patient_id'].count().min() - subtract_from_smallest_subgroup
-        if n_each_group < 1:
-            raise Exception(f"cannot stratify by these subgroups, smallest subgroup has fewer than {subtract_from_smallest_subgroup} patients")
-        sub_dfs = []
-        isub_portions = {}
-        for sub in df['subgroup'].unique():
-            isub_portions[sub] = 1
-            for s in sub.split("-"):
-                isub_portions[sub] *= sub_dict[s]
-            sub_dfs.append(df[df['subgroup'] == sub].sample(n=round(n_each_group*isub_portions[sub]), random_state=random_seed))
-        out_df = pd.concat(sub_dfs, axis=0)
-        print("isub portions: ", isub_portions)
-        print(out_df.groupby('subgroup')['patient_id'].count())
-    if split_frac is None and split_num is None:
-        return out_df
-    elif split_num is not None:
-        sub_dfs = []
-        for sub in out_df['subgroup'].unique():
-            print(sub, round(split_num*(isub_portions[sub]/sum(isub_portions.values()))))
-            sub_dfs.append(out_df[out_df['subgroup'] == sub].sample(n=round(split_num*(isub_portions[sub]/sum(isub_portions.values()))), random_state=random_seed))
-        return pd.concat(sub_dfs, axis=0)
-    else:
-        sub_dfs = []
-        for sub in out_df['subgroup'].unique():
-            sub_dfs.append(out_df[out_df['subgroup'] == sub].sample(frac=split_frac, random_state=random_seed))
-        return pd.concat(sub_dfs, axis=0)
-
 def prevent_data_leakage(base_df, df_list:list):
     out_df = base_df.copy()
     for df in df_list:
@@ -361,7 +297,6 @@ def get_subgroup(row):
             subgroup = subgroup + "-" + row[g]
     return subgroup
 
-
 def get_stats(df_dict):
     df_list = []
     for id, split_df in df_dict.items():
@@ -372,35 +307,8 @@ def get_stats(df_dict):
     for sp in df['split'].unique():
         if df[df['split']!=sp]['patient_id'].isin(df[df['split']==sp]['patient_id']).any():
             print(f"OOPS: {sp}")
-    # print(pd.pivot_table(df, values='patient_id', index='subgroup', columns='split',aggfunc=pd.Series.nunique))
     return pd.pivot_table(df,values='patient_id', index='subgroup', columns='split',aggfunc=pd.Series.nunique, margins=True), pd.pivot_table(df,values='patient_id', index='subgroup', columns='split',aggfunc='count')
-    # return df.rename(columns = {'patient_id':'number of patients'}).groupby(['split','subgroup'])['number of patients'].nunique(), df.rename(columns={'patient_id':'number of images'}).groupby(['split','subgroup'])['number of images'].count()
-    
-
-def old_get_stats(test_df, val_df, val_2_df, train_df):
-    test_df= test_df.copy()
-    val_df = val_df.copy()
-    val_2_df = val_2_df.copy()
-    train_df = train_df.copy()
-    test_df.loc[:,'split'] = 'test'
-    val_df.loc[:,'split'] = 'validation'
-    
-    train_df.loc[:,'split'] = 'train'
-    if len(val_2_df) != 0:
-        val_2_df.loc[:,'split'] = 'validation_2'
-        df = pd.concat([test_df, val_df, train_df, val_2_df], axis=0)
-    else:
-        df = pd.concat([test_df, val_df, train_df], axis=0)
-    for sp in ['test', 'validation','validation_2', 'train']: # check that there is no patient_id_overlap
-        if df[df['split']!=sp]['patient_id'].isin(df[df['split']==sp]['patient_id']).any():
-            print(f"OOPS: {sp}")
-    for grp in group_dict:
-        if 'subgroup' not in df.columns:
-            df['subgroup'] = df[grp]
-        else:
-            df.loc[:,'subgroup'] = df['subgroup'] + "-" + df[grp]
-    return df.rename(columns = {'patient_id':'number of patients'}).groupby(['split','subgroup'])['number of patients'].nunique(), df.rename(columns={'patient_id':'number of images'}).groupby(['split','subgroup'])['number of images'].count()
-    
+   
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # # partition general settings (input file, classes, split sizes, stratification)
