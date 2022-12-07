@@ -72,6 +72,7 @@ class plane_dataset(BaseDataset):
         # print("SHUFFLE: ", shuffle)
         self.subgroups = subgroups
         self.steps = steps
+        # self.steps = 10
         self.normalize = normalize
         self.return_info_dict = False
         self.study_level = False
@@ -333,13 +334,14 @@ def decision_region_analysis(predictions,
 
 
 class DecisionBoundaryEvaluator():
-    def __init__(self, experiment_name, save_location, predictor, transform_args, data_args, model_args, input_classes, output_classes,overwrite=False, **kwargs):
+    def __init__(self, experiment_name, save_location, predictor, transform_args, data_args, model_args, input_classes, output_classes,overwrite=False, save_last_dense_layer=False, **kwargs):
         if overwrite:
             print("\noverwrite is on\n")
         self.input_classes = input_classes
         self.output_classes = output_classes
         self.experiment_name = experiment_name
         self.experiment_dir = os.path.join(save_location, experiment_name)
+        self.save_last_dense_layer = save_last_dense_layer
         if not os.path.exists(self.experiment_dir):
             os.mkdir(self.experiment_dir)
         self.sample_fp = os.path.join(self.experiment_dir, "DB_samples.csv")
@@ -352,7 +354,12 @@ class DecisionBoundaryEvaluator():
                                 transform_args=transform_args,
                                 is_training=False,
                                 return_info_dict=True)
-            base_predictions, base_groundtruth, base_paths = predictor.predict(loader)
+            base_predictions, base_groundtruth, base_paths, base_last_dense_layer = predictor.predict(loader, return_embeddings=True)
+            if self.save_last_dense_layer:
+                # # save the embeddings
+                base_dense_layer_arrays = {'base_paths': base_paths, 'base_last_dense_layer': base_last_dense_layer, 'base_groundtruth': base_groundtruth}
+                embedding_npz_fp = os.path.join(self.experiment_dir, "all_orig__last_dense.npz")
+                np.savez_compressed(embedding_npz_fp, **base_dense_layer_arrays)
             # set up sample dataframe
             sample_df = original_gt[['patient_id', 'Path']].copy()
             for subclasses in self.input_classes.values():
@@ -387,8 +394,13 @@ class DecisionBoundaryEvaluator():
         if os.path.exists(self.triplet_information[trip_idx]['array fp']):
             DB_arrays = np.load(self.triplet_information[trip_idx]['array fp'], allow_pickle=True)
             DB_arrays = dict(DB_arrays)
+            if self.save_last_dense_layer:
+                DN_arrays = np.load(self.triplet_information[trip_idx]['array fp'].replace('.npz', '__last_dense.npz'), allow_pickle=True)
+                DN_arrays = dict(DN_arrays)
         else:
             DB_arrays = {}
+            if self.save_last_dense_layer:
+                DN_arrays = {}
         for i in range(self.triplet_information[trip_idx]['samples'], self.max_samples):
             self.sample_df = sample_df
             print(f"{self.triplet_information[trip_idx]['triplet id']}: {i+1}/{self.max_samples}")
@@ -398,14 +410,18 @@ class DecisionBoundaryEvaluator():
                 # different options (such as random image shuffling, noise replacement, etc.)
                 planeloader = get_planeloader(data_args, dataframe=self.sample_df, img_idxs=current_sample, subgroups=self.input_classes, 
                                               prediction_tasks=model_args.tasks, **pl_setting)
-                predictions, groundtruth = predictor.predict(planeloader)
+                predictions, groundtruth, last_dense_layer = predictor.predict(planeloader, return_embeddings=True)
+                DN_arrays[f"{i+1}__{current_sample[0]}_{current_sample[1]}_{current_sample[2]}"] = last_dense_layer
                 for al_setting in self.analysis_settings:
                     db_results, db_array = decision_region_analysis(predictions, planeloader, title_with='both', label_with='none',
                                                                     classes=self.output_classes,**al_setting)
                     DB_arrays[f"{i+1}__{current_sample[0]}_{current_sample[1]}_{current_sample[2]}"] = db_array
             self.triplet_information[trip_idx]['samples'] += 1
+            # break
             if (i+1) % self.save_every == 0: # save progress
                 np.savez_compressed(self.triplet_information[trip_idx]['array fp'], **DB_arrays)
+                if self.save_last_dense_layer:
+                    np.savez_compressed(self.triplet_information[trip_idx]['array fp'].replace('.npz', '__last_dense.npz'), **DN_arrays)
                 self.save()
 
     def trial_setup(self, planeloader_settings={}, analysis_settings={}, triplets=None, n_samples=10, save_every=1):
