@@ -42,7 +42,7 @@ def new_run_db_eval(args, db_folder=DB_folder):
     DB = DecisionBoundaryEvaluator(db_folder, Path(ckpt_path).parent,  predictor=predictor,
                             input_classes=test_input_classes, output_classes=test_output_classes, 
                             data_args = data_args, model_args=model_args, transform_args=transform_args,
-                            n_samples=num_samples, save_every=save_every)
+                            n_samples=num_samples, save_every=save_every, save_last_dense_layer=False)
     
 # ====================================================================================
 #                              Deprecated Code
