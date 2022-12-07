@@ -8,9 +8,9 @@ import json
 # # currently only supports stratification by sex, race, COVID_positive, and/or modality
 equal_stratification_groups = ['M-White-Yes-CR', 'F-White-Yes-CR','M-Black-Yes-CR', 'F-Black-Yes-CR',
                                'M-White-No-CR', 'F-White-No-CR','M-Black-No-CR', 'F-Black-No-CR']
-custom_composition ={ # to exclude a group from sratification, set all values to 0
+custom_composition ={ 
     'sex':{"M":1, "F":1},
-    'race':{"White":1, "Black":1},
+    'race':{"White":0, "Black":1},
     'COVID_positive':{"Yes":1, "No":1},
     'modality':{"CR":1, "DX":0}
 }
@@ -90,6 +90,8 @@ def bootstrapping(args):
             df = df[df[grp] != 'other']
     img_df = df.copy()
     bp_df = df.drop('Path', axis=1).drop_duplicates() # by-patient df for splitting/stratifying
+    print("\nNumber of patients/subgroup in input summary:")
+    print(bp_df[bp_df['subgroup'].isin(equal_stratification_groups)].groupby("subgroup")['patient_id'].count())
     # 3) train/validation/test split ================================================================================
     # # process into easier format
     split_list = ['train', 'validation', 'validation_2', 'independent_test']
@@ -112,7 +114,7 @@ def bootstrapping(args):
             bp_split_dfs[s] = pd.read_csv(os.path.join(save_folder, f"{s}.csv")).drop("Path",axis=1).drop_duplicates()
     # 3) b) check if any partitions limit total number of patients, if so, get that number
     if splits['limit_pid'].any():
-        limit_pid_total_num = adjust_comp(bp_df, 'equal', args.random_seed + args.random_seed_initial).groupby('subgroup')['patient_id'].count().min()*int(args.min_num_subgroups)
+        limit_pid_total_num = adjust_comp(bp_df, 'equal', args.random_seed + args.random_seed_initial, subtract_from_subgroup=True).groupby('subgroup')['patient_id'].count().min()*int(args.min_num_subgroups)
     # 3) c) get remaining partitions
     for s in splits.index:
         remaining_bp_df = prevent_data_leakage(bp_df, bp_split_dfs.values())
@@ -171,69 +173,66 @@ def bootstrapping(args):
     with open(os.path.join(save_folder, f"RAND_{args.random_seed}", "partition_info.log"), 'w') as fp:
         json.dump(tracking_info, fp, indent=4)
 
-def adjust_comp(in_df, comp, random_seed, split_frac=None, split_num=None):
+def adjust_comp(in_df, comp, random_seed, split_frac=1, split_num=None, subtract_from_subgroup=False):
+    '''
+        adjusts the composition of in_df to match the comp specified, if split_frac or split_num are specified,
+    generates a split of the specified size.
+    -------
+    in_df - input dataframe (by-patient)
+    comp - desired composition [None, equal, or custom]
+    random_seed - random control
+    split_frac - the fraction (decimal) of the available data to return
+    split_num - the number of patients overall to return
+    subtract_from_subgroup - whether or not to subtract subtract_from_smallest_subgroup during adjustment,
+        set to True to allow more variation between random seeds, but fewer patients used
+    '''
     df = in_df.copy()
     if comp is None:
-        return df
-    elif comp == 'equal':
-        sub_dfs = []
-        for sub in equal_stratification_groups:
-            temp_df = df.copy()
-            for s in sub.split("-"):
-                for grp, vals in group_dict.items():
-                    if s in vals['subgroups']:
-                        temp_df = temp_df[temp_df[grp] == s]
-            temp_df['subgroup'] = sub
-            sub_dfs.append(temp_df)
-        subgroup_df = pd.concat(sub_dfs, axis=0)
-        n_each_group = subgroup_df.groupby('subgroup')['patient_id'].count().min() - subtract_from_smallest_subgroup
-        if n_each_group < 1:
-            raise Exception(f"cannot stratify by these subgroups, smallest subgroup has fewer than {subtract_from_smallest_subgroup} patients")
-        for ii, sub in enumerate(sub_dfs):
-            sub_dfs[ii] = sub.sample(n=n_each_group, random_state=random_seed)
-        out_df = pd.concat(sub_dfs, axis=0)
-        isub_portions = {x:1 for x in equal_stratification_groups}
-    elif comp == 'custom': # TODO: adjust to optimize number of patients in each subgroup, currently sets them equal and then adjusts to composition (except groups not being used)
-        sub_dict = {}
-        for grp in custom_composition:
-            grp_total = sum(custom_composition[grp].values())
-            grp_max = max(custom_composition[grp].values())
-            if grp_total == 0: # Not stratifying by this group
-                continue
-            if 'subgroup' not in df.columns:
-                df['subgroup'] = df[grp]
+        if split_num is not None:
+            return df.sample(n=round(split_num*split_frac), random_state=random_seed)
+        else:
+            return df.sample(frac=split_frac, random_seed=random_seed)
+    elif comp == 'equal': 
+        subgroup_proportions = {sub:1 for sub in equal_stratification_groups}
+    elif comp == 'custom': # get percentage of each interaction subgroup in adjusted data
+        from itertools import product
+        raw_proportions = {i:j for z in custom_composition.values() for i,j in z.items()} # exactly what is specified 
+        # get subgroups
+        subgroups = []
+        for x in custom_composition.values():
+            if len(subgroups) == 0:
+                subgroups = x
             else:
-                df.loc[:,'subgroup'] = df['subgroup'] + "-" + df[grp]
-            df = df[df[grp].isin(custom_composition[grp])]
-            for subgrp in custom_composition[grp]:
-                sub_dict[subgrp] = (custom_composition[grp][subgrp] / grp_max)
-                # remove subgroups that we aren't using
-                if sub_dict[subgrp] == 0:
-                    df = df[df[grp]!=subgrp]
-        # set remaining subgroups equal -> adjust to fit comp
-        n_each_group = df.groupby('subgroup')['patient_id'].count().min() - subtract_from_smallest_subgroup
-        if n_each_group < 1:
-            raise Exception(f"cannot stratify by these subgroups, smallest subgroup has fewer than {subtract_from_smallest_subgroup} patients")
-        sub_dfs = []
-        isub_portions = {}
-        for sub in df['subgroup'].unique():
-            isub_portions[sub] = 1
+                subgroups = list(product(subgroups, x))
+                subgroups = ["-".join(y) for y in subgroups]
+        # determine specific subgroup proportions based on raw_proportions
+        subgroup_proportions = {sub:1 for sub in subgroups}
+        for sub in subgroups:
             for s in sub.split("-"):
-                isub_portions[sub] *= sub_dict[s]
-            sub_dfs.append(df[df['subgroup'] == sub].sample(n=round(n_each_group*isub_portions[sub]), random_state=random_seed))
-        out_df = pd.concat(sub_dfs, axis=0)
-    if split_frac is None and split_num is None:
-        return out_df
-    elif split_num is not None:
-        sub_dfs = []
-        for sub in out_df['subgroup'].unique():
-            sub_dfs.append(out_df[out_df['subgroup'] == sub].sample(n=round(split_num*(isub_portions[sub]/sum(isub_portions.values()))), random_state=random_seed))
-        return pd.concat(sub_dfs, axis=0)
+                subgroup_proportions[sub] *= raw_proportions[s]
+        subgroup_proportions = {i:j for i,j in subgroup_proportions.items() if j != 0}
     else:
-        sub_dfs = []
-        for sub in out_df['subgroup'].unique():
-            sub_dfs.append(out_df[out_df['subgroup'] == sub].sample(frac=split_frac, random_state=random_seed))
-        return pd.concat(sub_dfs, axis=0)
+        raise Exception(f"unrecognized composition {comp}")
+    # joint process for both custom and equal comp type ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~
+    # convert from subgroup proportions to specific percentage of the split
+    subgroup_percentages = {i:(j/sum(subgroup_proportions.values())) for i,j in subgroup_proportions.items()}
+    # get values for each subgroup
+    if split_num is None: # figure out actual split num based on limiting group
+        # determine limiting group
+        # below method only works if all compositions = custom, otherwise it messes stuff up
+        max_size_by_subgroup = {}
+        for sub in subgroup_percentages:
+            original_n_sub = df[df['subgroup'] == sub]['patient_id'].count()
+            if subtract_from_subgroup:
+                original_n_sub -= subtract_from_smallest_subgroup
+            max_size_by_subgroup[sub] = original_n_sub / subgroup_percentages[sub]
+        split_num = int(min(max_size_by_subgroup.values()))
+    sub_dfs = []
+    for sub in subgroup_percentages:
+        sub_num = round(split_num * subgroup_percentages[sub])
+        sub_dfs.append(df[df['subgroup'] == sub].sample(n=round(sub_num*split_frac), random_state=random_seed))
+    adjusted_df = pd.concat(sub_dfs, axis=0)
+    return adjusted_df
 
 def prevent_data_leakage(base_df, df_list:list):
     out_df = base_df.copy()
@@ -298,7 +297,6 @@ def get_subgroup(row):
             subgroup = subgroup + "-" + row[g]
     return subgroup
 
-
 def get_stats(df_dict):
     df_list = []
     for id, split_df in df_dict.items():
@@ -309,38 +307,8 @@ def get_stats(df_dict):
     for sp in df['split'].unique():
         if df[df['split']!=sp]['patient_id'].isin(df[df['split']==sp]['patient_id']).any():
             print(f"OOPS: {sp}")
-    # for grp in group_dict:
-    #     if 'subgroup' not in df.columns:
-    #         df['subgroup'] = df[grp]
-    #     else:
-    #         df.loc[:,'subgroup'] = df['subgroup'] + "-" + df[grp]
-    return df.rename(columns = {'patient_id':'number of patients'}).groupby(['split','subgroup'])['number of patients'].nunique(), df.rename(columns={'patient_id':'number of images'}).groupby(['split','subgroup'])['number of images'].count()
-    
-
-def old_get_stats(test_df, val_df, val_2_df, train_df):
-    test_df= test_df.copy()
-    val_df = val_df.copy()
-    val_2_df = val_2_df.copy()
-    train_df = train_df.copy()
-    test_df.loc[:,'split'] = 'test'
-    val_df.loc[:,'split'] = 'validation'
-    
-    train_df.loc[:,'split'] = 'train'
-    if len(val_2_df) != 0:
-        val_2_df.loc[:,'split'] = 'validation_2'
-        df = pd.concat([test_df, val_df, train_df, val_2_df], axis=0)
-    else:
-        df = pd.concat([test_df, val_df, train_df], axis=0)
-    for sp in ['test', 'validation','validation_2', 'train']: # check that there is no patient_id_overlap
-        if df[df['split']!=sp]['patient_id'].isin(df[df['split']==sp]['patient_id']).any():
-            print(f"OOPS: {sp}")
-    for grp in group_dict:
-        if 'subgroup' not in df.columns:
-            df['subgroup'] = df[grp]
-        else:
-            df.loc[:,'subgroup'] = df['subgroup'] + "-" + df[grp]
-    return df.rename(columns = {'patient_id':'number of patients'}).groupby(['split','subgroup'])['number of patients'].nunique(), df.rename(columns={'patient_id':'number of images'}).groupby(['split','subgroup'])['number of images'].count()
-    
+    return pd.pivot_table(df,values='patient_id', index='subgroup', columns='split',aggfunc=pd.Series.nunique, margins=True), pd.pivot_table(df,values='patient_id', index='subgroup', columns='split',aggfunc='count')
+   
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # # partition general settings (input file, classes, split sizes, stratification)
