@@ -29,6 +29,25 @@ class TestArgParser(BaseArgParser):
         self.parser.add_argument('--steps',
                                  dest='db_args.steps',
                                  default=1)
+        self.parser.add_argument("--db_tasks",
+                                 dest='db_args.tasks',
+                                 help="subgroups to detect in the decision boundary analysis")
+        self.parser.add_argument("--correct_triplets_only",
+                                 dest='db_args.correct_only',
+                                 default=False,
+                                 type=bool)
+        self.parser.add_argument("--prediction_csv",
+                                 dest='db_args.pred_csv',
+                                 default=None)
+        self.parser.add_argument("--input_triplets", 
+                                 dest='db_args.triplets')
+        self.parser.add_argument("--n_samples",
+                                 dest='db_args.n_samples',
+                                 default=100,
+                                 type=int)
+        self.parser.add_argument("--db_save_dir",
+                                 dest='db_args.save_dir')
+      #   self.parser.add_argument()
         # ==============================
         # Data args
         self.parser.add_argument('--phase',

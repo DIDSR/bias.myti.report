@@ -11,19 +11,19 @@ EXE="../src/generate_partitions.py"
 #						"/gpfs_projects/ravi.samala/OUT/2022_CXR/202208/20220801_summary_table__open_AI.json" \
 #						"/gpfs_projects/ravi.samala/OUT/2022_CXR/202208/20220801_summary_table__open_RI.json")
 # General options
-# declare -a IN_summary=("/gpfs_projects/ravi.samala/OUT/2022_CXR/data_summarization/20221010/20221010_summary_table__open_A1.json")
+declare -a IN_summary=("/gpfs_projects/ravi.samala/OUT/2022_CXR/data_summarization/20221010/20221010_summary_table__open_A1.json")
 
-declare -a IN_summary=("/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/20220823/summary_table__MIDRC_RICORD_1C.json")
+# declare -a IN_summary=("/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/20220823/summary_table__MIDRC_RICORD_1C.json")
 # 						"/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/20220823/summary_table__COVID_19_NY_SBU.json")
 # OUT_dir="/gpfs_projects/alexis.burgon/OUT/2022_CXR/model_runs/open_A1_scenario_1_v3"
 # OUT_dir="/gpfs_projects/alexis.burgon/OUT/2022_CXR/model_runs/open_A1_scenario_1_v4"
-OUT_dir="/gpfs_projects/alexis.burgon/OUT/2022_CXR/model_runs"
+OUT_dir="/gpfs_projects/alexis.burgon/OUT/2022_CXR/model_runs/open_A1_scenario_1_v4"
 RAND_SEED=2050
 # split/step options
 N_steps=1
 ACCUMULATE=0 # [0,1], portion of previous step to include 
 PERCENT_TEST_PARTITION=0.2
-ADD_JOINT_VAL=False
+ADD_JOINT_VAL=0.2 # this is taken before the percent_test_partition!
 SPLIT_TYPE=equal
 # SPLIT_TYPE="0.25,0.125,0.125,0.125,0.125,0.125,0.125" # Does not include the validation step, which is separated before the split	
 						# # equal: N_steps equal sized splits
@@ -37,21 +37,22 @@ OPTION=0	# # 0: all images/patient
 			# # 1: first min N number of images/patient
 MIN_N_IMAGES_PATIENT=1	# # min number of patients per image, ordered by time
 
-STRATIFY=sex	# TO see the exact groups, see subgroup_dict in generate_partitions.py
+STRATIFY='sex,race,COVID_positive'	# TO see the exact groups, see subgroup_dict in generate_partitions.py
 # STRATIFY=False
 # TASKS="F,M,DC,DX"
-TASKS="F,M,CR,DX,Yes,No,Black_or_African_American,White" # see supported values in subgroup_dict in generate_partitions.py
+TASKS="F,M,CR,Yes,No,Black_or_African_American,White" # see supported values in subgroup_dict in generate_partitions.py
 															# # Separate values with commas, if a value has spaces, replace with underscore
 # STEP_repos="0-2__MIDRC_RICORD_1C/3,4__COVID_19_NY_SBU" ## WIP
 # PARTITION_NAME='custom_split_7_steps_no_accumulation'
-PARTITION_NAME="time_comparison_MIDRC_RICORD_1C"
+PARTITION_NAME="1_step_all_CR_stratified_ind_test"
+# PARTITION_NAME='DEBUG'
 
 # # -----------------------------------------------------------------------
 # # -----------------------------------------------------------------------
 # # -----------------------------------------------------------------------
 # #
 # for RAND in 0 1 2 3 4 5 6 7 8 9
-for RAND in 0
+for RAND in 0 1 2 3
 do
 	# # get length of an array
 	arraylength=${#IN_summary[@]}

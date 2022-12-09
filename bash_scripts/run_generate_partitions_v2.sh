@@ -44,7 +44,7 @@ ALLOW_OTHER=False
 
 # Save options
     # folder w/ name {PARTITION_NAME} will automatically be created in {OUT_dir}, RAND folders will be created within
-PARTITION_NAME=DEBUG
+PARTITION_NAME=DEBUG_allblack
 OUT_dir="/gpfs_projects/alexis.burgon/OUT/2022_CXR/temp"
 
 # Number of imgs/patient selection_modes = random, first, last (how to select images if a max is specified)

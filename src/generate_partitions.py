@@ -29,7 +29,8 @@ subgroup_dict = {
 conversion_files_openhpc = {repo:f"/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/20220823/{repo}_jpegs/conversion_table.json" for repo in ["MIDRC_RICORD_1C", "COVID_19_NY_SBU", "COVID_19_AR", "open_RI"]}
 conversion_files_openhpc['open_A1'] ="/gpfs_projects/ravi.samala/OUT/2022_CXR/data_summarization/20221010/20221010_open_A1_jpegs/conversion_table.json"
 
-conversion_files_betsy = {repo:f"/scratch/alexis.burgon/2022_CXR/data_summarization/20220823/{repo}_jpegs/conversion_table.json" for repo in ["MIDRC_RICORD_1C", "COVID_19_NY_SBU", "COVID_19_AR", "open_AI", "open_RI"]}
+# conversion_files_betsy = {repo:f"/scratch/alexis.burgon/2022_CXR/data_summarization/20220823/{repo}_jpegs/conversion_table.json" for repo in ["MIDRC_RICORD_1C", "COVID_19_NY_SBU", "COVID_19_AR", "open_AI", "open_RI"]}
+conversion_files_betsy = {repo:f"/scratch/alexis.burgon/2022_CXR/data_summarization/20221010/{repo}_jpegs/conversion_table.json" for repo in ["open_A1"]}
 
 def select_image_per_patient(patient_df, n_images):
     # # iterate by patient, sort by "study date" and select the first n_images
@@ -415,6 +416,7 @@ def bootstrapping_v2(args):
             strat_id_dfs[cls] = df.sample(min_n, random_state=RAND_SEED_INITIAL+args.random_seed)
     
     if args.add_joint_validation != 0:
+        df = pd.read_csv(overall_csv, index_col=0)
         if args.stratify != "False":
             jvs = []
             for cls in strat_id_dfs:
@@ -426,7 +428,7 @@ def bootstrapping_v2(args):
             id_df, jv = train_test_split(id_df, test_size=args.add_joint_validation,random_state=RAND_SEED_INITIAL+args.random_seed, shuffle=True)
         v_pids = jv['patient_id'].unique().tolist()
         joint_val = df[df['patient_id'].isin(v_pids)]
-        joint_val.to_csv(os.path.join(args.output_dir, 'joint_validation.csv'))
+        joint_val.to_csv(os.path.join(args.output_dir, 'independent_test.csv'))
 
     if args.stratify != "False":
         val_samples = {}
@@ -489,11 +491,7 @@ def bootstrapping_v2(args):
 
    
         
-        
-
-
     
-
 
 if __name__ == "__main__":
     pd.options.mode.chained_assignment = None
