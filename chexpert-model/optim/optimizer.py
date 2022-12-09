@@ -23,6 +23,7 @@ class Optimizer(object):
         self.weight_decay = optim_args.weight_decay
         self.sgd_dampening = optim_args.sgd_dampening
         self.lr_step = 0
+        self.lr_milestones = optim_args.lr_milestones
         self.lr_decay_step = optim_args.lr_decay_step
         self.lr_decay_gamma = optim_args.lr_decay_gamma
         self.lr_patience = optim_args.lr_patience
@@ -108,6 +109,10 @@ class Optimizer(object):
                                                      patience=self.lr_patience,
                                                      min_lr=[pg['lr'] * 1e-3
                                                              for pg in self.optimizer.param_groups])
+        elif self.lr_scheduler_name == 'exponential':
+            self.lr_scheduler =\
+                optim.lr_scheduler.ExponentialLR(self.optimizer,
+                                                 gamma=self.lr_decay_gamma)
         else:
             raise ValueError('Invalid learning rate scheduler: ' +
                              f'{self.lr_scheduler_name}.')
