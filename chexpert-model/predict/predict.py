@@ -2,6 +2,8 @@ import torch
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+import torch.nn.functional as F
+import torch.nn as nn
 
 import util
 
@@ -17,7 +19,7 @@ class Predictor(object):
         self.device = device
         self.code_dir = code_dir
 
-    def predict(self, loader, by_patient=False):
+    def predict(self, loader, by_patient=False, return_embeddings=False):
         if by_patient and not loader.dataset.return_info_dict:
             raise Exception("Cannot predict by patient when return_info_dict is False")
         self.model.eval()
@@ -60,7 +62,15 @@ class Predictor(object):
                         else:
                             inputs, targets = data
 
-                        batch_logits, unknown_tensor = self.model(inputs.to(self.device))
+                        # batch_logits, unknown_tensor = self.model(inputs.to(self.device))
+                        batch_logits, batch_embeddings = self.model(inputs.to(self.device))
+                        x = F.relu(batch_embeddings, inplace=False)
+                        pool = nn.AdaptiveAvgPool2d(1)
+                        x = pool(x).view(x.size(0), -1)
+                        if len(all_embeddings) == 0:
+                            all_embeddings = x.detach().cpu().numpy()
+                        else:
+                            all_embeddings = np.vstack((all_embeddings, x.detach().cpu().numpy()))
                         #print(f'batch logits: {batch_logits}')
 
                     if self.model.module.model_uncertainty:
@@ -81,6 +91,8 @@ class Predictor(object):
                     paths.extend(info_dict['paths'])
                 progress_bar.update(targets.size(0))
 
+        # print(len(all_embeddings))
+        # print(all_embeddings.shape)
         # concat = np.concatenate(all_embeddings)
         # all_embeddings = concat.reshape(len(concat), -1)
         
@@ -116,8 +128,13 @@ class Predictor(object):
            print("Getting by-patient predictions and gts")
            probs_df = convert_to_by_patient(probs_df)
            gt_df = convert_to_by_patient(gt_df)
-        if loader.dataset.return_info_dict:
+        if loader.dataset.return_info_dict and not return_embeddings:
             return probs_df, gt_df, paths
+        elif loader.dataset.return_info_dict and return_embeddings:
+            return probs_df, gt_df, paths, all_embeddings
+        
+        if return_embeddings:
+            return probs_df, gt_df, all_embeddings
 
         return probs_df, gt_df
 
