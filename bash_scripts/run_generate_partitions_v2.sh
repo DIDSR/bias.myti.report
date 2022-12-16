@@ -44,13 +44,13 @@ ALLOW_OTHER=False
 
 # Save options
     # folder w/ name {PARTITION_NAME} will automatically be created in {OUT_dir}, RAND folders will be created within
-PARTITION_NAME=DEBUG_allblack
-OUT_dir="/gpfs_projects/alexis.burgon/OUT/2022_CXR/temp"
+PARTITION_NAME=100w0b
+OUT_dir="/gpfs_projects/yuhang.zhang/OUT/2022_CXR/bias/subgroup_size/"
 
 # Number of imgs/patient selection_modes = random, first, last (how to select images if a max is specified)
     # NOTE: random selection mode will potentially cause issues with TEST_RAND != None, use with caution
     # NOTE: currently, MIN_IMG will be applied to ALL splits, even if not listed in IMG_SELECTION_SPLITS
-declare -a IMG_SELECTION_SPLITS=('train') # which splits will follow the specified image selection settings, all other splits will include all imgs/patients
+declare -a IMG_SELECTION_SPLITS=() # which splits will follow the specified image selection settings, all other splits will include all imgs/patients
 
 MIN_IMG=0
 MAX_IMG=None
@@ -61,7 +61,7 @@ declare -a LIMIT_SPLITS=('train' 'validation')
 
 MIN_NUM_SUBGROUPS=4  # to ensure the same number of patients in experiments with differing numbers of subgroups
 
-for RAND in 0 1 2
+for RAND in 0 1 2 3 4 5 6 7 8 9
 do
 # # ==================================================================
 # # Nothing below this point should need to be edited for regular use
