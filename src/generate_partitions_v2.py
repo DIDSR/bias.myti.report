@@ -10,7 +10,7 @@ equal_stratification_groups = ['M-White-Yes-CR', 'F-White-Yes-CR','M-Black-Yes-C
                                'M-White-No-CR', 'F-White-No-CR','M-Black-No-CR', 'F-Black-No-CR']
 custom_composition ={ 
     'sex':{"M":1, "F":1},
-    'race':{"White":0, "Black":1},
+    'race':{"White":1, "Black":0},
     'COVID_positive':{"Yes":1, "No":1},
     'modality':{"CR":1, "DX":0}
 }
@@ -153,9 +153,11 @@ def bootstrapping(args):
                 if os.path.exists(os.path.join(save_folder, f"{s}.csv")):
                     print(f"Joint {s} file already exists, not overwriting")
                 else:
-                    output_files[s].to_csv(os.path.join(save_folder, f"{s}.csv"), index=False)
+                    temp_df = convert_to_csv(output_files[s], args.tasks)
+                    temp_df.to_csv(os.path.join(save_folder, f"{s}.csv"), index=False)
             else:
-                output_files[s].to_csv(os.path.join(save_folder,f"RAND_{args.random_seed}", f"{s}.csv"), index=False)
+                temp_df = convert_to_csv(output_files[s], args.tasks)
+                temp_df.to_csv(os.path.join(save_folder,f"RAND_{args.random_seed}", f"{s}.csv"), index=False)
         bp_summary, img_summary = get_stats(output_files)
         bp_summary.to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", 'by_patient_split_summary.csv'))
         img_summary.to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", 'by_image_split_summary.csv'))

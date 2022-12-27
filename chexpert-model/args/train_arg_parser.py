@@ -139,7 +139,7 @@ class TrainArgParser(BaseArgParser):
                                  dest='optim_args.lr_scheduler',
                                  type=str, default=None,
                                  choices=(None, 'step', 'multi_step',
-                                          'plateau'),
+                                          'plateau', 'exponential'),
                                  help='LR scheduler to use.')
         self.parser.add_argument('--lr_decay_gamma',
                                  dest='optim_args.lr_decay_gamma',

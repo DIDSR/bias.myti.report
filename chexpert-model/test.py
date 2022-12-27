@@ -19,6 +19,8 @@ import numpy as np
 import json
 
 
+analysis_subgroups = ['M','F','Black_or_African_American', 'White', "Yes", "No"]
+
 def get_last_iter(model_dir):
     model_iters = {}
     for fp in os.listdir(model_dir):    
@@ -33,10 +35,10 @@ def get_last_iter(model_dir):
     iter_fp = os.path.join(model_dir,model_iters[x])
     return iter_fp
 
-def test(args):
+def test(args, subgroup_analysis=True):
     """Run model testing."""
-    # ADJUSTMENT - getting the last_iter
-    args.model_args.ckpt_path = get_last_iter(Path(args.model_args.ckpt_path).parent)
+    # # ADJUSTMENT - getting the last_iter
+    # args.model_args.ckpt_path = get_last_iter(Path(args.model_args.ckpt_path).parent)
     # TODO: invesitage logger_args.results_dir (set to results/test?)
     model_args = args.model_args
     data_args = args.data_args
@@ -69,35 +71,6 @@ def test(args):
         for eval_ds in eval_datasets:
             eval_files[eval_ds] = os.path.join(bulk_args.eval_folder, f"{eval_ds}.csv")
 
-    # for eval_ds in eval_datasets: # get the file paths for the locations of the different datasets to be tested on
-    #     if eval_ds == 'validation': # find validation file (check for indivual step, if not, general)
-    #         indiv_val = os.path.join("/".join(str(logger_args.save_dir).split("/")[:-1]), f'step_{step_num}_validation.csv')
-    #         if not os.path.exists(indiv_val):
-    #             print("no individual step validation file found, assuming general validation file")
-    #             eval_files[eval_ds] = os.path.join("/".join(str(logger_args.save_dir).split("/")[:-1]), 'validation.csv')
-    #         else:
-    #             eval_files[eval_ds] = indiv_val
-    #     elif eval_ds == 'joint-validation': # (not technically validation) - testing on a reserved test partition of the training dataset, not validation for any step
-    #         eval_files[eval_ds] = os.path.join("/".join(str(logger_args.save_dir).split("/")[:-1]), 'joint_validation.csv')
-    #     elif eval_ds == 'backward-train': # inference on previous step's training data
-    #         if step_num == 0:
-    #             continue
-    #         eval_files[eval_ds] = os.path.join("/".join(str(logger_args.save_dir).split("/")[:-1]), f'step_{step_num-1}.csv')            
-    #     elif eval_ds == 'backward-test': # inference on previous step's testing data
-    #         if step_num == 0:
-    #             continue
-    #         eval_files[eval_ds] = os.path.join("/".join(str(logger_args.save_dir).split("/")[:-1]), f'step_{step_num-1}_validation.csv') 
-    #     elif eval_ds == 'forward-train': # inference on the next step's training data
-    #         if step_num == total_steps-1:
-    #             continue
-    #         eval_files[eval_ds] = os.path.join("/".join(str(logger_args.save_dir).split("/")[:-1]), f'step_{step_num+1}.csv')
-    #     elif eval_ds == 'forward-test': # inference on the next step's testing data
-    #         if step_num == total_steps-1:
-    #             continue
-    #         eval_files[eval_ds] = os.path.join("/".join(str(logger_args.save_dir).split("/")[:-1]), f'step_{step_num+1}_validation.csv')
-    #     else: # independet test data set -> eval folder
-    #         eval_files[eval_ds] = os.path.join(bulk_args.eval_folder, f"{eval_ds}.csv")
-        
     # NEW custom metrics ========
     # # 1.1 -> just current validation
     eval_files['validation'] = validation_files[step_num]
@@ -126,24 +99,14 @@ def test(args):
                 temp_dfs.append(pd.read_csv(validation_files[i]))
             temp_df = pd.concat(temp_dfs)
             temp_df.to_csv(custom_fp, index=None)
+    to_rm = []
     for eval_ds in eval_files:
         if not os.path.exists(eval_files[eval_ds]):
             print(f"Could not find an existing summary file for {eval_ds}")
-            return
-    # ==================
-    # old custom metrics --------------------
-    # # get the necessary files for the custom continual learning metrics
-    #     # custom 1 -> backwards (tr, ts) + current (tr, ts)
-    #     # custom 2 -> backwards (tr, ts) + current (tr, ts) + forward (ts)
-    
-    # # # -> need the training file as well
-    # tr_file = os.path.join("/".join(str(logger_args.save_dir).split("/")[:-1]), f'step_{step_num}.csv')
-    # if step_num > 0:
-    #     eval_files['custom_1'] = [eval_files['backward-train'], eval_files['backward-test'], eval_files['validation'], tr_file]
-    #     if step_num < total_steps-1:
-    #         eval_files['custom_2'] = [eval_files['backward-train'], eval_files['backward-test'], eval_files['validation'], tr_file, eval_files['forward-test']]
-    # ----------------------------
-
+            to_rm.append(eval_ds)
+            # return
+    for e in to_rm:
+        eval_files.pop(e)
     # Get logger.
     logger = Logger(logger_args.log_path,
                     logger_args.save_dir,
@@ -209,29 +172,16 @@ def test(args):
                 gt_fp = os.path.join(logger_args.save_dir, "results", f"{ds}_by_patient_groundtruth.csv")
             else:
                 # TEMP
-                # pred_fp = os.path.join(logger_args.save_dir, "results",f"{ds}_predictions.csv")
-                # gt_fp = os.path.join(logger_args.save_dir, "results", f"{ds}_groundtruth.csv")
-                pred_fp = os.path.join(logger_args.save_dir, "results",f"{ds}_predictions_last_iter.csv")
-                gt_fp = os.path.join(logger_args.save_dir, "results", f"{ds}_groundtruth_last_iter.csv")
+                pred_fp = os.path.join(logger_args.save_dir, "results",f"{ds}_predictions.csv")
+                gt_fp = os.path.join(logger_args.save_dir, "results", f"{ds}_groundtruth.csv")
+                # pred_fp = os.path.join(logger_args.save_dir, "results",f"{ds}_predictions_last_iter.csv")
+                # gt_fp = os.path.join(logger_args.save_dir, "results", f"{ds}_groundtruth_last_iter.csv")
             if os.path.exists(pred_fp):
                 print(f"{ds} evaluation read from file")
                 predictions = pd.read_csv(pred_fp)
                 groundtruth = pd.read_csv(gt_fp)
             else:
                 print(f"===== Evaluating {ds} =====")
-                # if 'custom' in ds:
-                #     # need to create custom csvs to evaluate
-                #     custom_save_name = os.path.join("/".join(str(logger_args.save_dir).split("/")[:-1]), f"{ds}_step_{step_num}.csv")
-                #     if not os.path.exists(custom_save_name):
-                #         custom_files = []
-                #         for file in ds_file:
-                #             custom_files.append(pd.read_csv(file, index_col=0))
-                #         combined_df = pd.concat(custom_files)
-                #         combined_df.reset_index()
-                #         combined_df.to_csv(custom_save_name)
-                #     data_args.test_csv = custom_save_name
-                # else:
-                #     data_args.test_csv = ds_file
                 data_args.test_csv = ds_file
                 loader = get_loader(phase=data_args.phase,
                                     data_args=data_args,
@@ -248,31 +198,71 @@ def test(args):
                 # save predictions and ground truth ========= 
                 predictions.to_csv(pred_fp)
                 groundtruth.to_csv(gt_fp)
-            
-            # if groundtruth had=s more columns than prediction -> adjust
+            if subgroup_analysis:
+                patient_info_fp = os.path.join(logger_args.save_dir, 'results', f"{ds}_patient_information.csv")
+                if os.path.exists(patient_info_fp):
+                    patient_info = pd.read_csv(patient_info_fp)
+                else:
+                    # determine the subgroups fo each patient in the ds file
+                    df = pd.read_csv(ds_file)
+                    patient_info = df.drop(['Path'], axis=1)
+                    patient_info = patient_info.groupby(['patient_id']).mean()
+                    # drop patients that aren't in the subgroups that we are looking at
+                    # TODO: non-binary class functionality
+                    patient_info['avg'] = patient_info[analysis_subgroups].mean(axis=1)
+                    patient_info = patient_info[patient_info['avg'] == 0.5]
+                    print(patient_info[analysis_subgroups+['avg']].head(5))
+                    drop_cols = [col for col in patient_info.columns if col not in analysis_subgroups]
+                    patient_info = patient_info.drop(drop_cols, axis=1)
+                    patient_info.to_csv(patient_info_fp)
+            # if groundtruth has more columns than prediction -> adjust
             groundtruth = groundtruth[groundtruth.columns.intersection(predictions.columns)]
 
             # get AUROCs
             AUROC_dict = {}
             # print(f"TASKS: {model_args.__dict__[TASKS]}")
-            for task in model_args.__dict__[TASKS]:
-                print(task)
-                # don't use rows with missing values (-1)
-                task_gt = groundtruth[groundtruth[task] >= 0]
-                task_pred = predictions[groundtruth[task] >= 0]
-                # print(task_gt[task].head(5))
-                # print(task_pred[task].head(5))
-                if len(task_gt) <= 1:
-                    continue
-                # get overall AUROC
-                if sum(task_gt[task]) == 0:
-                    # AUROC_dict[f'{task} (overall)'] = "none in gt"
-                    AUROC_dict[f'{task} (overall)'] = nan
-                elif sum(task_gt[task]) == len(groundtruth):
-                    # AUROC_dict[f'{task} (overall)'] = "all gt"
-                    AUROC_dict[f'{task} (overall)'] = inf
-                else:
-                    AUROC_dict[f'{task} (overall)'] = sk_metrics.roc_auc_score(y_true=task_gt[task], y_score=task_pred[task])
+            # for task in model_args.__dict__[TASKS]:
+            #     groundtruth[task] = groundtruth[task].astype(int)
+            #     # don't use rows with missing values (-1)
+            #     task_gt = groundtruth[groundtruth[task] >= 0]
+            #     task_pred = predictions[groundtruth[task] >= 0]
+            #     if len(task_gt) <= 1:
+            #         continue
+            #     # get overall AUROC
+            #     if sum(task_gt[task]) == 0: # None in gt
+            #         AUROC_dict[f'{task} (overall)'] = nan
+            #     elif sum(task_gt[task]) == len(groundtruth): # all gt
+            #         AUROC_dict[f'{task} (overall)'] = inf
+            #     else:
+            #         AUROC_dict[f'{task} (overall)'] = sk_metrics.roc_auc_score(y_true=task_gt[task], y_score=task_pred[task])
+            #     if subgroup_analysis:
+            #         for sub in analysis_subgroups:
+            #             subgroup = patient_info[patient_info[sub] == 1]
+            #             if len(subgroup) == 0:
+            #                 continue
+            #             # return
+            #             if 'patient_id' not in subgroup.columns:
+            #                 if subgroup.index.name == 'patient_id':
+            #                     sub_pids = subgroup.index.to_list()
+            #                 else:
+            #                     print("patient_id not found in columns or index")
+            #                     print(subgroup.columns)
+            #                     print(subgroup.head(5))
+            #                     return
+            #             else:
+            #                 sub_pids = subgroup['patient_id'].to_list()
+            #             # get AUROC for patients of this subgroup
+            #             print(groundtruth.head(5))
+            #             sub_gt = groundtruth[groundtruth['patient_id'].isin(sub_pids)]
+            #             sub_pred = predictions[predictions['patient_id'].isin(sub_pids)]
+            #             if sum(sub_gt[task]) == 0: # None in gt
+            #                 AUROC_dict[f'{task} (within {sub})'] = nan
+            #             elif sum(sub_gt[task]) == len(sub_gt): # all gt
+            #                 AUROC_dict[f"{task} (within {sub})"] = inf
+            #             else:
+            #                 AUROC_dict[f"{task} (within {sub})"] = sk_metrics.roc_auc_score(y_true=sub_gt[task], y_score=sub_pred[task])
+                
+
                 # for key, vals in CUSTOM_TASK_SUBSETS.items():
                 #     if task in vals:
                 #         continue
@@ -302,7 +292,7 @@ def test(args):
         for ds, dic in All_AUROCs.items():
             overall_summ.loc[ds] = dic
         print(overall_summ)
-        overall_summ.to_csv(os.path.join(logger_args.save_dir, "AUROC_summary_last_iter.csv"))
+        overall_summ.to_csv(os.path.join(logger_args.save_dir, "AUROC_summary.csv"))
         
         
     #     # save predictions and ground truth ========= # TODO

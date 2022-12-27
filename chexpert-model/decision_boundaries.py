@@ -28,7 +28,7 @@ abbreviation_table = {
     'CR':"C",
     "DX":"D",
     "White":"W",
-    'Black_or_African_American':"B",
+    'Black':"B",
     "Yes":"P",# positive
     "No":'N'
 }
@@ -178,7 +178,7 @@ class plane_dataset(BaseDataset):
         # coef_df['Label'] = [np.array([0]*len(self.prediction_tasks))]
         # self.images = coef_df['Image'].values()
         # df = coef_df[['Image','Label']]
-        return df # DEBUG
+        return df
 
     def __len__(self):
         return self.coefs1.shape[0]
@@ -213,6 +213,17 @@ def catagorize(row, subgroups):
     return "-".join(label)
 
 def decision_region_analysis(predictions,
+                             planeloader,
+                             classes):
+    out_df = pd.DataFrame()
+    for c in classes:
+        out_df[f"{c} score"] = predictions[c]
+    out_df['x'] = planeloader.dataset.coefs1.numpy()
+    out_df['y'] = planeloader.dataset.coefs2.numpy()
+    return out_df, out_df.to_numpy()
+
+
+def old_decision_region_analysis(predictions,
                              planeloader,
                              classes,
                              save_loc=None,
@@ -334,7 +345,7 @@ def decision_region_analysis(predictions,
 
 
 class DecisionBoundaryEvaluator():
-    def __init__(self, experiment_name, save_location, predictor, transform_args, data_args, model_args, input_classes, output_classes,overwrite=False, save_last_dense_layer=False, **kwargs):
+    def __init__(self, experiment_name, save_location, predictor, transform_args, data_args, model_args, input_classes, output_classes,overwrite=False, save_last_dense_layer=False, ensemble_mode='avg', model_ckpts=None, **kwargs):
         if overwrite:
             print("\noverwrite is on\n")
         self.input_classes = input_classes
@@ -342,11 +353,17 @@ class DecisionBoundaryEvaluator():
         self.experiment_name = experiment_name
         self.experiment_dir = os.path.join(save_location, experiment_name)
         self.save_last_dense_layer = save_last_dense_layer
+        self.ensemble_mode = ensemble_mode
+        self.model_ckpts = model_ckpts
+        if type(predictor) == dict:
+            self.ensemble = True
+        else:
+            self.ensemble = False
         if not os.path.exists(self.experiment_dir):
             os.mkdir(self.experiment_dir)
         self.sample_fp = os.path.join(self.experiment_dir, "DB_samples.csv")
         if os.path.exists(self.sample_fp):
-            sample_df = pd.read_csv(self.sample_fp, index_col=0)
+            sample_df = pd.read_csv(self.sample_fp)
         else:
             original_gt = pd.read_csv(data_args.test_csv)
             loader = get_loader(phase=data_args.phase,
@@ -360,6 +377,22 @@ class DecisionBoundaryEvaluator():
                 base_dense_layer_arrays = {'base_paths': base_paths, 'base_last_dense_layer': base_last_dense_layer, 'base_groundtruth': base_groundtruth}
                 embedding_npz_fp = os.path.join(self.experiment_dir, "all_orig__last_dense.npz")
                 np.savez_compressed(embedding_npz_fp, **base_dense_layer_arrays)
+            elif not self.ensemble: # TODO: integrate ensemble and embeddings
+                base_predictions, base_groundtruth, base_paths = predictor.predict(loader)
+            else:
+                b_predictions = []
+                for rand, pred in predictor.items():
+                    if os.path.exists(self.sample_fp.replace(".csv", f"_{rand}.csv")):
+                        b_predictions.append(pd.read_csv(self.sample_fp.replace(".csv", f"_{rand}.csv"), index_col=0))
+                    else:
+                        bp, base_groundtruth, _ = pred.predict(loader)
+                        bp['RAND'] = rand
+                        bp.to_csv(self.sample_fp.replace(".csv", f"_{rand}.csv"))
+                        b_predictions.append(bp)
+                base_predictions = pd.concat(b_predictions, axis=0)
+                if self.ensemble_mode == 'avg':
+                    base_predictions = base_predictions.groupby("Path").mean()
+                    base_predictions = base_predictions.reset_index().rename(columns={'index':'Path'})
             # set up sample dataframe
             sample_df = original_gt[['patient_id', 'Path']].copy()
             for subclasses in self.input_classes.values():
@@ -367,7 +400,7 @@ class DecisionBoundaryEvaluator():
                     sample_df[ic] = sample_df.Path.map(original_gt.set_index("Path")[ic])
             for oc in self.output_classes:
                 sample_df[f"{oc} score"] = sample_df.Path.map(base_predictions.set_index("Path")[oc])
-            sample_df.to_csv(self.sample_fp)
+            sample_df.to_csv(self.sample_fp, index=False)
         self.sample_df = sample_df
         if os.path.exists(os.path.join(self.experiment_dir, 'decision_boundary_args.json')) and overwrite == False:
             # resume trial
@@ -410,19 +443,36 @@ class DecisionBoundaryEvaluator():
                 # different options (such as random image shuffling, noise replacement, etc.)
                 planeloader = get_planeloader(data_args, dataframe=self.sample_df, img_idxs=current_sample, subgroups=self.input_classes, 
                                               prediction_tasks=model_args.tasks, **pl_setting)
-                predictions, groundtruth, last_dense_layer = predictor.predict(planeloader, return_embeddings=True)
-                DN_arrays[f"{i+1}__{current_sample[0]}_{current_sample[1]}_{current_sample[2]}"] = last_dense_layer
-                for al_setting in self.analysis_settings:
-                    db_results, db_array = decision_region_analysis(predictions, planeloader, title_with='both', label_with='none',
-                                                                    classes=self.output_classes,**al_setting)
-                    DB_arrays[f"{i+1}__{current_sample[0]}_{current_sample[1]}_{current_sample[2]}"] = db_array
+                if self.save_last_dense_layer:
+                    predictions, groundtruth, last_dense_layer = predictor.predict(planeloader, return_embeddings=True)
+                    DN_arrays[f"{i+1}__{current_sample[0]}_{current_sample[1]}_{current_sample[2]}"] = last_dense_layer
+                elif not self.ensemble:
+                    predictions, groundtruth = predictor.predict(planeloader)
+                else: 
+                    prediction_list = {}
+                    for key, pred in predictor.items():
+                        p, groundtruth = pred.predict(planeloader)
+                        prediction_list[key] = p
+                    predictions = pd.concat(prediction_list.values(), axis=0).reset_index()
+                    predictions = predictions.groupby('index').mean()
+                for al_setting in self.analysis_settings: #TODO: test with save_last_dense_layer
+                    if not self.ensemble:
+                        db_results, db_array = decision_region_analysis(predictions, planeloader, self.output_classes)
+                        DB_arrays[f"{i+1}__{current_sample[0]}_{current_sample[1]}_{current_sample[2]}"] = db_array
+                    else:
+                        for key in prediction_list:
+                            db_results, db_array = decision_region_analysis(prediction_list[key], planeloader, self.output_classes)
+                            DB_arrays[f"{i+1}__{current_sample[0]}_{current_sample[1]}_{current_sample[2]}_{key}"] = db_array
+                        # get average prediction Decision region
+                        db_results, db_array = decision_region_analysis(predictions, planeloader, self.output_classes)
+                        DB_arrays[f"{i+1}__{current_sample[0]}_{current_sample[1]}_{current_sample[2]}_ensemble"] = db_array
             self.triplet_information[trip_idx]['samples'] += 1
-            # break
-            if (i+1) % self.save_every == 0: # save progress
+            if (i+1) % self.save_every == 0 or not os.path.exists(self.triplet_information[trip_idx]['array fp']): # save progress
                 np.savez_compressed(self.triplet_information[trip_idx]['array fp'], **DB_arrays)
                 if self.save_last_dense_layer:
                     np.savez_compressed(self.triplet_information[trip_idx]['array fp'].replace('.npz', '__last_dense.npz'), **DN_arrays)
                 self.save()
+            # return # DEBUG
 
     def trial_setup(self, planeloader_settings={}, analysis_settings={}, triplets=None, n_samples=10, save_every=1):
         # assign variables as attributes
@@ -580,7 +630,9 @@ class DecisionBoundaryEvaluator():
 
     def uncertainty_analysis(self, triplet_id):
         save_name = os.path.join(self.experiment_dir, f"{triplet_id}_uncertainty.csv")
-        if "N" in triplet_id:
+        if len(self.output_classes) == 1:
+            cls = self.output_classes[0]
+        elif "N" in triplet_id:
             cls = "No"
         elif "P" in triplet_id:
             cls = 'Yes'
@@ -601,10 +653,18 @@ class DecisionBoundaryEvaluator():
 
     def thresholded_analysis(self, triplet_id):
         save_name = os.path.join(self.experiment_dir, f"{triplet_id}_thresholded_summary.csv")
-        if "N" in triplet_id:
+        if len(self.output_classes) == 1:
+            cls = self.output_classes[0]
+            if 'N' in triplet_id:
+                exp_val = 0
+            elif 'P' in triplet_id:
+                exp_val = 100
+        elif "N" in triplet_id:
             cls = "No"
+            exp_val = 100
         elif "P" in triplet_id:
             cls = 'Yes'
+            exp_val = 100
         else:
             print(f"couldn't get class from {triplet_id}")
         for ii, trip_dict in self.triplet_information.items():
@@ -616,5 +676,5 @@ class DecisionBoundaryEvaluator():
             DB_df = pd.DataFrame(arr, columns=cols)
             DB_df[f"{cls} Score"] = DB_df[f"{cls} Score"].round()
             percent = (DB_df[f"{cls} Score"].sum()/len(DB_df)) * 100
-            df.loc[len(df)] = [triplet_id, ii, 100-percent]
+            df.loc[len(df)] = [triplet_id, ii, abs(exp_val-percent)]
         df.to_csv(save_name, index=False)
