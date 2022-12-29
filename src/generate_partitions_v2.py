@@ -36,6 +36,7 @@ group_dict = {
 
 conversion_files_openhpc = {repo:f"/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/20220823/{repo}_jpegs/conversion_table.json" for repo in ["MIDRC_RICORD_1C", "COVID_19_NY_SBU", "COVID_19_AR", "open_RI"]}
 conversion_files_openhpc['open_A1'] = "/gpfs_projects/ravi.samala/OUT/2022_CXR/data_summarization/20221010/20221010_open_A1_jpegs/conversion_table.json"
+conversion_files_openhpc['open_R1'] = "/gpfs_projects/ravi.samala/OUT/2022_CXR/data_summarization/20221023/20221023_open_R1_jpegs/conversion_table.json"
 
 conversion_files_betsy = {repo:f"/scratch/alexis.burgon/2022_CXR/data_summarization/20220823/{repo}_jpegs/conversion_table.json" for repo in ["MIDRC_RICORD_1C", "COVID_19_NY_SBU", "COVID_19_AR", "open_RI"]}
 conversion_files_betsy['open_A1'] = "/scratch/alexis.burgon/2022_CXR/data_summarization/20221010/open_A1_jpegs/conversion_table.json" 
