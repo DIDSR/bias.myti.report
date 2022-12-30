@@ -6,6 +6,11 @@ import json
 
 # STRATIFICATION VARIABLES ========
 # # currently only supports stratification by sex, race, COVID_positive, and/or modality
+
+# For MIDRC_RICORD_1C (can also add CR/DX if necessary)
+# equal_stratification_groups = ['M-Yes', 'F-Yes'] 
+
+# for open_A1 / open_R1
 equal_stratification_groups = ['M-White-Yes-CR', 'F-White-Yes-CR','M-Black-Yes-CR', 'F-Black-Yes-CR',
                                'M-White-No-CR', 'F-White-No-CR','M-Black-No-CR', 'F-Black-No-CR']
 custom_composition ={ 
@@ -20,8 +25,8 @@ custom_composition ={
     # None - no stratification used for this partition
     # Note: due to required rounding at different times, using a custom split results in slight changes to testing and validation sizes
         # (ex. 0.20 may change to 0.194)
-train_composition = 'custom'
-validation_composition = 'custom'
+train_composition = 'equal'
+validation_composition = 'equal'
 validation_2_composition = 'equal'
 test_composition = 'equal'
 
@@ -80,8 +85,10 @@ def bootstrapping(args):
     for in_summ in args.input_list:
         input_summaries.append(pd.read_json(in_summ, orient='table'))
     df = convert_from_summary(pd.concat(input_summaries, axis=0), conversion_tables, args.min_img_per_patient, args.max_img_per_patient, args.patient_img_selection_mode, args.random_seed + args.random_seed_initial)
+    df = adjust_subgroups(df)
     # get a version of the df with all images/patient
     all_df = convert_from_summary(pd.concat(input_summaries, axis=0), conversion_tables, 0, None, 'random', args.random_seed + args.random_seed_initial)
+    all_df = adjust_subgroups(all_df)
     # 2) b) limit to labels in group_dict (remove others or not depending on arguments passed) ======================
     for grp in group_dict:
         if len(df[df[grp].isin(args.tasks)]) == 0: # not interested in this group as an output task, don't restrict
@@ -136,7 +143,7 @@ def bootstrapping(args):
             split_fraction = splits.at[s,'size'] / splits[~splits.index.isin(bp_split_dfs)]['size'].sum()
             bp_split_dfs[s] = adjust_comp(remaining_bp_df, splits.at[s,'comp'], random_seed, split_frac=split_fraction)
     # 4) convert from by-patient dataframes back to by-image dataframes =============================================
-    # TODO: more than 1 step
+    # TODO: more than 1 step    
     if not os.path.exists(os.path.join(save_folder, f"RAND_{args.random_seed}")):
         os.mkdir(os.path.join(save_folder, f"RAND_{args.random_seed}"))
     if args.steps == 1: # Saving
@@ -176,6 +183,22 @@ def bootstrapping(args):
     with open(os.path.join(save_folder, f"RAND_{args.random_seed}", "partition_info.log"), 'w') as fp:
         json.dump(tracking_info, fp, indent=4)
 
+def adjust_subgroups(in_df):
+    ''' adjust subgroup information displayed in dataframe to only reflect attributes that are specified as import in equal_stratification_groups'''
+    df = in_df.copy()
+    rel_subs = list(set([x for y in equal_stratification_groups for x in y.split("-")]))
+    irrel_groups = [x for x in group_dict if len([z for z in group_dict[x]['subgroups'] if z in rel_subs]) == 0]
+    # remove irrelevant groups from the subgroup labels
+    for x in irrel_groups:
+        df['subgroup'] = df.apply(lambda row: row['subgroup'].replace(row[x], ""), axis=1)
+    # # remove extraneous -'s
+    df['subgroup'] = df['subgroup'].replace("--","-", regex=True)
+    idx = df[df['subgroup'].str.endswith("-")].index
+    df.loc[idx, 'subgroup'] = df.loc[idx, 'subgroup'].apply(lambda x: x[:-1])
+    idx = df[df['subgroup'].str.startswith("-")].index
+    df.loc[idx, 'subgroup'] = df.loc[idx, 'subgroup'].apply(lambda x: x[1:])
+    return df
+
 def adjust_comp(in_df, comp, random_seed, split_frac=1, split_num=None, subtract_from_subgroup=False):
     '''
         adjusts the composition of in_df to match the comp specified, if split_frac or split_num are specified,
@@ -197,6 +220,7 @@ def adjust_comp(in_df, comp, random_seed, split_frac=1, split_num=None, subtract
             return df.sample(frac=split_frac, random_seed=random_seed)
     elif comp == 'equal': 
         subgroup_proportions = {sub:1 for sub in equal_stratification_groups}
+        
     elif comp == 'custom': # get percentage of each interaction subgroup in adjusted data
         from itertools import product
         raw_proportions = {i:j for z in custom_composition.values() for i,j in z.items()} # exactly what is specified 
@@ -257,10 +281,10 @@ def convert_to_csv(df, tasks):
 def convert_from_summary(df, conversion_table, min_img, max_img, selection_mode, random_state):
     for val in group_dict.values():
         x = val['loc']
+        df = df[df['images_info'].str.len() != 0].copy() # remove rows without image information
         df[x[1]] = df.apply(lambda row: row[x[0]][0][x[1]], axis=1)
     df['race'] = df['race'].replace({" ":"_"},regex=True)
     df['race'] = df['race'].replace({"Black_or_African_American":"Black"}, regex=True)
-    # df = df.explode('images')
     # to get the study date with the image, we need to joint-explode images and images_information
     exp_cols = {'images', 'images_info'}
     other_cols = list(set(df.columns)-set(exp_cols))
