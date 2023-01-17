@@ -40,10 +40,12 @@ def predict(args):
     # get predictions 
     
     predictor = Predictor(model=model, device=args.device, code_dir=args.code_dir)
-    predictions, groundtruth, paths = predictor.predict(data_loader)
+    predictions, groundtruth, paths = predictor.predict(data_loader, by_patient=args.by_patient)
 
-    predictions.to_csv(args.prediction_save_file, index=False)
-    groundtruth.to_csv(args.prediction_save_file.replace("predictions", "groundtruth"), index=False)
+    # predictions.to_csv(args.prediction_save_file, index=False)
+    # groundtruth.to_csv(args.prediction_save_file.replace("predictions", "groundtruth"), index=False)
+    predictions.to_csv(args.prediction_save_file, index=True)
+    groundtruth.to_csv(args.prediction_save_file.replace("predictions", "groundtruth"), index=True)
 
 if __name__ == '__main__':
     parser = TestArgParser()
