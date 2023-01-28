@@ -19,13 +19,34 @@ class Predictor(object):
         self.device = device
         self.code_dir = code_dir
 
-    def predict(self, loader, by_patient=False, return_embeddings=False):
+    def predict(self, loader, by_patient=False, return_embeddings=False, hook_option=-1):
         if by_patient and not loader.dataset.return_info_dict:
             raise Exception("Cannot predict by patient when return_info_dict is False")
         self.model.eval()
+
+        if hook_option != -1:
+            # # hard coded to work with ResNet18 only
+            # # capture activation maps >>>>>>>>>>
+            # a dict to store the activations
+            activation = {}
+            def getActivation(name):
+                # the hook signature
+                def hook(model, input, output):
+                    activation[name] = output.detach()
+                return hook
+            # register forward hooks on the layers of choice
+            if hook_option==0:
+                hook = self.model.module.model.layer2[0].downsample[1].register_forward_hook(getActivation('comp'))
+            elif hook_option==1:
+                hook = self.model.module.model.layer3[0].downsample[1].register_forward_hook(getActivation('comp'))
+            elif hook_option==2:
+                hook = self.model.module.model.layer4[0].downsample[1].register_forward_hook(getActivation('comp'))            
+            # # <<<<<<<<<<
+
         probs = []
         gt = []
         all_embeddings = []
+        all_activation_maps = []
         if loader.dataset.return_info_dict:
             paths = []
         with tqdm(total=len(loader.dataset)) as progress_bar:
@@ -64,14 +85,25 @@ class Predictor(object):
 
                         # batch_logits, unknown_tensor = self.model(inputs.to(self.device))
                         batch_logits, batch_embeddings = self.model(inputs.to(self.device))
-                        x = F.relu(batch_embeddings, inplace=False)
+                        # x = F.relu(batch_embeddings, inplace=False)
                         pool = nn.AdaptiveAvgPool2d(1)
-                        x = pool(x).view(x.size(0), -1)
+                        x = pool(batch_embeddings).view(batch_embeddings.size(0), -1)
                         if len(all_embeddings) == 0:
                             all_embeddings = x.detach().cpu().numpy()
                         else:
                             all_embeddings = np.vstack((all_embeddings, x.detach().cpu().numpy()))
-                        #print(f'batch logits: {batch_logits}')
+                        # if len(all_embeddings) == 0:
+                        #     all_embeddings = batch_embeddings.detach().cpu().numpy()
+                        # else:
+                        #     all_embeddings = np.vstack((all_embeddings, batch_embeddings.detach().cpu().numpy()))
+                        # print(f'batch logits: {batch_logits}')
+
+                        if hook_option != -1:
+                            # print(activation['comp'].shape)
+                            if len(all_activation_maps) == 0:
+                                all_activation_maps = activation['comp'].detach().cpu().numpy()
+                            else:
+                                all_activation_maps = np.vstack((all_activation_maps, activation['comp'].detach().cpu().numpy()))
 
                     if self.model.module.model_uncertainty:
                         batch_probs =\
@@ -91,8 +123,11 @@ class Predictor(object):
                     paths.extend(info_dict['paths'])
                 progress_bar.update(targets.size(0))
 
+        if hook_option != -1:
+            hook.remove()
         # print(len(all_embeddings))
         # print(all_embeddings.shape)
+        # print(all_activation_maps.shape)
         # concat = np.concatenate(all_embeddings)
         # all_embeddings = concat.reshape(len(concat), -1)
         
@@ -131,10 +166,10 @@ class Predictor(object):
         if loader.dataset.return_info_dict and not return_embeddings:
             return probs_df, gt_df, paths
         elif loader.dataset.return_info_dict and return_embeddings:
-            return probs_df, gt_df, paths, all_embeddings
+            return probs_df, gt_df, paths, all_embeddings, all_activation_maps
         
         if return_embeddings:
-            return probs_df, gt_df, all_embeddings
+            return probs_df, gt_df, all_embeddings, all_activation_maps
 
         return probs_df, gt_df
 
