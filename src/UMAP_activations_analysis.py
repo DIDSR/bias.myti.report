@@ -22,20 +22,20 @@ import random
 sns.set(style='white', context='notebook', rc={'figure.figsize':(14,10)})
 # #
 # # -----------------------------------------------------------------------------------------
-in_dir = '/home/ravi.samala/temp/RAND_0/CHEXPERT_RESNET_0__step_0/Valid_ResNet18_layer4_0__downsample_1/'
-out_dir = '/home/ravi.samala/temp/RAND_0/CHEXPERT_RESNET_0__step_0/Valid_ResNet18_layer4_0__downsample_1/'
+in_dir = '/home/ravi.samala/temp/RAND_0/CHEXPERT_RESNET_0__step_0/OOD_ResNet18_layer4_0__downsample_1/'
+out_dir = '/home/ravi.samala/temp/RAND_0/CHEXPERT_RESNET_0__step_0/OOD_ResNet18_layer4_0__downsample_1/'
 # # Fixed params, the program expects the following files in the "in_dir"
 samples_csv = 'DB_samples.csv'
 orig_sample_npz = 'all_orig__activation_maps.npz'
 subgroups_dense_npz = {
                         'MWP': 'MWP_arrays__activations.npz',
                         'MWN': 'MWN_arrays__activations.npz',
-                        'MBP': 'MBP_arrays__activations.npz',
-                        'MBN': 'MBN_arrays__activations.npz',
-                        'FWP': 'FWP_arrays__activations.npz',
-                        'FWN': 'FWN_arrays__activations.npz',
-                        'FBP': 'FBP_arrays__activations.npz',
-                        'FBN': 'FBN_arrays__activations.npz',
+                        # 'MBP': 'MBP_arrays__activations.npz',
+                        # 'MBN': 'MBN_arrays__activations.npz',
+                        # 'FWP': 'FWP_arrays__activations.npz',
+                        # 'FWN': 'FWN_arrays__activations.npz',
+                        # 'FBP': 'FBP_arrays__activations.npz',
+                        # 'FBN': 'FBN_arrays__activations.npz',
                         }
 # # other plot related params
 vicinal_marker_size = 1
@@ -91,7 +91,7 @@ def do_embedding(merge_np, reduction_technique):
         spectral = manifold.SpectralEmbedding(n_components=2, n_neighbors=10)
         embedding = spectral.fit_transform(merge_np)
     elif reduction_technique == 'TSNE':
-        tsne = manifold.TSNE(n_components=2, perplexity=30, n_iter=250, init="random",)
+        tsne = manifold.TSNE(n_components=3, perplexity=30, n_iter=250, init="random",)
         embedding = tsne.fit_transform(merge_np.astype(np.float32))
     else:
         print('UNKNOWN option for dimensionality reduction technique')
@@ -242,12 +242,12 @@ print(embedding2_both.shape)
 plot=px.Figure(data=[
     px.Scatter3d(x=embedding2_orig[size_orig_idx[0]:size_orig_idx[0+1], 0],y=embedding2_orig[size_orig_idx[0]:size_orig_idx[0+1], 1], z=embedding2_orig[size_orig_idx[0]:size_orig_idx[0+1], 2], mode='markers', marker = dict(size = 3,color = clr_orig[0],opacity = 0.8, symbol='square'), name='MWP'),
     px.Scatter3d(x=embedding2_orig[size_orig_idx[1]:size_orig_idx[1+1], 0],y=embedding2_orig[size_orig_idx[1]:size_orig_idx[1+1], 1], z=embedding2_orig[size_orig_idx[1]:size_orig_idx[1+1], 2], mode='markers', marker = dict(size = 3,color = clr_orig[1],opacity = 0.8, symbol='diamond'), name='MWN'),
-    px.Scatter3d(x=embedding2_orig[size_orig_idx[2]:size_orig_idx[2+1], 0],y=embedding2_orig[size_orig_idx[2]:size_orig_idx[2+1], 1], z=embedding2_orig[size_orig_idx[2]:size_orig_idx[2+1], 2], mode='markers', marker = dict(size = 3,color = clr_orig[2],opacity = 0.8, symbol='square'), name='MBP'),
-    px.Scatter3d(x=embedding2_orig[size_orig_idx[3]:size_orig_idx[3+1], 0],y=embedding2_orig[size_orig_idx[3]:size_orig_idx[3+1], 1], z=embedding2_orig[size_orig_idx[3]:size_orig_idx[3+1], 2], mode='markers', marker = dict(size = 3,color = clr_orig[3],opacity = 0.8, symbol='diamond'), name='MBN'),
-    px.Scatter3d(x=embedding2_orig[size_orig_idx[4]:size_orig_idx[4+1], 0],y=embedding2_orig[size_orig_idx[4]:size_orig_idx[4+1], 1], z=embedding2_orig[size_orig_idx[4]:size_orig_idx[4+1], 2], mode='markers', marker = dict(size = 3,color = clr_orig[4],opacity = 0.8, symbol='square'), name='FWP'),
-    px.Scatter3d(x=embedding2_orig[size_orig_idx[5]:size_orig_idx[5+1], 0],y=embedding2_orig[size_orig_idx[5]:size_orig_idx[5+1], 1], z=embedding2_orig[size_orig_idx[5]:size_orig_idx[5+1], 2], mode='markers', marker = dict(size = 3,color = clr_orig[5],opacity = 0.8, symbol='diamond'), name='FWN'),
-    px.Scatter3d(x=embedding2_orig[size_orig_idx[6]:size_orig_idx[6+1], 0],y=embedding2_orig[size_orig_idx[6]:size_orig_idx[6+1], 1], z=embedding2_orig[size_orig_idx[6]:size_orig_idx[6+1], 2], mode='markers', marker = dict(size = 3,color = clr_orig[6],opacity = 0.8, symbol='square'), name='FBP'),
-    px.Scatter3d(x=embedding2_orig[size_orig_idx[7]:size_orig_idx[7+1], 0],y=embedding2_orig[size_orig_idx[7]:size_orig_idx[7+1], 1], z=embedding2_orig[size_orig_idx[7]:size_orig_idx[7+1], 2], mode='markers', marker = dict(size = 3,color = clr_orig[7],opacity = 0.8, symbol='diamond'), name='FBN'),
+    # px.Scatter3d(x=embedding2_orig[size_orig_idx[2]:size_orig_idx[2+1], 0],y=embedding2_orig[size_orig_idx[2]:size_orig_idx[2+1], 1], z=embedding2_orig[size_orig_idx[2]:size_orig_idx[2+1], 2], mode='markers', marker = dict(size = 3,color = clr_orig[2],opacity = 0.8, symbol='square'), name='MBP'),
+    # px.Scatter3d(x=embedding2_orig[size_orig_idx[3]:size_orig_idx[3+1], 0],y=embedding2_orig[size_orig_idx[3]:size_orig_idx[3+1], 1], z=embedding2_orig[size_orig_idx[3]:size_orig_idx[3+1], 2], mode='markers', marker = dict(size = 3,color = clr_orig[3],opacity = 0.8, symbol='diamond'), name='MBN'),
+    # px.Scatter3d(x=embedding2_orig[size_orig_idx[4]:size_orig_idx[4+1], 0],y=embedding2_orig[size_orig_idx[4]:size_orig_idx[4+1], 1], z=embedding2_orig[size_orig_idx[4]:size_orig_idx[4+1], 2], mode='markers', marker = dict(size = 3,color = clr_orig[4],opacity = 0.8, symbol='square'), name='FWP'),
+    # px.Scatter3d(x=embedding2_orig[size_orig_idx[5]:size_orig_idx[5+1], 0],y=embedding2_orig[size_orig_idx[5]:size_orig_idx[5+1], 1], z=embedding2_orig[size_orig_idx[5]:size_orig_idx[5+1], 2], mode='markers', marker = dict(size = 3,color = clr_orig[5],opacity = 0.8, symbol='diamond'), name='FWN'),
+    # px.Scatter3d(x=embedding2_orig[size_orig_idx[6]:size_orig_idx[6+1], 0],y=embedding2_orig[size_orig_idx[6]:size_orig_idx[6+1], 1], z=embedding2_orig[size_orig_idx[6]:size_orig_idx[6+1], 2], mode='markers', marker = dict(size = 3,color = clr_orig[6],opacity = 0.8, symbol='square'), name='FBP'),
+    # px.Scatter3d(x=embedding2_orig[size_orig_idx[7]:size_orig_idx[7+1], 0],y=embedding2_orig[size_orig_idx[7]:size_orig_idx[7+1], 1], z=embedding2_orig[size_orig_idx[7]:size_orig_idx[7+1], 2], mode='markers', marker = dict(size = 3,color = clr_orig[7],opacity = 0.8, symbol='diamond'), name='FBN'),
     ])
 # Add dropdown
 plot.update_layout(legend=dict(title_font_family="arial black",font=dict(size=24), itemsizing='constant'),
@@ -291,12 +291,12 @@ plot.write_html(os.path.join(out_dir, reduction_technique + '_orig_out.html'), f
 plot=px.Figure(data=[
     px.Scatter3d(x=embedding2_vicinal[size_vici_idx[0]:size_vici_idx[0+1], 0],y=embedding2_vicinal[size_vici_idx[0]:size_vici_idx[0+1], 1], z=embedding2_vicinal[size_vici_idx[0]:size_vici_idx[0+1], 2], mode='markers', marker = dict(size = 3,color = clr_vici[0],opacity = 0.8, symbol='square'), name='MWP'),
     px.Scatter3d(x=embedding2_vicinal[size_vici_idx[1]:size_vici_idx[1+1], 0],y=embedding2_vicinal[size_vici_idx[1]:size_vici_idx[1+1], 1], z=embedding2_vicinal[size_vici_idx[1]:size_vici_idx[1+1], 2], mode='markers', marker = dict(size = 3,color = clr_vici[1],opacity = 0.8, symbol='diamond'), name='MWN'),
-    px.Scatter3d(x=embedding2_vicinal[size_vici_idx[2]:size_vici_idx[2+1], 0],y=embedding2_vicinal[size_vici_idx[2]:size_vici_idx[2+1], 1], z=embedding2_vicinal[size_vici_idx[2]:size_vici_idx[2+1], 2], mode='markers', marker = dict(size = 3,color = clr_vici[2],opacity = 0.8, symbol='square'), name='MBP'),
-    px.Scatter3d(x=embedding2_vicinal[size_vici_idx[3]:size_vici_idx[3+1], 0],y=embedding2_vicinal[size_vici_idx[3]:size_vici_idx[3+1], 1], z=embedding2_vicinal[size_vici_idx[3]:size_vici_idx[3+1], 2], mode='markers', marker = dict(size = 3,color = clr_vici[3],opacity = 0.8, symbol='diamond'), name='MBN'),
-    px.Scatter3d(x=embedding2_vicinal[size_vici_idx[4]:size_vici_idx[4+1], 0],y=embedding2_vicinal[size_vici_idx[4]:size_vici_idx[4+1], 1], z=embedding2_vicinal[size_vici_idx[4]:size_vici_idx[4+1], 2], mode='markers', marker = dict(size = 3,color = clr_vici[4],opacity = 0.8, symbol='square'), name='FWP'),
-    px.Scatter3d(x=embedding2_vicinal[size_vici_idx[5]:size_vici_idx[5+1], 0],y=embedding2_vicinal[size_vici_idx[5]:size_vici_idx[5+1], 1], z=embedding2_vicinal[size_vici_idx[5]:size_vici_idx[5+1], 2], mode='markers', marker = dict(size = 3,color = clr_vici[5],opacity = 0.8, symbol='diamond'), name='FWN'),
-    px.Scatter3d(x=embedding2_vicinal[size_vici_idx[6]:size_vici_idx[6+1], 0],y=embedding2_vicinal[size_vici_idx[6]:size_vici_idx[6+1], 1], z=embedding2_vicinal[size_vici_idx[6]:size_vici_idx[6+1], 2], mode='markers', marker = dict(size = 3,color = clr_vici[6],opacity = 0.8, symbol='square'), name='FBP'),
-    px.Scatter3d(x=embedding2_vicinal[size_vici_idx[7]:size_vici_idx[7+1], 0],y=embedding2_vicinal[size_vici_idx[7]:size_vici_idx[7+1], 1], z=embedding2_vicinal[size_vici_idx[7]:size_vici_idx[7+1], 2], mode='markers', marker = dict(size = 3,color = clr_vici[7],opacity = 0.8, symbol='diamond'), name='FBN'),
+    # px.Scatter3d(x=embedding2_vicinal[size_vici_idx[2]:size_vici_idx[2+1], 0],y=embedding2_vicinal[size_vici_idx[2]:size_vici_idx[2+1], 1], z=embedding2_vicinal[size_vici_idx[2]:size_vici_idx[2+1], 2], mode='markers', marker = dict(size = 3,color = clr_vici[2],opacity = 0.8, symbol='square'), name='MBP'),
+    # px.Scatter3d(x=embedding2_vicinal[size_vici_idx[3]:size_vici_idx[3+1], 0],y=embedding2_vicinal[size_vici_idx[3]:size_vici_idx[3+1], 1], z=embedding2_vicinal[size_vici_idx[3]:size_vici_idx[3+1], 2], mode='markers', marker = dict(size = 3,color = clr_vici[3],opacity = 0.8, symbol='diamond'), name='MBN'),
+    # px.Scatter3d(x=embedding2_vicinal[size_vici_idx[4]:size_vici_idx[4+1], 0],y=embedding2_vicinal[size_vici_idx[4]:size_vici_idx[4+1], 1], z=embedding2_vicinal[size_vici_idx[4]:size_vici_idx[4+1], 2], mode='markers', marker = dict(size = 3,color = clr_vici[4],opacity = 0.8, symbol='square'), name='FWP'),
+    # px.Scatter3d(x=embedding2_vicinal[size_vici_idx[5]:size_vici_idx[5+1], 0],y=embedding2_vicinal[size_vici_idx[5]:size_vici_idx[5+1], 1], z=embedding2_vicinal[size_vici_idx[5]:size_vici_idx[5+1], 2], mode='markers', marker = dict(size = 3,color = clr_vici[5],opacity = 0.8, symbol='diamond'), name='FWN'),
+    # px.Scatter3d(x=embedding2_vicinal[size_vici_idx[6]:size_vici_idx[6+1], 0],y=embedding2_vicinal[size_vici_idx[6]:size_vici_idx[6+1], 1], z=embedding2_vicinal[size_vici_idx[6]:size_vici_idx[6+1], 2], mode='markers', marker = dict(size = 3,color = clr_vici[6],opacity = 0.8, symbol='square'), name='FBP'),
+    # px.Scatter3d(x=embedding2_vicinal[size_vici_idx[7]:size_vici_idx[7+1], 0],y=embedding2_vicinal[size_vici_idx[7]:size_vici_idx[7+1], 1], z=embedding2_vicinal[size_vici_idx[7]:size_vici_idx[7+1], 2], mode='markers', marker = dict(size = 3,color = clr_vici[7],opacity = 0.8, symbol='diamond'), name='FBN'),
     ])
 # Add dropdown
 plot.update_layout(legend=dict(title_font_family="arial black",font=dict(size=24), itemsizing='constant'),
@@ -347,24 +347,24 @@ plot=px.Figure(data=[
     px.Scatter3d(x=embedding2_both[size_both_idx[1][0]:size_both_idx[1][1], 0],y=embedding2_both[size_both_idx[1][0]:size_both_idx[1][1], 1], z=embedding2_both[size_both_idx[1][0]:size_both_idx[1][1], 2], mode='markers', marker = dict(size = 5,color = 'green',opacity = 0.8, symbol='diamond'), name='MWN - ORIG'),
     px.Scatter3d(x=embedding2_both[size_both_idx[1][2]:size_both_idx[1][3], 0],y=embedding2_both[size_both_idx[1][2]:size_both_idx[1][3], 1], z=embedding2_both[size_both_idx[1][2]:size_both_idx[1][3], 2], mode='markers', marker = dict(size = 3,color = 'blue',opacity = 0.3), name='MWN - VICI'),
     # # MBP
-    px.Scatter3d(x=embedding2_both[size_both_idx[2][0]:size_both_idx[2][1], 0],y=embedding2_both[size_both_idx[2][0]:size_both_idx[2][1], 1], z=embedding2_both[size_both_idx[2][0]:size_both_idx[2][1], 2], mode='markers', marker = dict(size = 5,color = 'red',opacity = 0.8, symbol='square'), name='MBP - ORIG'),
-    px.Scatter3d(x=embedding2_both[size_both_idx[2][2]:size_both_idx[2][3], 0],y=embedding2_both[size_both_idx[2][2]:size_both_idx[2][3], 1], z=embedding2_both[size_both_idx[2][2]:size_both_idx[2][3], 2], mode='markers', marker = dict(size = 3,color = 'orange',opacity = 0.3), name='MBP - VICI'),
-    # # MBN
-    px.Scatter3d(x=embedding2_both[size_both_idx[3][0]:size_both_idx[3][1], 0],y=embedding2_both[size_both_idx[3][0]:size_both_idx[3][1], 1], z=embedding2_both[size_both_idx[3][0]:size_both_idx[3][1], 2], mode='markers', marker = dict(size = 5,color = 'green',opacity = 0.8, symbol='diamond'), name='MBN - ORIG'),
-    px.Scatter3d(x=embedding2_both[size_both_idx[3][2]:size_both_idx[3][3], 0],y=embedding2_both[size_both_idx[3][2]:size_both_idx[3][3], 1], z=embedding2_both[size_both_idx[3][2]:size_both_idx[3][3], 2], mode='markers', marker = dict(size = 3,color = 'blue',opacity = 0.3), name='MBN - VICI'),
-    # #
-    # # FWP
-    px.Scatter3d(x=embedding2_both[size_both_idx[4][0]:size_both_idx[4][1], 0],y=embedding2_both[size_both_idx[4][0]:size_both_idx[4][1], 1], z=embedding2_both[size_both_idx[4][0]:size_both_idx[4][1], 2], mode='markers', marker = dict(size = 5,color = 'red',opacity = 0.8, symbol='square'), name='FWP - ORIG'),
-    px.Scatter3d(x=embedding2_both[size_both_idx[4][2]:size_both_idx[4][3], 0],y=embedding2_both[size_both_idx[4][2]:size_both_idx[4][3], 1], z=embedding2_both[size_both_idx[4][2]:size_both_idx[4][3], 2], mode='markers', marker = dict(size = 3,color = 'orange',opacity = 0.3), name='FWP - VICI'),
-    # # FWN
-    px.Scatter3d(x=embedding2_both[size_both_idx[5][0]:size_both_idx[5][1], 0],y=embedding2_both[size_both_idx[5][0]:size_both_idx[5][1], 1], z=embedding2_both[size_both_idx[5][0]:size_both_idx[5][1], 2], mode='markers', marker = dict(size = 5,color = 'green',opacity = 0.8, symbol='diamond'), name='FWN - ORIG'),
-    px.Scatter3d(x=embedding2_both[size_both_idx[5][2]:size_both_idx[5][3], 0],y=embedding2_both[size_both_idx[5][2]:size_both_idx[5][3], 1], z=embedding2_both[size_both_idx[5][2]:size_both_idx[5][3], 2], mode='markers', marker = dict(size = 3,color = 'blue',opacity = 0.3), name='FWN - VICI'),
-    # # FBP
-    px.Scatter3d(x=embedding2_both[size_both_idx[6][0]:size_both_idx[6][1], 0],y=embedding2_both[size_both_idx[6][0]:size_both_idx[6][1], 1], z=embedding2_both[size_both_idx[6][0]:size_both_idx[6][1], 2], mode='markers', marker = dict(size = 5,color = 'red',opacity = 0.8, symbol='square'), name='FBP - ORIG'),
-    px.Scatter3d(x=embedding2_both[size_both_idx[6][2]:size_both_idx[6][3], 0],y=embedding2_both[size_both_idx[6][2]:size_both_idx[6][3], 1], z=embedding2_both[size_both_idx[6][2]:size_both_idx[6][3], 2], mode='markers', marker = dict(size = 3,color = 'orange',opacity = 0.3), name='FBP - VICI'),
-    # # FBN
-    px.Scatter3d(x=embedding2_both[size_both_idx[7][0]:size_both_idx[7][1], 0],y=embedding2_both[size_both_idx[7][0]:size_both_idx[7][1], 1], z=embedding2_both[size_both_idx[7][0]:size_both_idx[7][1], 2], mode='markers', marker = dict(size = 5,color = 'green',opacity = 0.8, symbol='diamond'), name='FBN - ORIG'),
-    px.Scatter3d(x=embedding2_both[size_both_idx[7][2]:size_both_idx[7][3], 0],y=embedding2_both[size_both_idx[7][2]:size_both_idx[7][3], 1], z=embedding2_both[size_both_idx[7][2]:size_both_idx[7][3], 2], mode='markers', marker = dict(size = 3,color = 'blue',opacity = 0.3), name='FBN - VICI'),
+    # px.Scatter3d(x=embedding2_both[size_both_idx[2][0]:size_both_idx[2][1], 0],y=embedding2_both[size_both_idx[2][0]:size_both_idx[2][1], 1], z=embedding2_both[size_both_idx[2][0]:size_both_idx[2][1], 2], mode='markers', marker = dict(size = 5,color = 'red',opacity = 0.8, symbol='square'), name='MBP - ORIG'),
+    # px.Scatter3d(x=embedding2_both[size_both_idx[2][2]:size_both_idx[2][3], 0],y=embedding2_both[size_both_idx[2][2]:size_both_idx[2][3], 1], z=embedding2_both[size_both_idx[2][2]:size_both_idx[2][3], 2], mode='markers', marker = dict(size = 3,color = 'orange',opacity = 0.3), name='MBP - VICI'),
+    # # # MBN
+    # px.Scatter3d(x=embedding2_both[size_both_idx[3][0]:size_both_idx[3][1], 0],y=embedding2_both[size_both_idx[3][0]:size_both_idx[3][1], 1], z=embedding2_both[size_both_idx[3][0]:size_both_idx[3][1], 2], mode='markers', marker = dict(size = 5,color = 'green',opacity = 0.8, symbol='diamond'), name='MBN - ORIG'),
+    # px.Scatter3d(x=embedding2_both[size_both_idx[3][2]:size_both_idx[3][3], 0],y=embedding2_both[size_both_idx[3][2]:size_both_idx[3][3], 1], z=embedding2_both[size_both_idx[3][2]:size_both_idx[3][3], 2], mode='markers', marker = dict(size = 3,color = 'blue',opacity = 0.3), name='MBN - VICI'),
+    # # #
+    # # # FWP
+    # px.Scatter3d(x=embedding2_both[size_both_idx[4][0]:size_both_idx[4][1], 0],y=embedding2_both[size_both_idx[4][0]:size_both_idx[4][1], 1], z=embedding2_both[size_both_idx[4][0]:size_both_idx[4][1], 2], mode='markers', marker = dict(size = 5,color = 'red',opacity = 0.8, symbol='square'), name='FWP - ORIG'),
+    # px.Scatter3d(x=embedding2_both[size_both_idx[4][2]:size_both_idx[4][3], 0],y=embedding2_both[size_both_idx[4][2]:size_both_idx[4][3], 1], z=embedding2_both[size_both_idx[4][2]:size_both_idx[4][3], 2], mode='markers', marker = dict(size = 3,color = 'orange',opacity = 0.3), name='FWP - VICI'),
+    # # # FWN
+    # px.Scatter3d(x=embedding2_both[size_both_idx[5][0]:size_both_idx[5][1], 0],y=embedding2_both[size_both_idx[5][0]:size_both_idx[5][1], 1], z=embedding2_both[size_both_idx[5][0]:size_both_idx[5][1], 2], mode='markers', marker = dict(size = 5,color = 'green',opacity = 0.8, symbol='diamond'), name='FWN - ORIG'),
+    # px.Scatter3d(x=embedding2_both[size_both_idx[5][2]:size_both_idx[5][3], 0],y=embedding2_both[size_both_idx[5][2]:size_both_idx[5][3], 1], z=embedding2_both[size_both_idx[5][2]:size_both_idx[5][3], 2], mode='markers', marker = dict(size = 3,color = 'blue',opacity = 0.3), name='FWN - VICI'),
+    # # # FBP
+    # px.Scatter3d(x=embedding2_both[size_both_idx[6][0]:size_both_idx[6][1], 0],y=embedding2_both[size_both_idx[6][0]:size_both_idx[6][1], 1], z=embedding2_both[size_both_idx[6][0]:size_both_idx[6][1], 2], mode='markers', marker = dict(size = 5,color = 'red',opacity = 0.8, symbol='square'), name='FBP - ORIG'),
+    # px.Scatter3d(x=embedding2_both[size_both_idx[6][2]:size_both_idx[6][3], 0],y=embedding2_both[size_both_idx[6][2]:size_both_idx[6][3], 1], z=embedding2_both[size_both_idx[6][2]:size_both_idx[6][3], 2], mode='markers', marker = dict(size = 3,color = 'orange',opacity = 0.3), name='FBP - VICI'),
+    # # # FBN
+    # px.Scatter3d(x=embedding2_both[size_both_idx[7][0]:size_both_idx[7][1], 0],y=embedding2_both[size_both_idx[7][0]:size_both_idx[7][1], 1], z=embedding2_both[size_both_idx[7][0]:size_both_idx[7][1], 2], mode='markers', marker = dict(size = 5,color = 'green',opacity = 0.8, symbol='diamond'), name='FBN - ORIG'),
+    # px.Scatter3d(x=embedding2_both[size_both_idx[7][2]:size_both_idx[7][3], 0],y=embedding2_both[size_both_idx[7][2]:size_both_idx[7][3], 1], z=embedding2_both[size_both_idx[7][2]:size_both_idx[7][3], 2], mode='markers', marker = dict(size = 3,color = 'blue',opacity = 0.3), name='FBN - VICI'),
     ])
 # Add dropdown
 plot.update_layout(legend=dict(title_font_family="arial black",font=dict(size=24), itemsizing='constant'),
