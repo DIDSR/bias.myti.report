@@ -8,7 +8,15 @@ import math
 import random
 import os
 from torch.utils.data import Dataset as BaseDataset
+from PIL import Image
+import pandas as pd
+from torchvision import transforms
 
+transform = transforms.Compose([
+    # you can add other transformations in this list
+    transforms.Resize((320, 320)),
+    transforms.ToTensor()
+])
 
 def read_dat_rot(imageName, rot_flag, custom_scale):
     '''
@@ -52,23 +60,29 @@ def read_dat_rot(imageName, rot_flag, custom_scale):
     return npAr3
 
 
+def read_jpg(imageName):
+    '''
+    function to read jpg image with rotation enabled for 
+    data augmentation
+    '''
+    return transform(Image.open(imageName).convert('RGB'))
+
+
 class Dataset(BaseDataset):
     def __init__(
             self,
             list_file,
-            crop_to_224=True,
             train_flag=True,
-            custom_scale=False
+            default_out_class='Yes',
+            default_path='Path'
     ):
         # #
-        self.crop_to_224 = crop_to_224
         self.train_flag = train_flag
-        self.custom_scale = custom_scale
-        # #
-        lines = open(list_file).readlines()
-        info = np.array([t.rstrip().split('\t') for t in lines])
-        dats = info[:, 0]
-        labels = info[:, 1]
+        # # read the CSV file with header
+        df = pd.read_csv(list_file)
+        print(df.columns.values.tolist())
+        dats = df[default_path].tolist()   # # JPEGs
+        labels = df[default_out_class].tolist() # # class label
 
         c = list(zip(dats, labels))
         # # Randomize the list
@@ -78,23 +92,9 @@ class Dataset(BaseDataset):
 
 
     def __getitem__(self, i):
-        # #
-        if self.train_flag:
-            # # data augmentation using rotation
-            rot_flag = random.randint(0, 7)
-            img_o = read_dat_rot(self.images[i], rot_flag, self.custom_scale)
-        else:
-            img_o = read_dat_rot(self.images[i], 0, self.custom_scale)
+        # # implement data augmentation later
+        img_o = read_jpg(self.images[i])
         lbl_o = self.class_values[i]
-        # #
-        if self.crop_to_224:
-            if self.train_flag:
-                # # data augmentation using jittering
-                x = random.randint(0, 256 - 224 - 1)
-                y = random.randint(0, 256 - 224 - 1)
-                img_o = img_o[:, x:x + 224, y:y + 224]
-            else:
-                img_o = img_o[:, 16:16 + 224, 16:16 + 224]
 
         return os.path.basename(self.images[i]), img_o, int(lbl_o)
 

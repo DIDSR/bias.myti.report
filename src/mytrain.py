@@ -23,12 +23,9 @@
     Git is used to track the versions.
 
     Worked in the following virtual environment:
-        >> source /nas/unas25/rsamala/tf/venv_CADPC32_PyTorch171/bin/activate
-        >> export PATH="$PATH:/usr/local/cuda-11.0/bin"
-        >> export LD_LIBRARY_PATH="/usr/local/cuda-11.0/lib64:/usr/local/cuda-11.0/extras/CUPTI/lib64"
+        >> source /gpfs_projects/ravi.samala/venvs/venv_Pytorch/bin/activate
     
-    Proxy: When running the first time, pytorch will download the pretrained model, 
-    so appropriate proxy settings have to be used
+    When running the first time, pytorch will download the pretrained model
 
 '''
 import torch
@@ -127,7 +124,8 @@ def add_classification_layer_v1(model, num_channels, p=0.2):
 
 
 def train(args):
-    writer = SummaryWriter(log_dir=args.output_base_dir, flush_secs=1)
+    # writer = SummaryWriter(log_dir=args.output_base_dir, flush_secs=1)
+    # writer = SummaryWriter()
     # # based on the selected DNN N/W, modify the last layer of the ImageNet pre-trained DNN
     model = models.__dict__[args.dcnn](pretrained=True)
     num_channels = 1
@@ -172,14 +170,14 @@ def train(args):
     # # <<
     
     # # debug code to understand how a ROI passes through the network
-    x=torch.rand(16,3,224,224)
+    x=torch.rand(16,3,320,320)
     print(summary(model, x))
     # # 
     torch.cuda.set_device(args.gpu_id)
     model.cuda(args.gpu_id)
     # # Create tr and vd datasets
-    train_dataset = Dataset(args.input_train_file, crop_to_224=True, train_flag=True, custom_scale=True)
-    valid_dataset = Dataset(args.validation_file, crop_to_224=True, train_flag=False, custom_scale=True)
+    train_dataset = Dataset(args.input_train_file, train_flag=True)
+    valid_dataset = Dataset(args.validation_file, train_flag=False)
     # # Create tr and vd data loaders
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.threads)
     valid_loader = DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.threads)
@@ -201,11 +199,11 @@ def train(args):
     auc_val = -1
     for epoch in range(args.num_epochs):
         # # train for one epoch
-        avg_loss = run_train(train_loader, model, criterion, optimizer, writer, my_lr_scheduler)
+        avg_loss = run_train(train_loader, model, criterion, optimizer, my_lr_scheduler)
         # # save
         if epoch % args.save_every_N_epochs == 0 or epoch == args.num_epochs-1:
             # # evaluate on validation set
-            auc_val = run_validate(valid_loader, model, writer, args)
+            auc_val = run_validate(valid_loader, model, args)
             print("> {:d}\t{:1.5f}\t\t{:1.5f}".format(epoch, avg_loss, auc_val))
             save_checkpoint({
                 'epoch': epoch + 1,
@@ -219,7 +217,7 @@ def train(args):
         fp.write(args.input_train_file + '\t' + args.validation_file +  '\t' +  args.output_base_dir + '\t' + str(auc_val) + '\n')
 
 
-def run_train(train_loader, model, criterion, optimizer, writer, my_lr_scheduler):
+def run_train(train_loader, model, criterion, optimizer,  my_lr_scheduler):
     '''
         function that runs the training
     '''
@@ -237,18 +235,18 @@ def run_train(train_loader, model, criterion, optimizer, writer, my_lr_scheduler
         output = model(images.float())
         # # compute loss
         loss = criterion(torch.sigmoid(torch.flatten(output)), target.float())
-        writer.add_scalar("Loss/train", loss.item(), master_iter)
+        # writer.add_scalar("Loss/train", loss.item(), master_iter)
         avg_loss += loss.item()
         # # compute gradient and do SGD step
         loss.backward()
         optimizer.step()
         my_lr_scheduler.step()
         # #
-        writer.add_scalar("LR/train", my_lr_scheduler.get_last_lr()[0], master_iter)
+        # writer.add_scalar("LR/train", my_lr_scheduler.get_last_lr()[0], master_iter)
     return avg_loss/len(train_loader)
 
 
-def run_validate(val_loader, model, writer, args):
+def run_validate(val_loader, model, args):
     '''
         function the deploys on the input data loader
         calculates sample based AUC
@@ -286,7 +284,7 @@ def run_validate(val_loader, model, writer, args):
     auc_val = metrics.auc(fpr, tpr)
     with open(os.path.join(args.output_base_dir, 'log.log'), 'a') as fp:
         fp.write("{:d}\t{:1.5f}\n".format(master_iter, auc_val))
-    writer.add_scalar("AUC/test", auc_val, master_iter)
+    # writer.add_scalar("AUC/test", auc_val, master_iter)
     return auc_val
 
 
