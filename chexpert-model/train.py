@@ -92,14 +92,20 @@ def train(args):
             print(f"pretrained checkpoint specified: {model_args.ckpt_path}")
             if model_args.ckpt_path in ckpt_files:
                 model_args.ckpt_path = ckpt_files[model_args.ckpt_path]
-            else:
-                print("Specified ckpt_path not implemented yet")
-                return
-            print(f"Loading model from {model_args.ckpt_path}")
-            model, ckpt_info = ModelSaver.load_model(ckpt_path=model_args.ckpt_path,
+                print(f"Loading model from {model_args.ckpt_path}")
+                model, ckpt_info = ModelSaver.load_model(ckpt_path=model_args.ckpt_path,
                                                     gpu_ids=args.gpu_ids,
                                                     model_args=model_args,
                                                     is_training=True)
+            elif model_args.ckpt_path == 'ImageNet':
+                # loading the pretraine_model
+                print("loading ImageNet weights...")
+                model = models.CadeneModel(model_name=model_args.model.lower(),
+                                           tasks=tasks,
+                                           model_args=model_args)
+            else:
+                print("Specified ckpt_path not implemented yet")
+                return
             # print(ckpt_info)
             optim_args.start_epoch = 1
             

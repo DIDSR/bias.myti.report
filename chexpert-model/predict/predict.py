@@ -105,7 +105,10 @@ class Predictor(object):
                             else:
                                 all_activation_maps = np.vstack((all_activation_maps, activation['comp'].detach().cpu().numpy()))
 
-                    if self.model.module.model_uncertainty:
+                    if hasattr(self.model, 'module') and self.model.module.model_uncertainty:
+                        batch_probs =\
+                            util.uncertain_logits_to_probs(batch_logits)
+                    elif hasattr(self.model, 'model_uncertainty') and self.model.model_uncertainty:
                         batch_probs =\
                             util.uncertain_logits_to_probs(batch_logits)
                     else:
@@ -144,8 +147,10 @@ class Predictor(object):
                 np.save(f, all_embeddings)
                 np.save(f, gt_concat)
        
-        
-        tasks = self.model.module.tasks # Tasks decided at self.model.module.tasks.
+        if hasattr(self.model, 'module'):
+            tasks = self.model.module.tasks # Tasks decided at self.model.module.tasks.
+        else:
+            tasks = self.model.tasks
         probs_dict =  {task: probs_concat[:, i] for i, task in enumerate(tasks)}
         gt_dict = {task: gt_concat[:, i] for i, task in enumerate(tasks)}
         if loader.dataset.return_info_dict:

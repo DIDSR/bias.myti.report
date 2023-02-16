@@ -91,11 +91,17 @@ class ModelSaver(object):
         """
         lr_scheduler = None if optimizer.lr_scheduler is None\
             else optimizer.lr_scheduler.state_dict()
+        if hasattr(model,'module'):
+            model_name = model.module.__class__.__name__
+            tasks = model.module.tasks
+        else:
+            model_name = model.__class__.__name__
+            tasks = model.tasks
         ckpt_dict = {
             'ckpt_info': {'epoch': epoch, 'iteration': iteration,
                           self.metric_name: metric_val},
-            'model_name': model.module.__class__.__name__,
-            TASKS: model.module.tasks,
+            'model_name': model_name,
+            TASKS: tasks,
             'model_state': model.to('cpu').state_dict(),
             'optimizer': optimizer.state_dict(),
             'lr_scheduler': lr_scheduler
