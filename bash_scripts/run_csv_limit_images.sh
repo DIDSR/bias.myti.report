@@ -26,4 +26,5 @@ NUM_IMAGES=1
 
 python ../src/csv_limit_images.py -i ${INPUT_CSV} \
                                   -o ${OUTPUT_CSV} \
-                                  -n ${NUM_IMAGES} 
+                                  -n ${NUM_IMAGES} \
+                                  --portable # Added to include portable/nonportable info (+ subgroup summary) remove to not get portable info
