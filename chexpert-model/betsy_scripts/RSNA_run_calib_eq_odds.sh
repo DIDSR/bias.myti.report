@@ -20,7 +20,7 @@ do
 SUB_DIR=${MAIN_DIR}/RAND_${RAND}/target_model_${LAYER}_RD_${RD}/${EXPERIMENT_NAME}/results/
 for CONSTRAINT in ${CONSTRAINT_ARRAY[@]}
 do
-python ../../eq_odds_post_mitigation/RSNA_calib_eq_odds.py --test_dir ${SUB_DIR} \
+python ../eq_odds/RSNA_calib_eq_odds.py --test_dir ${SUB_DIR} \
                            --constraints ${CONSTRAINT} \
                            --constraint_weight 0.5 \
                            --train_file ${TRAIN_FILE} \
