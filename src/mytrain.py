@@ -122,12 +122,49 @@ def add_classification_layer_v1(model, num_channels, p=0.2):
     model = nn.Sequential(model, new_layers)
     return model
 
+def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels, is_training=True):
+    device = f'cuda:{gpu_ids}'
+    ckpt_dict = torch.load(ckpt_path, map_location=device)
+
+    model = models.__dict__[base_dcnn](pretrained=True)
+
+    # TODO: JBY
+    state_dict = ckpt_dict['state_dict']
+    # print(state_dict)
+    for k in list(state_dict.keys()):
+        # retain only encoder_q up to before the embedding layer
+        if k.startswith('module.encoder_q') and not k.startswith('module.encoder_q.fc'):
+            # remove prefix
+            # state_dict[k[len("module.encoder_q."):]] = state_dict[k]
+            state_dict['module.model.' + k[len("module.encoder_q."):]] = state_dict[k]
+            # delete renamed or unused k
+            del state_dict[k]
+        elif 'encoder_k' in k or 'module.queue' in k:
+            del state_dict[k]
+        elif k.startswith('module.encoder_q.fc'):
+            # if 'fc.0' not in k:
+            #     state_dict['module.model.fc' + k[len("module.encoder_q.fc.2"):]] = state_dict[k]
+            # TODO: JBY these are bad
+            del state_dict[k]
+
+        model.load_state_dict(state_dict, strict=False)
+
+    # # modify the last layers
+    new_layers = nn.Sequential(nn.Dropout(0.2), nn.Linear(1000, 512), nn.Linear(512, 128), nn.Linear(128, num_channels))
+    model = nn.Sequential(model, new_layers)
+
+    # if is_training:
+    #     model.train()
+    # else:
+    #     model.eval()
+
+    return model
 
 def train(args):
     # writer = SummaryWriter(log_dir=args.output_base_dir, flush_secs=1)
     # writer = SummaryWriter()
     # # based on the selected DNN N/W, modify the last layer of the ImageNet pre-trained DNN
-    model = models.__dict__[args.dcnn](pretrained=True)
+    # model = models.__dict__[args.dcnn](pretrained=True)
     num_channels = 1
     custom_layer_name = []
     if args.dcnn == 'googlenet':
@@ -142,9 +179,16 @@ def train(args):
         custom_layer_name = densenet121_ordered_layer_names.copy()
     elif args.dcnn == 'resnext50_32x4d':
         model = add_classification_layer_v1(model, num_channels)
+    elif args.dcnn == 'CheXpert_Resnet':
+        model = load_custom_checkpoint(args.custom_checkpoint_file, 'resnet18', args.gpu_id, num_channels)
+        print('HERE2--------------')
+        print(model)
+        print('Using custom pretrained checkpoint file')
     else:
         print('ERROR. UNKNOWN model.')
         return
+    # print(model)
+    # return
     
 
     # # custom transfer learning >>
@@ -184,7 +228,8 @@ def train(args):
     num_steps_in_epoch = len(train_loader)
     # # select the optimizer
     if args.optimizer == 'adam':
-        optimizer = torch.optim.Adam(model.parameters(), args.start_learning_rate, weight_decay=args.step_decay)
+        # optimizer = torch.optim.Adam(model.parameters(), args.start_learning_rate, weight_decay=args.step_decay)
+        optimizer = torch.optim.Adam(model.parameters(), args.start_learning_rate, betas=(0.9, 0.999), weight_decay=0.0)
     elif args.optimizer == 'sgd':
         optimizer = torch.optim.SGD(model.parameters(), lr=args.start_learning_rate, momentum=args.SGDmomentum)
     else:
@@ -195,7 +240,8 @@ def train(args):
     # #
     print('Training...')
     print('EPOCH\tTR-AVG-LOSS\tVD-AUC')
-    criterion = nn.BCELoss()
+    # criterion = nn.BCELoss()
+    criterion = nn.BCEWithLogitsLoss()
     auc_val = -1
     for epoch in range(args.num_epochs):
         # # train for one epoch
@@ -234,7 +280,8 @@ def run_train(train_loader, model, criterion, optimizer,  my_lr_scheduler):
         optimizer.zero_grad()
         output = model(images.float())
         # # compute loss
-        loss = criterion(torch.sigmoid(torch.flatten(output)), target.float())
+        # loss = criterion(torch.sigmoid(torch.flatten(output)), target.float())
+        loss = criterion(torch.flatten(output), target.float())
         # writer.add_scalar("Loss/train", loss.item(), master_iter)
         avg_loss += loss.item()
         # # compute gradient and do SGD step
@@ -295,7 +342,7 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--validation_file', help='input validation list file', required=True)
     parser.add_argument('-o', '--output_base_dir', help='output based dir', required=True)
     parser.add_argument('-d', '--dcnn', 
-        help="which dcnn to use: 'googlenet', 'resnet18', 'wide_resnet50_2', 'resnext50_32x4d' or 'densenet121'", required=True)
+        help="which dcnn to use: 'googlenet', 'resnet18', 'wide_resnet50_2', 'resnext50_32x4d' or 'densenet121', 'CheXpert_Resnet'", required=True)
     # parser.add_argument('-f', '--freeze_up_to', help="Must be a freezable layer in the structure e.g. FirstLayer", required=True)
     # Must be one of: 'FirstLayer', 'Mixed_3b', 'Mixed_3c', 'Mixed_4b', 'Mixed_4c', 'Mixed_4d', 'Mixed_4e', 'Mixed_4f', 'Mixed_5b', 'Mixed_5c'
     parser.add_argument('-f', '--fine_tuning', default='full', help="options: 'full' or 'partial'")
@@ -306,7 +353,7 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--batch_size', type=int, default=64, help='batch size.')
     parser.add_argument('-n', '--num_epochs', type=int, default=2000, help='num. of epochs.')
     parser.add_argument('-t', '--threads', type=int, default=4, help='num. of threads.')
-    parser.add_argument('-r', '--start_learning_rate', type=float, default=0.0001, help='starting learning rate.')
+    parser.add_argument('-r', '--start_learning_rate', type=float, default=1e-4, help='starting learning rate.')
     parser.add_argument('-s', '--step_decay', type=int, default=1000, help='Step for decay of learning rate.')
     parser.add_argument('--SGDmomentum', type=float, default=0.9, help='Momemtum param for SGD optimizer')
     parser.add_argument('--decay_every_N_epoch', type=int, default=5, help='Drop the learning rate every N epochs')
@@ -315,6 +362,9 @@ if __name__ == '__main__':
     parser.add_argument('--bsave_valid_results_at_epochs', type=bool, default=False, 
         help='save validation results csv at every epoch, True/False')
     parser.add_argument('-g', '--gpu_id', type=int, default=0, help='GPU ID')
+    parser.add_argument('-c', '--custom_checkpoint_file', 
+        default="/gpfs_projects/ravi.samala/OUT/moco/experiments/ravi.samala/r8w1n416_20220715h15_tr_mocov2_20220715-172742/checkpoint_0019.pth.tar", 
+        help='custom checkpoint file to start')
 
     args = parser.parse_args()
     print(args)
