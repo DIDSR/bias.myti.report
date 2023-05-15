@@ -18,46 +18,46 @@ transform = transforms.Compose([
     transforms.ToTensor()
 ])
 
-def read_dat_rot(imageName, rot_flag, custom_scale):
-    '''
-        custom function to read dat files, provide ratation-based augmentation and custom scaling
-    '''
-    with open(imageName, "rb") as f:
-        bytes = f.read(4)
-        size = struct.unpack('<HH', bytes)
-        wd = size[0]
-        ht = size[1]
-        widthToRead = int(math.floor((wd + 1) / 2) * 2)
-        heightToRead = int(math.floor((ht + 1) / 2) * 2)
-        argm = "=" + str((widthToRead) - 2) + "h"
-        hd = struct.unpack(argm, (f.read((heightToRead-2) * 2)))
-        argm = "=" + str(widthToRead * heightToRead) + "h"
-        img = list(struct.unpack(argm, (f.read(widthToRead * heightToRead * 2))))
+# def read_dat_rot(imageName, rot_flag, custom_scale):
+#     '''
+#         custom function to read dat files, provide ratation-based augmentation and custom scaling
+#     '''
+#     with open(imageName, "rb") as f:
+#         bytes = f.read(4)
+#         size = struct.unpack('<HH', bytes)
+#         wd = size[0]
+#         ht = size[1]
+#         widthToRead = int(math.floor((wd + 1) / 2) * 2)
+#         heightToRead = int(math.floor((ht + 1) / 2) * 2)
+#         argm = "=" + str((widthToRead) - 2) + "h"
+#         hd = struct.unpack(argm, (f.read((heightToRead-2) * 2)))
+#         argm = "=" + str(widthToRead * heightToRead) + "h"
+#         img = list(struct.unpack(argm, (f.read(widthToRead * heightToRead * 2))))
 
-    npA = np.array(img)
-    npAr1 = np.reshape(npA, (widthToRead, heightToRead), order='C')
-    npAr2 = npAr1.copy()
-    if 1 <= rot_flag <= 3:
-        npAr2 = np.rot90(npAr1, rot_flag)
-    elif rot_flag == 4:
-        npAr2 = np.fliplr(npAr1)
-    elif 5 <= rot_flag <= 7:
-        npAr5 = np.fliplr(npAr1)
-        npAr2 = np.rot90(npAr5, rot_flag-4)
-    npAr3 = np.zeros((3, widthToRead, heightToRead))
-    npAr3[0, :, :] = npAr2[:, :]
-    npAr3[1, :, :] = npAr2[:, :]
-    npAr3[2, :, :] = npAr2[:, :]
-    npAr3 = npAr3.astype(np.float32)
-    # # special
-    if custom_scale:
-        # # custom scale only for BG corrected mammo masses
-        # # adjust this if the task changes
-        npAr3 = (npAr3 - 400)/(2000.0 - 400.0)
-        npAr3[npAr3 < 0] = 0
-        npAr3[npAr3 > 1] = 1
-    # # <<
-    return npAr3
+#     npA = np.array(img)
+#     npAr1 = np.reshape(npA, (widthToRead, heightToRead), order='C')
+#     npAr2 = npAr1.copy()
+#     if 1 <= rot_flag <= 3:
+#         npAr2 = np.rot90(npAr1, rot_flag)
+#     elif rot_flag == 4:
+#         npAr2 = np.fliplr(npAr1)
+#     elif 5 <= rot_flag <= 7:
+#         npAr5 = np.fliplr(npAr1)
+#         npAr2 = np.rot90(npAr5, rot_flag-4)
+#     npAr3 = np.zeros((3, widthToRead, heightToRead))
+#     npAr3[0, :, :] = npAr2[:, :]
+#     npAr3[1, :, :] = npAr2[:, :]
+#     npAr3[2, :, :] = npAr2[:, :]
+#     npAr3 = npAr3.astype(np.float32)
+#     # # special
+#     if custom_scale:
+#         # # custom scale only for BG corrected mammo masses
+#         # # adjust this if the task changes
+#         npAr3 = (npAr3 - 400)/(2000.0 - 400.0)
+#         npAr3[npAr3 < 0] = 0
+#         npAr3[npAr3 > 1] = 1
+#     # # <<
+#     return npAr3
 
 
 def read_jpg(imageName):
