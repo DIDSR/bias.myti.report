@@ -43,6 +43,10 @@ import pandas as pd
 from sklearn import metrics
 import json
 # #
+import torch.onnx
+import onnx
+import onnxruntime
+# #
 # # CONSTANTS
 resnet18_ordered_layer_names = ['conv1', 'layer1', 'layer2', 'layer3', 'layer4', 'fc']
 densenet121_ordered_layer_names = ['Conv2d_conv0', 'denseblock1', 'denseblock2', 'denseblock3', 'denseblock4', 'classifier']
@@ -255,6 +259,40 @@ def train(args):
     # # log the final model performance
     with open(args.log_path, 'a') as fp:
         fp.write(args.input_train_file + '\t' + args.validation_file +  '\t' +  args.output_base_dir + '\t' + str(auc_val) + '\n')
+    
+    # # save ONNX
+    # Export the model
+    # x = torch.randn(args.batch_size, 3, 320, 320, requires_grad=True)
+    # torch_out = model(x.cuda())
+    onnx_model_path = os.path.join(args.output_base_dir, 'pytorch_last_epoch_model.onnx')
+    torch.onnx.export(model,                   # model being run
+                    x.cuda(),                         # model input (or a tuple for multiple inputs)
+                    onnx_model_path,           # where to save the model (can be a file or file-like object)
+                    export_params=True,        # store the trained parameter weights inside the model file
+                    opset_version=10,          # the ONNX version to export the model to
+                    do_constant_folding=True,  # whether to execute constant folding for optimization
+                    input_names = ['input'],   # the model's input names
+                    output_names = ['output'], # the model's output names
+                    dynamic_axes={'input' : {0 : 'args.batch_size'},    # variable length axes
+                                    'output' : {0 : 'args.batch_size'}})
+    print('Final epoch model saved to: ' + onnx_model_path)
+    
+    # onnx_model = onnx.load(onnx_model_path)
+    # onnx.checker.check_model(onnx_model)
+
+    # ort_session = onnxruntime.InferenceSession(onnx_model_path)
+
+    # def to_numpy(tensor):
+    #     return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
+
+    # # compute ONNX Runtime output prediction
+    # ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(x)}
+    # ort_outs = ort_session.run(None, ort_inputs)
+
+    # # compare ONNX Runtime and PyTorch results
+    # np.testing.assert_allclose(to_numpy(torch_out), ort_outs[0], rtol=1e-03, atol=1e-05)
+
+    # print("Exported model has been tested with ONNXRuntime, and the result looks good!")
 
 
 def run_train(train_loader, model, criterion, optimizer,  my_lr_scheduler, writer):
