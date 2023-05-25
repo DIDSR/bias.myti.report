@@ -1,4 +1,9 @@
 #!/bin/bash
+
+#shell script to run 2-stage training for bias amplification (initiated from 2023 RSNA submission for the first time)
+#1st stage train the model to classify patient sex/race, 2nd stage model is fine tuned on the 1-stage model to classify COVID
+#layer array contains different No. of layers been frozen during the 2nd stage finetuning
+
 source /scratch/ravi.samala/anaconda3/envs/venv_python369/bin/activate 
 MAIN_DIR=/scratch/yuhang.zhang/OUT/latent_space_run/batch_2
 GPU_ID=0
@@ -9,7 +14,7 @@ TASK_1=F
 TASK_1_R=M
 TASK_2=Yes
 R=reverse
-declare -a LAYER_ARRAY=("last_17" "last_6" "last_4" "last_3" "direct" "reverse_last_17" "reverse_last_6" "reverse_last_4" "reverse_last_3")
+declare -a LAYER_ARRAY=("last_17" "last_6" "last_4" "last_3" "reverse_last_17" "reverse_last_6" "reverse_last_4" "reverse_last_3")
 for RAND in 0 1 2 3 4
 do
 python ../train.py --ckpt_path ${BASE_WEIGHTS} \

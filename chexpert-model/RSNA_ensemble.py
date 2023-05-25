@@ -3,6 +3,9 @@ import os
 import pandas as pd
 
 def ensemble_results():
+    """
+    function to load scores from individual models, concat them and compute mean score, and finally output the mean score
+    """
     main_dir = args.main_dir
     model_number = args.model_number
 

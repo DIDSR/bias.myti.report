@@ -1,4 +1,9 @@
 #!/bin/bash
+#shell script to summarize computed bias measurements from each random seeds and combine them together into 1 csv file
+#input directory and csv files that contain bias measurements
+#output file have the name "overall_summary" + original file name
+
+#different frozen layers during bias amplification (see 2023 RSNA submission)
 declare -a LAYER_ARRAY=("last_17" "last_6" "last_4" "last_3" "direct" "reverse_last_17" "reverse_last_6" "reverse_last_4" "reverse_last_3")
 BASE_WEIGHTS=CheXpert_Resnet
 EXPERIMENT_NAME=${BASE_WEIGHTS}_subgroup_size_decay_30_lr_5e-5

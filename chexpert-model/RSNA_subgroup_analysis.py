@@ -26,6 +26,9 @@ custom_subgroups ={
 }
 
 def get_confusion_matrix(predictions, groundtruth, threshold):
+    """
+    function to compute confusion matrix
+    """
     tp = np.sum(np.logical_and(predictions >= threshold, groundtruth == 1))
     tn = np.sum(np.logical_and(predictions < threshold, groundtruth == 0))
     fp = np.sum(np.logical_and(predictions >= threshold, groundtruth == 0))
@@ -33,18 +36,23 @@ def get_confusion_matrix(predictions, groundtruth, threshold):
     return tp, tn, fp, fn
 
 def subgroup_calculation():
+    """
+    function to read scores and patient attribute info, and calculate subgroup bias measurements
+    """
     sub_dir = args.sub_dir
     threshold = args.threshold
     subgroup_for_eval = []
     subgroup_for_eval.append(args.test_subgroup)
     prediction_file = args.prediction_file
     if args.post_processed == False:
+      # read scores
       predictions = pd.read_csv(os.path.join(args.pred_dir, prediction_file))
       info_pred = predictions.copy()
     else:
       # read validation_2 patient list, and drop duplicate patient ids
       validation_2_list = pd.read_csv(args.info_file)
       validation_2_list.drop_duplicates(subset="patient_id", keep='first', inplace=True)
+      # read scores
       predictions = pd.read_csv(os.path.join(args.pred_dir, prediction_file))
       
       # mapping patient labels to output score
@@ -102,7 +110,8 @@ def subgroup_calculation():
             p_sub = torch.tensor(task_pred.reset_index(drop=True))
             l_sub = torch.tensor(task_gt.reset_index(drop=True))
             dp[f"{grp}"]['NLL'] = nll_criterion(p_sub, l_sub.double()).item()      
-            
+    
+    # output the computed measurements      
     metrics_summary = pd.DataFrame.from_dict({i: dp[i] 
                            for i in dp.keys()},
                        orient='index')
