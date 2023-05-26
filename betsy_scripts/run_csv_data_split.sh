@@ -4,17 +4,15 @@
 #can use this script to split dataset in bias amplification indirect approachs (#1b)
 
 #NOTES: currently automatically split based on sex, race and COVID
-IN_DIR="/scratch/yuhang.zhang/OUT/latent_space_run_2a/"
-SAVE_DIR="/scratch/yuhang.zhang/OUT/latent_space_run_2a/"
 INPUT_FILE="train.csv"
-OUTOUT_1="train_1_test.csv"
-OUTOUT_2="train_2_test.csv"
+OUTOUT_1="train_1_baseline.csv"
+OUTOUT_2="train_2_baseline.csv"
 for BATCH in 0 1 2 3 4
 do
 for RAND in 0 1 2 3 4
 do
-IN_DIR=/scratch/yuhang.zhang/OUT/latent_space_run_2a/batch_${batch}/RAND_${rand}
-SAVE_DIR=/scratch/yuhang.zhang/OUT/latent_space_run_2a/batch_${batch}/RAND_${rand}
+IN_DIR=/scratch/yuhang.zhang/OUT/latent_space_run_2b/batch_${BATCH}/RAND_${RAND}
+SAVE_DIR=/scratch/yuhang.zhang/OUT/latent_space_run_2b/batch_${BATCH}/RAND_${RAND}
 python ../src/csv_data_split.py --in_dir ${IN_DIR} \
                              --save_dir ${SAVE_DIR} \
                              --input_file ${INPUT_FILE} \

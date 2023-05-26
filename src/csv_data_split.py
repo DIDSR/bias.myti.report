@@ -8,7 +8,7 @@ def train_split():
     split the training/validation dataset evenly for each subgroup (sex, race and COVID)
     """
     #read input csv files
-    train = pd.read_csv(os.path.join(args.main_dir, args.input_file))
+    train = pd.read_csv(os.path.join(args.in_dir, args.input_file))
     train_1_out = pd.DataFrame()
     train_2_out = pd.DataFrame()
     #concat evenly splitted data in each subgroup
@@ -22,9 +22,9 @@ def train_split():
           train_2_out = train_2_out.append(tr_temp_2)       
     #output 2 csv files     
     train_1_out = shuffle(train_1_out)
-    train_1_out.to_csv(os.path.join(args.dest_dir, args.output_1), index=False)
+    train_1_out.to_csv(os.path.join(args.save_dir, args.output_1), index=False)
     train_2_out = shuffle(train_2_out)
-    train_2_out.to_csv(os.path.join(args.dest_dir, args.output_2), index=False)
+    train_2_out.to_csv(os.path.join(args.save_dir, args.output_2), index=False)
             
 
 if __name__ == "__main__":
