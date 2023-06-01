@@ -5,18 +5,20 @@
 #current support nuanced AUCs (subgroup-background AUROC, AEGs),
 #demographic parity, TPR/TNR, subgroup AUROC, subgroup NLL, PPV
 
+#use this script for bias amplification with both indirect/direct approaches (#1a, 1b, 1c, 2a, 2b)
+
 #different frozen layers during bias amplification (see 2023 RSNA submission)
-declare -a LAYER_ARRAY=("last_17" "last_6" "last_4" "last_3" "direct" "reverse_last_17" "reverse_last_6" "reverse_last_4" "reverse_last_3")
+declare -a LAYER_ARRAY=("last_17" "last_6" "last_4" "last_3" "direct")
 BASE_WEIGHTS=CheXpert_Resnet
 EXPERIMENT_NAME=${BASE_WEIGHTS}_subgroup_size_decay_30_lr_5e-5
 TEST_SUBGROUP="sex"  #interested subgroup to measure bias, can be "sex", "race", "modality"
 PRED_FILE=ensemble_by_patient_predictions.csv
 POST_PRCS=False #whether the input file is after bias mitigation
-for BATCH in 5
+for BATCH in 0
 do
 for RAND in 0 1 2 3 4
 do
-MAIN_DIR=/scratch/yuhang.zhang/OUT/latent_space_run/batch_${BATCH}
+MAIN_DIR=/scratch/yuhang.zhang/OUT/temp/batch_${BATCH}
 INFO_FILE=${MAIN_DIR}/validation_1_image.csv
 for RD in 0
 do

@@ -15,7 +15,7 @@ equal_stratification_groups = ['M-White-Yes-CR', 'F-White-Yes-CR','M-Black-Yes-C
                                'M-White-No-CR', 'F-White-No-CR','M-Black-No-CR', 'F-Black-No-CR']
 custom_composition ={ 
     'sex':{"M":1, "F":1},
-    'race':{"White":1, "Black":0},
+    'race':{"White":1, "Black":1},
     'COVID_positive':{"Yes":1, "No":1},
     'modality':{"CR":1, "DX":0}
 }

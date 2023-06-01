@@ -19,8 +19,8 @@ import numpy as np
 import json
 
 custom_subgroups ={ 
-    'sex':{'M','F'},
-    'race':{'White', 'Black'},
+    'sex':{'F','M'},
+    'race':{'Black', 'White'},
     'COVID_positive':{'Yes', 'No'},
     'modality':{'CR', 'DX'}
 }
@@ -66,7 +66,8 @@ def subgroup_calculation():
     # subgroup calculations
 
     # nuanced auroc and AEG
-    subgroup_df = pd.DataFrame().assign(sub_1=info_pred['F'], sub_2=info_pred['M'])
+    grps = list(custom_subgroups[args.test_subgroup])
+    subgroup_df = pd.DataFrame().assign(sub_1=info_pred[grps[0]], sub_2=info_pred[grps[1]])
     true_label = pd.DataFrame().assign(target=info_pred['Yes'])
     pred_prob = pd.DataFrame().assign(target=info_pred['Yes score'])
     nuance = NuancedROC()
