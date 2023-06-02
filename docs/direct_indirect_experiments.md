@@ -52,4 +52,30 @@ source /scratch/ravi.samala/anaconda3/envs/venv_python369/bin/activate
 
   - Then the user could summarize all the results into one single csv file by [RSNA_run_summarize.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/chexpert-model/betsy_scripts/RSNA_run_summarize.sh)  
   The main directory is specified on line 11.
+### 1.b.
+- Running 1.b. is pretty much the same with running 1.a., except for several changes listed below.
+  - When running 2-step model training using [RSNA_run_2_step_train.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/chexpert-model/betsy_scripts/RSNA_run_2_step_train.sh), the user has to change the tasks to classify "race" instead of "sex" for the stage-1 model on line 13 and 14.
+  ```
+  TASK_1=Black
+  TASK_1_R=White
+  ```
+  - When calculating bias measurements using [RSNA_run_subgroup_analysis.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/chexpert-model/betsy_scripts/RSNA_run_subgroup_analysis.sh), the user should modify "TEST_SUBGROUP" to "race" on line 14.
+  ```
+  TEST_SUBGROUP="race"
+  ```
+### 1.c.
+- Running 1.c. is pretty much similar to 1.a., except for several changes listed below.
+  - For data preparation, after running [run_csv_limit_images.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/bash_scripts/run_csv_limit_images.sh), the user should run [run_csv_data_split](https://github.com/ravisamala/continual_learning_evaluation/blob/main/betsy_scripts/run_csv_data_split.sh) to split the training/validation data. On line 7, 8 and 9, the user can specify the input and output filenames for the csv data file.
+``` 
+INPUT_FILE="train.csv"
+OUTOUT_1="train_1_baseline.csv"
+OUTOUT_2="train_2_baseline.csv"
+```
+Line 14 and 15 are the places where user can specify the input and output directory for these data files.
+  - For training the 2-stage models using [RSNA_run_2_step_train.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/chexpert-model/betsy_scripts/RSNA_run_2_step_train.sh), user should assign seperate training/validation dataset for stage 1 and 2.  
+  Stage 1: line 25, 53 and 26, 54 change to "train_1_baseline.csv" and "validation_1_baseline.csv" in our current example.  
+  Stage 2: line 86, 115 and 87, 116 change to "train_2_baseline.csv" and "validation_2_baseline.csv".
+  - For baseline model using [run_finetune.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/chexpert-model/betsy_scripts/run_finetune.sh), the same training/validation dataset from stage 2 should be assigned on line 20 and 21 respectively.
 ## 2. Direct experiments
+### 2.a. 
+- 
