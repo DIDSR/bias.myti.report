@@ -93,8 +93,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
     # df = get_days_to_test()
     # print(df.head())
-    # df.to_csv("/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/study_to_test_date/20230306_open_A1.csv")
-    df = pd.read_csv("/scratch/yuhang.zhang/OUT/data_summarization/20230306_open_A1.csv")
+    if 'gpfs_projects' in args.input_csv:
+        df = pd.read_csv("/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/study_to_test_date/20230306_open_A1.csv")
+    elif 'scratch' in args.input_csv:    
+        df = pd.read_csv("/scratch/yuhang.zhang/OUT/data_summarization/20230306_open_A1.csv")
     # df.to_csv("/gpfs_projects/alexis.burgon/OUT/2022_CXR/data_summarization/20221010_betsy/20230301_open_A1_test_info.csv")
     if args.portable:
         out_df, summ_df = img_days_to_test(args.input_csv, df, allow_null=args.allow_null, portable_info=args.portable)

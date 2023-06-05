@@ -105,10 +105,10 @@ def bootstrapping(args):
     split_list = ['train', 'validation', 'validation_2', 'independent_test']
     splits = pd.DataFrame(columns=['size', 'comp', 'limit_img', 'rand_seed', 'limit_pid', 'get_remaining'],
     index=['train','validation','validation_2','independent_test'])
-    splits.at['validation',:] = [args.validation_size, validation_composition, False, None, False, False]
-    splits.at['validation_2',:] = [args.validation_size_2, validation_2_composition,False,args.val_2_rand, False, False]
-    splits.at['independent_test',:] = [args.test_size, test_composition,False, args.test_rand, False, args.remaining_to_test]
-    splits.at['train',:] = [1-splits['size'].sum(), train_composition, False, None, False, False]
+    splits.loc['validation',:] = [args.validation_size, validation_composition, False, None, False, False]
+    splits.loc['validation_2',:] = [args.validation_size_2, validation_2_composition,False,args.val_2_rand, False, False]
+    splits.loc['independent_test',:] = [args.test_size, test_composition,False, args.test_rand, False, args.remaining_to_test]
+    splits.loc['train',:] = [1-splits['size'].sum(), train_composition, False, None, False, False]
     for s in splits.index:
         if s in args.img_splits:
             splits.at[s,"limit_img"] = True
