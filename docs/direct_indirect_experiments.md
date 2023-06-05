@@ -65,7 +65,7 @@ source /scratch/ravi.samala/anaconda3/envs/venv_python369/bin/activate
   ```
 ### 1.c.
 - Running 1.c. is pretty much similar to 1.a., except for several changes listed below.
-  - For data preparation, after running [run_csv_limit_images.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/bash_scripts/run_csv_limit_images.sh), the user should run [run_csv_data_split](https://github.com/ravisamala/continual_learning_evaluation/blob/main/betsy_scripts/run_csv_data_split.sh) to split the training/validation data. On line 7, 8 and 9, the user can specify the input and output filenames for the csv data file.
+  - For data preparation, after running [run_csv_limit_images.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/bash_scripts/run_csv_limit_images.sh), the user should run [run_csv_data_split.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/betsy_scripts/run_csv_data_split.sh) to split the training/validation data. On line 7, 8 and 9, the user can specify the input and output filenames for the csv data file.
 ``` 
 INPUT_FILE="train.csv"
 OUTOUT_1="train_1_baseline.csv"
@@ -78,4 +78,15 @@ Line 14 and 15 are the places where user can specify the input and output direct
   - For baseline model using [run_finetune.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/chexpert-model/betsy_scripts/run_finetune.sh), the same training/validation dataset from stage 2 should be assigned on line 20 and 21 respectively.
 ## 2. Direct experiments
 ### 2.a. 
-- 
+- Data preparation
+  - First 2 steps are the same as 1.a, the user can run [run_generate_partitions_v2.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/bash_scripts/run_generate_partitions_v2.sh) and [run_csv_limit_images.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/bash_scripts/run_csv_limit_images.sh) to generate training, validation, validation_2 and independent_test datasets.
+  - After that, the user should run [run_csv_data_split.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/betsy_scripts/run_csv_data_split.sh) to evenly split the training/validation data for baseline models.  
+  The next step is to run [run_csv_data_split_v2.sh]() to construct training/validation datasets for experimental (biased) models.
+- Run training
+  - Baseline models should use [run_finetune.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/chexpert-model/betsy_scripts/run_finetune.sh) with training/validation datasets generated for baseline models (assigning on line 20 and 21).
+  - Similarly, experimental (biased) models should also use [run_finetune.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/chexpert-model/betsy_scripts/run_finetune.sh) with training/validation datasets generated for experimental (biased) models (assigning on line 20 and 21).
+### 2.b. 
+- Running 2.b. is pretty much the same as 2.a. The user only need to change line 7 in [run_csv_data_split_v2.sh]() to "race".
+``` 
+SUBGROUP="race"
+``` 
