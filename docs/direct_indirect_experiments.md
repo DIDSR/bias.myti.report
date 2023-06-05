@@ -1,16 +1,18 @@
 # Instructions on how to run the direct and indirect experiments on openHPC and Betsy
 ### Virtual environments
 - OpenHPC
+```
+source /gpfs_projects/ravi.samala/venvs/venv_Py310/bin/activate
+```
 - Betsy 
 ```
-source /scratch/ravi.samala/anaconda3/envs/venv_python369/bin/activate
+source /scratch/ravi.samala/anaconda3/envs/venv_python38_2022116/bin/activate
 ```
 
 ## 1. Indirect experiments
 ### 1.a. 
-- Data preparation
-  - Generate data partitions
-  Firstly generate 1 batch with 5 random seeds using [run_generate_partitions_v2.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/bash_scripts/run_generate_partitions_v2.sh).
+- Data preparation  
+    - Firstly generate 1 batch with 5 random seeds. For both **OpenHPC** and **Betsy** use [run_generate_partitions_v2.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/bash_scripts/run_generate_partitions_v2.sh).
   ```
   sh run_generate_partitions_v2.sh
   ```
@@ -19,7 +21,7 @@ source /scratch/ravi.samala/anaconda3/envs/venv_python369/bin/activate
   PARTITION_NAME=batch_0
   OUT_dir="/scratch/yuhang.zhang/OUT/temp/"
   ```
-    - Then run the script to limit 1 image per patient for generated data partitions using [run_csv_limit_images.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/bash_scripts/run_csv_limit_images.sh), including training, validation, validation_2 and independent_test datasets.
+    - Then for both **OpenHPC** and **Betsy**, run the script to limit 1 image per patient for generated data partitions using [run_csv_limit_images.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/bash_scripts/run_csv_limit_images.sh), including training, validation, validation_2 and independent_test datasets.
   ```
   sh run_csv_limit_images.sh
   ```
