@@ -30,19 +30,20 @@ source /scratch/ravi.samala/anaconda3/envs/venv_python38_2022116/bin/activate
   MAIN_PATH="/scratch/yuhang.zhang/OUT/temp/batch_0/"
   ```
  - Run training
-   - For baseline model training, using the script [run_finetune.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/chexpert-model/betsy_scripts/run_finetune.sh)
+   - For baseline model training, using the script [run_finetune.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/chexpert-model/betsy_scripts/run_finetune.sh).  
    On line 13 the user should specify the main directory that contains csv data files.
     ```
     MAIN_DIR=/scratch/yuhang.zhang/OUT/temp/batch_${BATCH}
     ```   
-   - For 2-stage model training, using the script [RSNA_run_2_step_train.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/chexpert-model/betsy_scripts/RSNA_run_2_step_train.sh)
+   - For 2-stage model training, using the script [RSNA_run_2_step_train.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/chexpert-model/betsy_scripts/RSNA_run_2_step_train.sh).  
    Again, the main directory should be assigned on line 20.
     ```
     MAIN_DIR=/scratch/yuhang.zhang/OUT/temp/batch_${BATCH}
-    ```   
+    ```
+   Noted that for running both scripts on **OpenHPC**, the user should comment out the virtual environment activation commend at the top, which is used for sbatch mode on **Betsy**.
  - Run deploy  
-    - After training is done, the user could deploy the model on validation_2 dataset by running [run_validation_2.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/chexpert-model/betsy_scripts/run_validation_2.sh)  
-    The main directory should be specified on line 10.
+   After training is done, the user could deploy the model on validation_2 dataset by running [run_validation_2.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/chexpert-model/betsy_scripts/run_validation_2.sh). The main directory should be specified on line 10.  
+    Again noted that for running on **OpenHPC**, the user should comment out the virtual environment activation commend at the top, which is used for sbatch mode on **Betsy**.
   
 - Plot/summarize results
   - After deployment is done, the 1st step is to ensemble results from 10 random states using [RSNA_run_ensemble.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/chexpert-model/betsy_scripts/RSNA_run_ensemble.sh)  
@@ -83,12 +84,12 @@ Line 14 and 15 are the places where user can specify the input and output direct
 - Data preparation
   - First 2 steps are the same as 1.a, the user can run [run_generate_partitions_v2.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/bash_scripts/run_generate_partitions_v2.sh) and [run_csv_limit_images.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/bash_scripts/run_csv_limit_images.sh) to generate training, validation, validation_2 and independent_test datasets.
   - After that, the user should run [run_csv_data_split.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/betsy_scripts/run_csv_data_split.sh) to evenly split the training/validation data for baseline models.  
-  The next step is to run [run_csv_data_split_v2.sh]() to construct training/validation datasets for experimental (biased) models.
+  The next step is to run [run_csv_data_split_v2.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/betsy_scripts/run_csv_data_split_v2.sh) to construct training/validation datasets for experimental (biased) models.
 - Run training
   - Baseline models should use [run_finetune.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/chexpert-model/betsy_scripts/run_finetune.sh) with training/validation datasets generated for baseline models (assigning on line 20 and 21).
   - Similarly, experimental (biased) models should also use [run_finetune.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/chexpert-model/betsy_scripts/run_finetune.sh) with training/validation datasets generated for experimental (biased) models (assigning on line 20 and 21).
 ### 2.b. 
-- Running 2.b. is pretty much the same as 2.a. The user only need to change line 7 in [run_csv_data_split_v2.sh]() to "race".
+- Running 2.b. is pretty much the same as 2.a. The user only need to change line 7 in [run_csv_data_split_v2.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/betsy_scripts/run_csv_data_split_v2.sh) to "race".
 ``` 
 SUBGROUP="race"
 ``` 
