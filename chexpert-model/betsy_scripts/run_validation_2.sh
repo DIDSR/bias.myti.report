@@ -1,6 +1,5 @@
 #!/bin/bash
 source /scratch/ravi.samala/anaconda3/envs/venv_python38_2022116/bin/activate
-CODE_DIR=/home/yuhang.zhang/code/mycode/continual_learning_evaluation/chexpert-model
 BASE_WEIGHTS=CheXpert_Resnet
 EXPERIMENT_NAME=${BASE_WEIGHTS}_subgroup_size_decay_50_lr_5e-5
 #LAYER=last_3
@@ -15,7 +14,7 @@ do
 echo RAND $RAND
 for RD in 0 1 2 3 4 5 6 7 8 9
 do
-python ${CODE_DIR}/subgroup_test.py --dataset custom \
+python ../subgroup_test.py          --dataset custom \
                                     --custom_tasks custom-tasks \
                                     --together True \
                                     --ckpt_path ${MAIN_DIR}/RAND_${RAND}/target_model_${LAYER}_RD_${RD}/${EXPERIMENT_NAME}/best.pth.tar \

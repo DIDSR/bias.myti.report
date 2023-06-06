@@ -88,7 +88,7 @@ def train(args):
     if step_var == 0 or step_var == None:
         # adjusted to allow the use of different pretraining
         if model_args.ckpt_path:
-            model_args.pretrained = False # TODO: look into what this does
+            model_args.weights = 'None' # TODO: look into what this does
             print(f"pretrained checkpoint specified: {model_args.ckpt_path}")
             if model_args.ckpt_path in ckpt_files:
                 model_args.ckpt_path = ckpt_files[model_args.ckpt_path]
@@ -104,8 +104,13 @@ def train(args):
                                            tasks=tasks,
                                            model_args=model_args)
             else:
-                print("Specified ckpt_path not implemented yet")
-                return
+                optim_args.start_epoch = 1
+                print(f"Loading model from {model_args.ckpt_path}")
+                model, ckpt_info = ModelSaver.load_model(ckpt_path=model_args.ckpt_path,
+                                                    gpu_ids=args.gpu_ids,
+                                                    model_args=model_args,
+                                                    is_training=True)
+                #print("Specified ckpt_path not implemented yet")
             # print(ckpt_info)
             optim_args.start_epoch = 1
             
