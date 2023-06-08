@@ -131,9 +131,8 @@ def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels, is_train
     ckpt_dict = torch.load(ckpt_path, map_location=device)
 
     model = models.__dict__[base_dcnn](pretrained=True)
-
     # # not sure why this check is required
-    state_dict = ckpt_dict['state_dict']
+    state_dict = ckpt_dict['model_state']
     for k in list(state_dict.keys()):
         # retain only encoder_q up to before the embedding layer
         if k.startswith('module.encoder_q') and not k.startswith('module.encoder_q.fc'):
@@ -184,6 +183,8 @@ def train(args):
         model = add_classification_layer_v1(model, num_channels)
     elif args.dcnn == 'CheXpert_Resnet':
         model = load_custom_checkpoint(args.custom_checkpoint_file, 'resnet18', args.gpu_id, num_channels)
+        custom_layer_name = resnet18_ordered_layer_names.copy()
+        print(custom_layer_name)
         print('Using custom pretrained checkpoint file')
     else:
         print('ERROR. UNKNOWN model.')
@@ -194,6 +195,8 @@ def train(args):
         if args.dcnn == 'googlenet':
             print('ERROR. Custom transfer learning not implemented for this model.')
         elif args.dcnn == 'resnet18':
+            model = apply_custom_transfer_learning__resnet18(model, custom_layer_name)
+        elif args.dcnn == 'CheXpert_Resnet':        
             model = apply_custom_transfer_learning__resnet18(model, custom_layer_name)
         elif args.dcnn == 'wide_resnet50_2':
             print('ERROR. Custom transfer learning not implemented for this model.')
