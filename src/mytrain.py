@@ -34,6 +34,7 @@ import torchvision.models as models
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchsummaryX import summary
+from distutils.util import strtobool
 # #
 from dat_data_load import Dataset
 import os
@@ -132,7 +133,10 @@ def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels, is_train
 
     model = models.__dict__[base_dcnn](pretrained=True)
     # # not sure why this check is required
-    state_dict = ckpt_dict['model_state']
+    if not args.moco:
+        state_dict = ckpt_dict['model_state']
+    else:
+        state_dict = ckpt_dict['state_dict']
     for k in list(state_dict.keys()):
         # retain only encoder_q up to before the embedding layer
         if k.startswith('module.encoder_q') and not k.startswith('module.encoder_q.fc'):
@@ -381,6 +385,7 @@ if __name__ == '__main__':
     # parser.add_argument('-f', '--freeze_up_to', help="Must be a freezable layer in the structure e.g. FirstLayer", required=True)
     # Must be one of: 'FirstLayer', 'Mixed_3b', 'Mixed_3c', 'Mixed_4b', 'Mixed_4c', 'Mixed_4d', 'Mixed_4e', 'Mixed_4f', 'Mixed_5b', 'Mixed_5c'
     parser.add_argument('-f', '--fine_tuning', default='full', help="options: 'full' or 'partial'")
+    parser.add_argument('-m', '--moco', default=True, type=lambda x: bool(strtobool(x)))
     parser.add_argument('-u', '--upto_freeze', type=int, default=0, 
         help="options: provide the layer number upto which to freeze")
     parser.add_argument('-l', '--log_path', help='log saving path', required=True)
