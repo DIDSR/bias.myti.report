@@ -45,7 +45,7 @@ def generate_partitions(args):
     df = df.drop([c for c in df.columns if c not in columns], axis=1) # remove unecessary columns
     step_dfs = determine_distributions(df, args, mode='step', existing_dfs=partition_dfs) 
     for s in range(args.steps):
-        partition_dfs[f"Step {s}"] = determine_distributions(step_dfs[f"Step {s}"], args, mode='partition', existing_dfs = partition_dfs[f"Step {s}"])
+        partition_dfs[f"Step {s}"] = determine_distributions(step_dfs[f"Step {s}"], args, mode='partition', existing_dfs = partition_dfs[f"Step {s}"], step=s)
     if len(args.accumulate) > 0:
         for i, a in enumerate(args.accumulate):
             if a == "True":

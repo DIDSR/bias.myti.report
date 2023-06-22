@@ -2,12 +2,12 @@
 # to run: ./basic_partitioning.py
 EXE="../generate_partitions.py"
 repo="open_A1"
-save_dir="/gpfs_projects/alexis.burgon/OUT/2022_CXR/temp/generate_partitions_test/"
-experiment_name="test_batching"
+save_dir=""
+experiment_name=""
 
-for batch in 1 2
+for batch in 0
 do
-    for RAND in 0 1 2 3
+    for RAND in 0
     do
         python $EXE -r $RAND \
             --repo $repo \

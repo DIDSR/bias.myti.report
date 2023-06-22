@@ -13,8 +13,7 @@ class PartitionArgumentParser():
         self.parser.add_argument("--betsy", default=False, action='store_true',                    # TODO: test betsy
           help="Pass to use betsy filepaths for summary and conversion files.")
         self.parser.add_argument("--id-column", "--id-col", dest='id_col', default='patient_id')   # TODO: help
-        self.parser.add_argument("--save-location", "--save-loc", dest='save_loc', 
-          default="/gpfs_projects/alexis.burgon/OUT/2022_CXR/temp/generate_partitions_test/")      # TODO remove default, make required
+        self.parser.add_argument("--save-location", "--save-loc", dest='save_loc', required=True)  
         self.parser.add_argument("--experiment-name", dest='experiment_name')                      # TODO: help
         self.parser.add_argument("--overwrite",default=False, action='store_true')                 # TODO: help
         self.parser.add_argument("--tasks", nargs="+", default=[])                                 # TODO: help
@@ -40,6 +39,8 @@ class PartitionArgumentParser():
         self.parser.add_argument("--step-sizes",dest='step_sizes', default=[1], nargs='+')
         self.parser.add_argument("--step-distributions", dest='step_distributions', nargs='+',
           default=['random'])
+        self.parser.add_argument("--constant-partitions", dest="constant_partitions",nargs="+", default=[], 
+          help="Partitions for which to only generate a single step/keep constant across all steps")
         
         # Batch Args ==============================================================================# TODO: help
         self.parser.add_argument("--batch", nargs='+', default=[])

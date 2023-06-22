@@ -3,7 +3,7 @@ from itertools import product
 import pandas as pd
 import numpy as np
 
-def determine_distributions(df, args, mode, existing_dfs): # TODO: load existing partitions using existing_dfs
+def determine_distributions(df, args, mode, existing_dfs, step=None): # TODO: load existing partitions using existing_dfs
     """ Determine the number of patients/subgroup in each step """
     # print(f"Partitioning {mode}")
     # Get by-patient df
@@ -31,6 +31,16 @@ def determine_distributions(df, args, mode, existing_dfs): # TODO: load existing
         subgroup_df = pd.DataFrame(columns=[p for p in args.partitions], index=["-".join(x) for x in possible_subgroups]).rename_axis("Subgroup").rename_axis('Partition',axis=1)
         dists = args.partition_distributions
         sizes = args.partition_sizes
+        if len(args.constant_partitions) > 0 and step != 0:
+            for i, p in enumerate(args.partitions):
+                if p in args.constant_partitions:
+                    sizes[i] = 0
+        print("Mode: ", mode)
+        print("step: ", step)
+        print(sizes)
+        sizes = [s/sum(sizes) for s in sizes]
+        print(sizes)
+        print()
         RANDs = [args.partition_RANDs[p] for p in args.partitions]
     cols = subgroup_df.columns
     subgroup_counts = df.groupby('subgroup')[args.id_col].nunique()
