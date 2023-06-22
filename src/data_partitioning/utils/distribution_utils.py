@@ -35,12 +35,6 @@ def determine_distributions(df, args, mode, existing_dfs, step=None): # TODO: lo
             for i, p in enumerate(args.partitions):
                 if p in args.constant_partitions:
                     sizes[i] = 0
-        print("Mode: ", mode)
-        print("step: ", step)
-        print(sizes)
-        sizes = [s/sum(sizes) for s in sizes]
-        print(sizes)
-        print()
         RANDs = [args.partition_RANDs[p] for p in args.partitions]
     cols = subgroup_df.columns
     subgroup_counts = df.groupby('subgroup')[args.id_col].nunique()
