@@ -98,6 +98,8 @@ def convert_summary_format_CXR(summary_filepath:str, conversion_table_filepath:s
 
 def get_portable_nonportable(df, portable_fp):
     """ Gets the portable/nonportable attribute for CXR """
+    if portable_fp is None:
+        return df
     pdf = pd.read_csv(portable_fp, sep="\t" if portable_fp.endswith(".tsv") else ',')
     pdf = pdf[['study_uid', 'study_description']].copy()
     # get STUDY id for each image
@@ -105,7 +107,6 @@ def get_portable_nonportable(df, portable_fp):
     cp = os.path.commonpath(temp_df['images'].values.tolist())
     temp_df['study_uid'] = temp_df['images'].replace({cp:""}, regex=True)
     temp_df['study_uid'] = temp_df.apply(lambda row: row['study_uid'].replace(f"/{row['patient_id']}/","").split("/")[0],axis=1)
-    
     temp_df['study_description'] = temp_df['study_uid'].map(pdf.set_index("study_uid")['study_description'])
     temp_df['study_description'] = temp_df['study_description'].fillna("Not Reported")
     temp_df['portable'] = temp_df['study_description'].apply(check_portable)

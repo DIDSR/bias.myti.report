@@ -54,13 +54,13 @@ portable_files_openHPC = {
 
 def get_test_date_file(repository, betsy=False):
     if betsy:
-        raise test_date_files_betsy[repository] if repository in test_date_files_betsy else None
+        return test_date_files_betsy[repository] if repository in test_date_files_betsy else None
     else:
         return test_date_files_openHPC[repository] if repository in test_date_files_openHPC else None
 
 def get_portable_file(repository, betsy=False):
     if betsy:
-        raise NotImplementedError()
+        return None
     else:
         return portable_files_openHPC[repository] if repository in portable_files_openHPC else None
 
