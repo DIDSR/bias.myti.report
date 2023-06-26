@@ -44,7 +44,7 @@ test_date_files_openHPC = {
 }
 
 test_date_files_betsy = {
-    'open_A1':"/scratch/yuhang.zhang/OUT.data_summarization/20230306_open_A1.csv"
+    'open_A1':"/scratch/yuhang.zhang/OUT/data_summarization/20230306_open_A1.csv"
 }
 
 portable_files_openHPC = {
