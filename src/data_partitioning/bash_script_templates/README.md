@@ -23,7 +23,10 @@ Generates train (50%), validation-1 (10%), validation-2 (20%) and test (20%) par
 ### [Basic Batching](basic_batching.sh)
 Similar to [basic partitioning](#basic-partitioningbasicpartitioningsh), however the validation-2 and test partitions are batched.
 ### [Equal Stratification by Patient Sex, Race, and COVID status](equal_strat_sex_race_COVID.sh)
-Similar to [basic partitioning](#basic-partitioningbasicpartitioningsh), except that the partitions are equally stratified into the subgroups: Female-Black-Negative, Female-Black-Positive, Female-White-Negative, Female-White-Positive, Male-Black-Negative, Male-Black-Positive, Male-White-Negative, Male-White-Positive,.
+Similar to [basic partitioning](#basic-partitioningbasicpartitioningsh), except that the partitions are equally stratified into the subgroups: Female-Black-Negative, Female-Black-Positive, Female-White-Negative, Female-White-Positive, Male-Black-Negative, Male-Black-Positive, Male-White-Negative, Male-White-Positive.
+
+### [Segmentation Evolving](segmentation_evolving.sh)
+Basic partitioning for evolving AI segmentation setups, template has two equal-sized steps, and a 70/10/20 train/validation/test split; batches test data.
 
 
 

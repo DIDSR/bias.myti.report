@@ -6,7 +6,9 @@ summary_files_openHPC = {
     "MIDRC_RICORD_1C":"/gpfs_projects/ravi.samala/OUT/2022_CXR/202208/20220801_summary_table__MIDRC_RICORD_1C.json",
     "COVID_19_NY_SBU":"/gpfs_projects/ravi.samala/OUT/2022_CXR/202208/20220801_summary_table__COVID_19_NY_SBU.json",
     "COVID_19_AR":"/gpfs_projects/ravi.samala/OUT/2022_CXR/202208/20220801_summary_table__COVID_19_AR.json",
-    'BraTS':"/gpfs_projects/alexis.burgon/DATA/BraTS/20230315/BraTS21-17_Mapping.csv"
+    # 'BraTS':"/gpfs_projects/alexis.burgon/DATA/BraTS/20230315/BraTS21-17_Mapping.csv", # -> old file (2021)
+    # 'BraTS': "/home/daniel.najarian/BraTS2023_2017_GLI_Mapping.csv", # -> new mapping file, WIP uses training folder (below)
+    'BraTS':"/gpfs_projects/ravi.samala/DATA/BraTS/ASNR-MICCAI-BraTS2023-GLI-Challenge-TrainingData/"
 }
 
 summary_files_betsy = {
