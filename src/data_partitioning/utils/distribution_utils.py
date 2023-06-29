@@ -21,7 +21,10 @@ def determine_distributions(df, args, mode, existing_dfs, step=None): # TODO: lo
         subgroup_df = pd.DataFrame(columns=[f"Step {s}" for s in range(args.steps)], index=["-".join(x) for x in possible_subgroups]).rename_axis("Subgroup").rename_axis('Step',axis=1)
         dists = args.step_distributions
         sizes = args.step_sizes
-        RANDs = [args.RAND for s in range(args.steps)] # TODO
+        if len(args.batch) > 0:
+            RANDs = [args.batch_RAND+args.RAND for s in range(args.steps)]
+        else:
+            RANDs = [args.RAND for s in range(args.steps)]
         step_dfs = {} # switch partition dfs to step dfs
         for s in existing_dfs:
             if len(existing_dfs[s]) > 0:
@@ -40,15 +43,21 @@ def determine_distributions(df, args, mode, existing_dfs, step=None): # TODO: lo
     cols = subgroup_df.columns
     subgroup_counts = df.groupby('subgroup')[args.id_col].nunique()
     subgroup_counts -= args.subtract_from_smallest
+    overall_total = df[args.id_col].nunique()
     if len(existing_dfs) > 0: # remove samples already used
         used_samples = pd.concat(existing_dfs.values(), axis=0)
         df = df[~df[args.id_col].isin(used_samples[args.id_col])]
     indiv_dfs = {}
     if 'random' in dists:
         if len(set(dists)) == 1: # all partitions are random
-            total = df[args.id_col].nunique()
             for i, c in enumerate(cols):
-                temp_df= df.sample(n=int(sizes[i]*total), random_state=RANDs[i]) 
+                total_size = int(sizes[i]*overall_total)
+                if c in existing_dfs:
+                    total_size -= existing_dfs[c][args.id_col].nunique()
+                temp_df = df.sample(n=int(total_size), random_state=RANDs[i])
+                # add the samples already existing
+                if c in existing_dfs:
+                    temp_df = pd.concat([temp_df, existing_dfs[c]], axis=0)
                 indiv_dfs[c] = image_df[image_df[args.id_col].isin(temp_df[args.id_col])].copy()
                 df = df[~df[args.id_col].isin(indiv_dfs[c][args.id_col])] # prevent ids from being used in multiple steps/partitions  
         else:

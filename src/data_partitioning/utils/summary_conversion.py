@@ -25,19 +25,30 @@ def load_existing_csvs(existing_csvs, args):
     total_loaded = pd.DataFrame(columns=[args.id_col])
     for fp in existing_csvs:
         filename = fp.split("/")[-1]
-        for s in range(args.steps):
-            if args.steps == 1:
-                partition_name = filename.split(".")[0]
-                print(f"Loading {partition_name} partition from file...")
-            else:
-                partition_name = filename.split(".")[0].split("__")[-1]
-                print(f"Loading Step {s} - {partition_name} partition from file...")
-            in_df = pd.read_csv(fp)
-            partition_csvs[f"Step {s}"][partition_name] = in_df[~in_df[args.id_col].isin(total_loaded[args.id_col])] # Undo effects of accumulate while loading
-            total_loaded = pd.concat([total_loaded, partition_csvs[f"Step {s}"][partition_name]])
+        if args.steps == 1:
+            partition_name = filename.split(".")[0]
+            s = 0
+            print(f"Loading {partition_name} partition from file...")
+        else:
+            partition_name = filename.split(".")[0].split("__")[-1]
+            s = filename.split("__")[0].split("_")[-1]
+            print(f"Loading Step {s} - {partition_name} partition from file...")
+        in_df = pd.read_csv(fp)
+        partition_csvs[f"Step {s}"][partition_name] = in_df[~in_df[args.id_col].isin(total_loaded[args.id_col])] # Undo effects of accumulate while loading
+        total_loaded = pd.concat([total_loaded, partition_csvs[f"Step {s}"][partition_name]])
     return partition_csvs
 # Segmentation ========================================================================================================
-def convert_summary_format_BraTS(summary_filepath:str, attributes:list):
+def convert_summary_format_BraTS(training_folder:str, attributes:list):
+    """ WIP: currently does not use the mapping csv to get any attributes about the patients.
+    This will eventually be combined with convert_summary_format_BraTS_old to include the old functions functionalities
+    for the updated dataset. """
+    df = pd.DataFrame(columns=['patient_id', 'Path', 'subgroup'])
+    for pid in os.listdir(training_folder):
+        df.loc[len(df)] = [pid, os.path.join(training_folder, pid), None]
+    return df
+
+
+def convert_summary_format_BraTS_old(summary_filepath:str, attributes:list): # this is set up to work with BraTS2021, not 2023
     """ Convert mapping csv format """
     df = pd.read_csv(summary_filepath)
     df['patient_id'] = df['BraTS2021']
