@@ -3,16 +3,24 @@ import os
 import pandas as pd
 import numpy as np
 import argparse
+import matplotlib.font_manager as font_manager
 
-plt.rcParams["figure.figsize"] = [9.6, 7.2]
+plt.rcParams["figure.figsize"] = [8, 6]
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams['font.family'] = 'monospace'
-plt.rcParams.update({'font.size': 16})
+plt.rcParams.update({'font.size': 14})
+plt.rcParams['axes.titley'] = 1.0 
+plt.rcParams['axes.titlepad'] = -18
+plt.rcParams["legend.loc"] = 'lower right'
+plt.rcParams["legend.handlelength"] = 1.6
+plt.rcParams["legend.borderaxespad"] = 0.2
+
+font = font_manager.FontProperties(weight='bold')
 
 def plot_indirect_sex(args):
     # #approach indirect sex
     x_ind = np.array([0,1,2,3,4])
-    xticks_ind = ['Baseline',	'1', '12',	'14',	'15'] 
+    xticks_ind = ['0',	'1', '12',	'14',	'15'] 
     #subgroup auroc
     auroc_1_mean_n = np.array([0.784157948,	0.773529846,	0.760813257,	0.74550136,	0.703751463])
     auroc_1_err_n = np.array([0.004004933,	0.00538384,	0.009680493,	0.013998313,	0.02050655])
@@ -26,20 +34,23 @@ def plot_indirect_sex(args):
     fig, ax = plt.subplots()
     ax.set_xticks(x_ind)
     ax.set_xticklabels(xticks_ind)
-    ax.set_xlabel('Number of frozen layers')
+    ax.set_xlabel('Number of frozen layers', fontweight='bold')
     ax.set_ylabel('AUROC', fontweight='bold')
-    plt.ylim(0.4, 1)
+    ax.set_ylim(0.4, 1)
     ax.plot(x_ind, auroc_1_mean_n, color='orange', linestyle = 'solid', linewidth=3)
-    ax.plot(x_ind, auroc_1_mean_i, color='orange', linestyle = 'dashed', linewidth=3)
+    ax.plot(x_ind, auroc_1_mean_i, color='orange', linestyle = 'dotted', dashes=[1,1], linewidth=4.5)
     ax.plot(x_ind, auroc_2_mean_n, color='#1f77b4', linestyle = 'solid', linewidth=3)
-    ax.plot(x_ind, auroc_2_mean_i, color='#1f77b4', linestyle = 'dashed', linewidth=3)
+    ax.plot(x_ind, auroc_2_mean_i, color='#1f77b4', linestyle = 'dotted', dashes=[1,1], linewidth=4.5)
     ax.fill_between(x_ind, auroc_1_mean_n - auroc_1_err_n, auroc_1_mean_n + auroc_1_err_n, facecolor ='orange', alpha=0.2)
     ax.fill_between(x_ind, auroc_1_mean_i - auroc_1_err_i, auroc_1_mean_i + auroc_1_err_i, facecolor ='orange', alpha=0.2)
     ax.fill_between(x_ind, auroc_2_mean_n - auroc_2_err_n, auroc_2_mean_n + auroc_2_err_n, facecolor ='#1f77b4', alpha=0.2)
     ax.fill_between(x_ind, auroc_2_mean_i - auroc_2_err_i, auroc_2_mean_i + auroc_2_err_i, facecolor ='#1f77b4', alpha=0.2)
-    plt.legend(['Female (Class "1": Female)', 'Female (Class "1": Male)', 'Male (Class "1": Female)', 'Male (Class "1": Male)'], loc = 'lower right')
-    plt.title("Indirect Approach-Subgroup AUROC", fontweight='bold')
-    plt.savefig(os.path.join(args.save_dir, "spie_indirect_sex_auroc_subgroup.png"))
+    ax.grid(color = "lightgray")
+    plt.axvline(0, color='navy',label = "Baseline", linestyle = '--', linewidth=3)
+    plt.text(0.06, 0.42, "Baseline", rotation=90, weight="bold", color='navy')
+    ax.legend(['Female (Class "1": Female)', 'Female (Class "1": Male)', 'Male (Class "1": Female)', 'Male (Class "1": Male)'], prop=font)
+    ax.set_title("Indirect Approach-Subgroup AUROC", fontweight='bold', bbox=dict(facecolor='khaki', alpha=0.2, edgecolor=(0,0,0,1)))
+    plt.savefig(os.path.join(args.save_dir, "indirect_sex_subgroup_AUC.png"))
         
     #overall auroc
     auroc_all_mean_n = np.array([0.769152854,	0.75880341,	0.745605015,	0.723371897,	0.681888117])
@@ -50,16 +61,19 @@ def plot_indirect_sex(args):
     fig, ax = plt.subplots()
     ax.set_xticks(x_ind)
     ax.set_xticklabels(xticks_ind)
-    ax.set_xlabel('Number of frozen layers')
+    ax.set_xlabel('Number of frozen layers', fontweight='bold')
     ax.set_ylabel('AUROC', fontweight='bold')
-    plt.ylim(0.4, 1)
+    ax.set_ylim(0.4, 1)
     ax.plot(x_ind, auroc_all_mean_n, color='orangered', linestyle = 'solid', linewidth=3)
-    ax.plot(x_ind, auroc_all_mean_i, color='orangered', linestyle = 'dashed', linewidth=3)
+    ax.plot(x_ind, auroc_all_mean_i, color='orangered', linestyle = 'dotted', dashes=[1,1], linewidth=4.5)
     ax.fill_between(x_ind, auroc_all_mean_n - auroc_all_err_n, auroc_all_mean_n + auroc_all_err_n, facecolor ='orangered', alpha=0.2)
     ax.fill_between(x_ind, auroc_all_mean_i - auroc_all_err_i, auroc_all_mean_i + auroc_all_err_i, facecolor ='orangered', alpha=0.2)
-    plt.legend(['Class "1": Female', 'Class "1": Male'], loc = 'lower right')
-    plt.title("Indirect Approach-Overall AUROC", fontweight='bold')
-    plt.savefig(os.path.join(args.save_dir, "spie_indirect_sex_auroc_overall.png"))
+    ax.grid(color = "lightgray")
+    plt.axvline(0, color='navy',label = "Baseline", linestyle = '--', linewidth=3)
+    plt.text(0.06, 0.42, "Baseline", rotation=90, weight="bold", color='navy')
+    ax.legend(['Class "1": Female', 'Class "1": Male'], prop=font)
+    ax.set_title("Indirect Approach-Overall AUROC", fontweight='bold', bbox=dict(facecolor='khaki', alpha=0.2, edgecolor=(0,0,0,1)))
+    plt.savefig(os.path.join(args.save_dir, "indirect_sex_AUC.png"))
         
     #sensitivity
     tpr_1_mean_n = np.array([0.705851419,	0.707681485,	0.720064477,	0.737676206,	0.7421772])
@@ -74,26 +88,29 @@ def plot_indirect_sex(args):
     fig, ax = plt.subplots()
     ax.set_xticks(x_ind)
     ax.set_xticklabels(xticks_ind)
-    ax.set_xlabel('Number of frozen layers')
+    ax.set_xlabel('Number of frozen layers', fontweight='bold')
     ax.set_ylabel('Sensitivity', fontweight='bold')
-    plt.ylim(0, 1)
+    ax.set_ylim(0, 1)
     ax.plot(x_ind, tpr_1_mean_n, color='orange', linestyle = 'solid', linewidth=3)
-    ax.plot(x_ind, tpr_1_mean_i, color='orange', linestyle = 'dashed', linewidth=3)
+    ax.plot(x_ind, tpr_1_mean_i, color='orange', linestyle = 'dotted', dashes=[1,1], linewidth=4.5)
     ax.plot(x_ind, tpr_2_mean_n, color='#1f77b4', linestyle = 'solid', linewidth=3)
-    ax.plot(x_ind, tpr_2_mean_i, color='#1f77b4', linestyle = 'dashed', linewidth=3)
+    ax.plot(x_ind, tpr_2_mean_i, color='#1f77b4', linestyle = 'dotted', dashes=[1,1], linewidth=4.5)
     ax.fill_between(x_ind, tpr_1_mean_n - tpr_1_err_n, tpr_1_mean_n + tpr_1_err_n, facecolor ='orange', alpha=0.2)
     ax.fill_between(x_ind, tpr_1_mean_i - tpr_1_err_i, tpr_1_mean_i + tpr_1_err_i, facecolor ='orange', alpha=0.2)
     ax.fill_between(x_ind, tpr_2_mean_n - tpr_2_err_n, tpr_2_mean_n + tpr_2_err_n, facecolor ='#1f77b4', alpha=0.2)
     ax.fill_between(x_ind, tpr_2_mean_i - tpr_2_err_i, tpr_2_mean_i + tpr_2_err_i, facecolor ='#1f77b4', alpha=0.2)
-    plt.legend(['Female (Class "1": Female)', 'Female (Class "1": Male)', 'Male (Class "1": Female)', 'Male (Class "1": Male)'], loc = 'lower right')
-    plt.title("Indirect Approach-Subgroup Sensitivity", fontweight='bold')
-    plt.savefig(os.path.join(args.save_dir, "spie_indirect_sex_sensitivity_subgroup.png"))
+    ax.grid(color = "lightgray")
+    plt.axvline(0, color='navy',label = "Baseline", linestyle = '--', linewidth=3)
+    plt.text(0.06, 0.02, "Baseline", rotation=90, weight="bold", color='navy')
+    ax.legend(['Female (Class "1": Female)', 'Female (Class "1": Male)', 'Male (Class "1": Female)', 'Male (Class "1": Male)'], prop=font)
+    ax.set_title("Indirect Approach-Subgroup Sensitivity", fontweight='bold', bbox=dict(facecolor='khaki', alpha=0.2, edgecolor=(0,0,0,1)))
+    plt.savefig(os.path.join(args.save_dir, "indirect_sex_sensitivity.png"))
     
     
 def plot_indirect_race(args):   
     # #approach indirect race
     x_ind = np.array([0,1,2,3,4])
-    xticks_ind = ['Baseline',	'1', '12',	'14',	'15'] 
+    xticks_ind = ['0',	'1', '12',	'14',	'15'] 
     #subgroup auroc
     auroc_1_mean_n = np.array([0.727094841,	0.70888685,	0.685511443,	0.672880126,	0.657301106])
     auroc_1_err_n = np.array([0.023167162,	0.029170952,	0.019630987,	0.013413202,	0.014777122])
@@ -107,20 +124,23 @@ def plot_indirect_race(args):
     fig, ax = plt.subplots()
     ax.set_xticks(x_ind)
     ax.set_xticklabels(xticks_ind)
-    ax.set_xlabel('Number of frozen layers')
+    ax.set_xlabel('Number of frozen layers', fontweight='bold')
     ax.set_ylabel('AUROC', fontweight='bold')
-    plt.ylim(0.4, 1)
+    ax.set_ylim(0.4, 1)
     ax.plot(x_ind, auroc_1_mean_n, color='slategray', linestyle = 'solid', linewidth=3)
-    ax.plot(x_ind, auroc_1_mean_i, color='slategray', linestyle = 'dashed', linewidth=3)
+    ax.plot(x_ind, auroc_1_mean_i, color='slategray', linestyle = 'dotted', dashes=[1,1], linewidth=4.5)
     ax.plot(x_ind, auroc_2_mean_n, color='green', linestyle = 'solid', linewidth=3)
-    ax.plot(x_ind, auroc_2_mean_i, color='green', linestyle = 'dashed', linewidth=3)
+    ax.plot(x_ind, auroc_2_mean_i, color='green', linestyle = 'dotted', dashes=[1,1], linewidth=4.5)
     ax.fill_between(x_ind, auroc_1_mean_n - auroc_1_err_n, auroc_1_mean_n + auroc_1_err_n, facecolor ='slategray', alpha=0.2)
     ax.fill_between(x_ind, auroc_1_mean_i - auroc_1_err_i, auroc_1_mean_i + auroc_1_err_i, facecolor ='slategray', alpha=0.2)
     ax.fill_between(x_ind, auroc_2_mean_n - auroc_2_err_n, auroc_2_mean_n + auroc_2_err_n, facecolor ='green', alpha=0.2)
     ax.fill_between(x_ind, auroc_2_mean_i - auroc_2_err_i, auroc_2_mean_i + auroc_2_err_i, facecolor ='green', alpha=0.2)
-    plt.legend(['Black (Class "1": Black)', 'Black (Class "1": White)', 'White (Class "1": Black)', 'White (Class "1": White)'], loc = 'lower right')
-    plt.title("Indirect Approach-Subgroup AUROC", fontweight='bold')
-    plt.savefig(os.path.join(args.save_dir, "spie_indirect_race_auroc_subgroup.png"))
+    ax.grid(color = "lightgray")
+    plt.axvline(0, color='navy',label = "Baseline", linestyle = '--', linewidth=3)
+    plt.text(0.06, 0.42, "Baseline", rotation=90, weight="bold", color='navy')
+    ax.legend(['Black (Class "1": Black)', 'Black (Class "1": White)', 'White (Class "1": Black)', 'White (Class "1": White)'], prop=font)
+    ax.set_title("Indirect Approach-Subgroup AUROC", fontweight='bold', bbox=dict(facecolor='khaki', alpha=0.2, edgecolor=(0,0,0,1)))
+    plt.savefig(os.path.join(args.save_dir, "indirect_race_subgroup_AUC.png"))
     
     #overall auroc
     auroc_all_mean_n = np.array([0.776030739,	0.768441343,	0.763868026,	0.752561635,	0.720947472])
@@ -131,16 +151,19 @@ def plot_indirect_race(args):
     fig, ax = plt.subplots()
     ax.set_xticks(x_ind)
     ax.set_xticklabels(xticks_ind)
-    ax.set_xlabel('Number of frozen layers')
+    ax.set_xlabel('Number of frozen layers', fontweight='bold')
     ax.set_ylabel('AUROC', fontweight='bold')
-    plt.ylim(0.4, 1)
+    ax.set_ylim(0.4, 1)
     ax.plot(x_ind, auroc_all_mean_n, color='orangered', linestyle = 'solid', linewidth=3)
-    ax.plot(x_ind, auroc_all_mean_i, color='orangered', linestyle = 'dashed', linewidth=3)
+    ax.plot(x_ind, auroc_all_mean_i, color='orangered', linestyle = 'dotted', dashes=[1,1], linewidth=4.5)
     ax.fill_between(x_ind, auroc_all_mean_n - auroc_all_err_n, auroc_all_mean_n + auroc_all_err_n, facecolor ='orangered', alpha=0.2)
     ax.fill_between(x_ind, auroc_all_mean_i - auroc_all_err_i, auroc_all_mean_i + auroc_all_err_i, facecolor ='orangered', alpha=0.2)
-    plt.legend(['Class "1": Black', 'Class "1": White'], loc = 'lower right')
-    plt.title("Indirect Approach-Overall AUROC", fontweight='bold')
-    plt.savefig(os.path.join(args.save_dir, "spie_indirect_race_auroc_overall.png"))
+    ax.grid(color = "lightgray")
+    plt.axvline(0, color='navy',label = "Baseline", linestyle = '--', linewidth=3)
+    plt.text(0.06, 0.42, "Baseline", rotation=90, weight="bold", color='navy')
+    ax.legend(['Class "1": Black', 'Class "1": White'], prop=font)
+    ax.set_title("Indirect Approach-Overall AUROC", fontweight='bold', bbox=dict(facecolor='khaki', alpha=0.2, edgecolor=(0,0,0,1)))
+    plt.savefig(os.path.join(args.save_dir, "indirect_race_AUC.png"))
     
     #sensitivity
     tpr_1_mean_n = np.array([0.839335964,	0.858960005,	0.869791811,	0.880447131,	0.90184426])
@@ -155,20 +178,23 @@ def plot_indirect_race(args):
     fig, ax = plt.subplots()
     ax.set_xticks(x_ind)
     ax.set_xticklabels(xticks_ind)
-    ax.set_xlabel('Number of frozen layers')
+    ax.set_xlabel('Number of frozen layers', fontweight='bold')
     ax.set_ylabel('Sensitivity', fontweight='bold')
-    plt.ylim(0, 1)
+    ax.set_ylim(0, 1)
     ax.plot(x_ind, tpr_1_mean_n, color='slategray', linestyle = 'solid', linewidth=3)
-    ax.plot(x_ind, tpr_1_mean_i, color='slategray', linestyle = 'dashed', linewidth=3)
+    ax.plot(x_ind, tpr_1_mean_i, color='slategray', linestyle = 'dotted', dashes=[1,1], linewidth=4.5)
     ax.plot(x_ind, tpr_2_mean_n, color='green', linestyle = 'solid', linewidth=3)
-    ax.plot(x_ind, tpr_2_mean_i, color='green', linestyle = 'dashed', linewidth=3)
+    ax.plot(x_ind, tpr_2_mean_i, color='green', linestyle = 'dotted', dashes=[1,1], linewidth=4.5)
     ax.fill_between(x_ind, tpr_1_mean_n - tpr_1_err_n, tpr_1_mean_n + tpr_1_err_n, facecolor ='slategray', alpha=0.2)
     ax.fill_between(x_ind, tpr_1_mean_i - tpr_1_err_i, tpr_1_mean_i + tpr_1_err_i, facecolor ='slategray', alpha=0.2)
     ax.fill_between(x_ind, tpr_2_mean_n - tpr_2_err_n, tpr_2_mean_n + tpr_2_err_n, facecolor ='green', alpha=0.2)
     ax.fill_between(x_ind, tpr_2_mean_i - tpr_2_err_i, tpr_2_mean_i + tpr_2_err_i, facecolor ='green', alpha=0.2)
-    plt.legend(['Black (Class "1": Black)', 'Black (Class "1": White)', 'White (Class "1": Black)', 'White (Class "1": White)'], loc = 'lower right')
-    plt.title("Indirect Approach-Subgroup Sensitivity", fontweight='bold')
-    plt.savefig(os.path.join(args.save_dir, "spie_indirect_race_sensitivity_subgroup.png"))
+    ax.grid(color = "lightgray")
+    plt.axvline(0, color='navy',label = "Baseline", linestyle = '--', linewidth=3)
+    plt.text(0.06, 0.02, "Baseline", rotation=90, weight="bold", color='navy')
+    ax.legend(['Black (Class "1": Black)', 'Black (Class "1": White)', 'White (Class "1": Black)', 'White (Class "1": White)'], prop=font)
+    ax.set_title("Indirect Approach-Subgroup Sensitivity", fontweight='bold', bbox=dict(facecolor='khaki', alpha=0.2, edgecolor=(0,0,0,1)))
+    plt.savefig(os.path.join(args.save_dir, "indirect_race_sensitivity.png"))
     
 def plot_direct_sex(args):    
     # # approach direct sex
@@ -185,7 +211,7 @@ def plot_direct_sex(args):
     ax.set_xticklabels(xticks_d)
     ax.set_xlabel('Disease Prevalence (Female)', fontweight='bold')
     ax.set_ylabel('AUROC', fontweight='bold')
-    plt.ylim(0.4, 1)
+    ax.set_ylim(0.4, 1)
     secx = ax.secondary_xaxis('top', functions=(lambda x: 6-x, lambda x: 6-x))
     secx.set_xticklabels(['0%', '0%','10%', '25%','50%','75%','90%','100%'])
     secx.set_xlabel('Disease Prevalence (Male)', fontweight='bold')
@@ -193,9 +219,12 @@ def plot_direct_sex(args):
     ax.plot(x_d, auroc_mean_2, color='#1f77b4', linewidth=3)
     ax.fill_between(x_d, auroc_mean_1 - auroc_err_1, auroc_mean_1 + auroc_err_1, facecolor ='orange', alpha=0.2)
     ax.fill_between(x_d, auroc_mean_2 - auroc_err_2, auroc_mean_2 + auroc_err_2, facecolor ='#1f77b4', alpha=0.2)
-    plt.legend(['Female', 'Male'], loc = 'lower right')
-    plt.title("Direct Approach-Subgroup AUROC", fontweight='bold')
-    plt.savefig(os.path.join(args.save_dir, "spie_direct_sex_auroc_subgroup.png"))
+    ax.grid(color = "lightgray")
+    plt.axvline(3, ymax = 0.92, color='navy',label = "Baseline", linestyle = '--', linewidth=3)
+    plt.text(2.72, 0.42, "Baseline", rotation=90, weight="bold", color='navy')
+    ax.legend(['Female', 'Male'], prop=font)
+    ax.set_title("Direct Approach-Subgroup AUROC", fontweight='bold', bbox=dict(facecolor='khaki', alpha=0.2, edgecolor=(0,0,0,1)))
+    plt.savefig(os.path.join(args.save_dir, "direct_sex_subgroup_AUC.png"))
     
     
     #auroc for sex classify
@@ -210,7 +239,7 @@ def plot_direct_sex(args):
     ax.set_xticklabels(xticks_d)
     ax.set_xlabel('Disease Prevalence (Female)', fontweight='bold')
     ax.set_ylabel('AUROC', fontweight='bold')
-    plt.ylim(0.4, 1)
+    ax.set_ylim(0.4, 1)
     secx = ax.secondary_xaxis('top', functions=(lambda x: 6-x, lambda x: 6-x))
     secx.set_xticklabels(['0%', '0%','10%', '25%','50%','75%','90%','100%'])
     secx.set_xlabel('Disease Prevalence (Male)', fontweight='bold')
@@ -218,9 +247,12 @@ def plot_direct_sex(args):
     ax.plot(x_d, auroc_mean_all, color='orangered', linewidth=3)
     ax.fill_between(x_d, auroc_mean - auroc_err, auroc_mean + auroc_err, facecolor ='purple', alpha=0.2)
     ax.fill_between(x_d, auroc_mean_all - auroc_err_all, auroc_mean_all + auroc_err_all, facecolor ='orangered', alpha=0.2)
-    plt.legend(['Patient Sex', 'COVID Status'], title="Measurement of separation", loc = 'lower right')
-    plt.title("Direct Approach-Overall AUROC", fontweight='bold')
-    plt.savefig(os.path.join(args.save_dir, "spie_direct_sex_auroc_overall.png"))
+    ax.grid(color = "lightgray")
+    plt.axvline(3, ymax = 0.92, color='navy',label = "Baseline", linestyle = '--', linewidth=3)
+    plt.text(2.72, 0.42, "Baseline", rotation=90, weight="bold", color='navy')
+    ax.legend(['Patient Sex', 'COVID Status'], title="Measurement of separation", prop=font, title_fontproperties=font)
+    ax.set_title("Direct Approach-Overall AUROC", fontweight='bold', bbox=dict(facecolor='khaki', alpha=0.2, edgecolor=(0,0,0,1)))
+    plt.savefig(os.path.join(args.save_dir, "direct_sex_AUC.png"))
     
     #sensitivity
     tpr_mean_1 = np.array([0.188939394, 0.267575758, 0.393030303, 0.646969697, 0.814848485, 0.863484848, 0.892878788])
@@ -233,7 +265,7 @@ def plot_direct_sex(args):
     ax.set_xticklabels(xticks_d)
     ax.set_xlabel('Disease Prevalence (Female)', fontweight='bold')
     ax.set_ylabel('Sensitivity', fontweight='bold')
-    plt.ylim(0, 1)
+    ax.set_ylim(0, 1)
     secx = ax.secondary_xaxis('top', functions=(lambda x: 6-x, lambda x: 6-x))
     secx.set_xticklabels(['0%', '0%','10%', '25%','50%','75%','90%','100%'])
     secx.set_xlabel('Disease Prevalence (Male)', fontweight='bold')
@@ -241,9 +273,12 @@ def plot_direct_sex(args):
     ax.plot(x_d, tpr_mean_2, color='#1f77b4', linewidth=3)
     ax.fill_between(x_d, tpr_mean_1 - tpr_err_1, tpr_mean_1 + tpr_err_1, facecolor ='orange', alpha=0.2)
     ax.fill_between(x_d, tpr_mean_2 - tpr_err_2, tpr_mean_2 + tpr_err_2, facecolor ='#1f77b4', alpha=0.2)
-    plt.legend(['Female', 'Male'], loc = 'lower right')
-    plt.title("Direct Approach-Subgroup Sensitivity", fontweight='bold')
-    plt.savefig(os.path.join(args.save_dir, "spie_direct_sex_sensitivity_subgroup.png"))
+    ax.grid(color = "lightgray")
+    plt.axvline(3, ymax = 0.92, color='navy',label = "Baseline", linestyle = '--', linewidth=3)
+    plt.text(2.72, 0.02, "Baseline", rotation=90, weight="bold", color='navy')
+    ax.legend(['Female', 'Male'], prop=font)
+    ax.set_title("Direct Approach-Subgroup Sensitivity", fontweight='bold', bbox=dict(facecolor='khaki', alpha=0.2, edgecolor=(0,0,0,1)))
+    plt.savefig(os.path.join(args.save_dir, "direct_sex_sensitivity.png"))
     
 def plot_direct_race(args):    
     # # approach direct race
@@ -260,7 +295,7 @@ def plot_direct_race(args):
     ax.set_xticklabels(xticks_d)
     ax.set_xlabel('Disease Prevalence (Black)', fontweight='bold')
     ax.set_ylabel('AUROC', fontweight='bold')
-    plt.ylim(0.4, 1)
+    ax.set_ylim(0.4, 1)
     secx = ax.secondary_xaxis('top', functions=(lambda x: 6-x, lambda x: 6-x))
     secx.set_xticklabels(['0%', '0%','10%', '25%','50%','75%','90%','100%'])
     secx.set_xlabel('Disease Prevalence (White)', fontweight='bold')
@@ -268,9 +303,12 @@ def plot_direct_race(args):
     ax.plot(x_d, auroc_mean_2, color='green', linewidth=3)
     ax.fill_between(x_d, auroc_mean_1 - auroc_err_1, auroc_mean_1 + auroc_err_1, facecolor ='slategray', alpha=0.2)
     ax.fill_between(x_d, auroc_mean_2 - auroc_err_2, auroc_mean_2 + auroc_err_2, facecolor ='green', alpha=0.2)
-    plt.legend(['Black', 'White'], loc = 'lower right')
-    plt.title("Direct Approach-Subgroup AUROC", fontweight='bold')
-    plt.savefig(os.path.join(args.save_dir, "spie_direct_race_auroc_subgroup.png"))
+    ax.grid(color = "lightgray")
+    plt.axvline(3, ymax = 0.92, color='navy',label = "Baseline", linestyle = '--', linewidth=3)
+    plt.text(2.72, 0.42, "Baseline", rotation=90, weight="bold", color='navy')
+    ax.legend(['Black', 'White'], prop=font)
+    ax.set_title("Direct Approach-Subgroup AUROC", fontweight='bold', bbox=dict(facecolor='khaki', alpha=0.2, edgecolor=(0,0,0,1)))
+    plt.savefig(os.path.join(args.save_dir, "direct_race_subgroup_AUC.png"))
     
     #auroc for race classify 
     auroc_mean = np.array([0.839168675,	0.748129448,	0.577669594,	0.690057823,	0.797439882,	0.829075844,	0.848937959])
@@ -284,7 +322,7 @@ def plot_direct_race(args):
     ax.set_xticklabels(xticks_d)
     ax.set_xlabel('Disease Prevalence (Black)', fontweight='bold')
     ax.set_ylabel('AUROC', fontweight='bold')
-    plt.ylim(0.4, 1)
+    ax.set_ylim(0.4, 1)
     secx = ax.secondary_xaxis('top', functions=(lambda x: 6-x, lambda x: 6-x))
     secx.set_xticklabels(['0%', '0%','10%', '25%','50%','75%','90%','100%'])
     secx.set_xlabel('Disease Prevalence (White)', fontweight='bold')
@@ -292,9 +330,12 @@ def plot_direct_race(args):
     ax.plot(x_d, auroc_mean_all, color='orangered', linewidth=3)
     ax.fill_between(x_d, auroc_mean - auroc_err, auroc_mean + auroc_err, facecolor ='purple', alpha=0.2)
     ax.fill_between(x_d, auroc_mean_all - auroc_err_all, auroc_mean_all + auroc_err_all, facecolor ='orangered', alpha=0.2)
-    plt.legend(['Patient Race', 'COVID Status'], title="Measurement of separation", loc = 'lower right')
-    plt.title("Direct Approach-Overall AUROC", fontweight='bold')
-    plt.savefig(os.path.join(args.save_dir, "spie_direct_race_auroc_overall.png"))
+    ax.grid(color = "lightgray")
+    plt.axvline(3, ymax = 0.92, color='navy',label = "Baseline", linestyle = '--', linewidth=3)
+    plt.text(2.72, 0.42, "Baseline", rotation=90, weight="bold", color='navy')
+    ax.legend(['Patient Race', 'COVID Status'], title="Measurement of separation", prop=font, title_fontproperties=font)
+    ax.set_title("Direct Approach-Overall AUROC", fontweight='bold', bbox=dict(facecolor='khaki', alpha=0.2, edgecolor=(0,0,0,1)))
+    plt.savefig(os.path.join(args.save_dir, "direct_race_AUC.png"))
     
     #sensitivity
     tpr_mean_1 = np.array([0.272424242,	0.367878788,	0.503636364,	0.746515152,	0.895606061,	0.913030303,	0.917424242])
@@ -307,7 +348,7 @@ def plot_direct_race(args):
     ax.set_xticklabels(xticks_d)
     ax.set_xlabel('Disease Prevalence (Black)', fontweight='bold')
     ax.set_ylabel('Sensitivity', fontweight='bold')
-    plt.ylim(0, 1)
+    ax.set_ylim(0, 1)
     secx = ax.secondary_xaxis('top', functions=(lambda x: 6-x, lambda x: 6-x))
     secx.set_xticklabels(['0%', '0%','10%', '25%','50%','75%','90%','100%'])
     secx.set_xlabel('Disease Prevalence (White)', fontweight='bold')
@@ -315,9 +356,12 @@ def plot_direct_race(args):
     ax.plot(x_d, tpr_mean_2, color='green', linewidth=3)
     ax.fill_between(x_d, tpr_mean_1 - tpr_err_1, tpr_mean_1 + tpr_err_1, facecolor ='slategray', alpha=0.2)
     ax.fill_between(x_d, tpr_mean_2 - tpr_err_2, tpr_mean_2 + tpr_err_2, facecolor ='green', alpha=0.2)
-    plt.legend(['Black', 'White'], loc = 'lower right')
-    plt.title("Direct Approach-Subgroup Sensitivity", fontweight='bold')
-    plt.savefig(os.path.join(args.save_dir, "spie_direct_race_sensitivity_subgroup.png"))
+    ax.grid(color = "lightgray")
+    plt.axvline(3, ymax = 0.92, color='navy',label = "Baseline", linestyle = '--', linewidth=3)
+    plt.text(2.72, 0.02, "Baseline", rotation=90, weight="bold", color='navy')
+    ax.legend(['Black', 'White'], prop=font)
+    ax.set_title("Direct Approach-Subgroup Sensitivity", fontweight='bold', bbox=dict(facecolor='khaki', alpha=0.2, edgecolor=(0,0,0,1)))
+    plt.savefig(os.path.join(args.save_dir, "direct_race_sensitivity.png"))
     
 
 
