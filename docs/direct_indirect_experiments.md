@@ -93,14 +93,19 @@ FRACTION=0.5
 - Run training
   - Baseline models should use [run_finetune.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/chexpert-model/betsy_scripts/run_finetune.sh) with training/validation datasets generated for baseline models (assigning on line 20 and 21).
   - Similarly, experimental (biased) models should also use [run_finetune.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/chexpert-model/betsy_scripts/run_finetune.sh) with training/validation datasets generated for experimental (biased) models (assigning on line 20 and 21).
-### 2.a. (Additional Control)
+### 2.a. (Additional Levels of Control)
 - Data preparation
   - First 2 steps are exactly the same as 2.a., including running [run_generate_partitions_v2.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/bash_scripts/run_generate_partitions_v2.sh) and [run_csv_limit_images.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/bash_scripts/run_csv_limit_images.sh) to generate training, validation, validation_2 and independent_test datasets.
-  - After that, the user should run [run_csv_data_split.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/betsy_scripts/run_csv_data_split.sh) to construct a series of training/validation dataset. The user should set the fraction to 0, 0.1, 0.25, 0.5 respectively. Noted that all the output csv files should be properly name on line 8 and 9.
+  - After that, the user should run [run_csv_data_split.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/betsy_scripts/run_csv_data_split.sh) to construct a series of training/validation dataset. The user should set the fraction to 0, 0.1, 0.25, 0.5 on line 10 respectively. The output csv files should be properly name on line 8 and 9. Noted that one input fraction can output two seperate csv files (e.g., a fraction of 0.1 can generate partitions of 10% female-positive, as well as 90% female-positive).
 - Run training
   - Training steps are pretty much the same as 2.a. The user should properly assign training/validation dataset used for the experiment on line 20 and 21 using [run_finetune.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/chexpert-model/betsy_scripts/run_finetune.sh). 
 ### 2.b. 
-- Running 2.b. is pretty much the same as 2.a. The user only need to change line 11 in [run_csv_data_split.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/betsy_scripts/run_csv_data_split.sh) to "race".
+- Both data preparation and model training for 2.b. is pretty much the same as 2.a. The user only need to change line 11 in [run_csv_data_split.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/betsy_scripts/run_csv_data_split.sh) to "race" during data preparation.
 ``` 
 TEST_SUB="race"
 ``` 
+### 2.b. (Additional Levels of Control)
+- Data preparation
+  - Again, first 2 steps are exactly the same as 2.b by running [run_generate_partitions_v2.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/bash_scripts/run_generate_partitions_v2.sh) and [run_csv_limit_images.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/bash_scripts/run_csv_limit_images.sh). After that, the user should run [run_csv_data_split.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/betsy_scripts/run_csv_data_split.sh) similar to 2.a. (Additional Levels of Control) while change TEST_SUB to "race" on line 11.
+- Run training
+  - Training steps are the same as 2.b. The user should properly assign training/validation dataset used for the experiment on line 20 and 21 using [run_finetune.sh](https://github.com/ravisamala/continual_learning_evaluation/blob/main/chexpert-model/betsy_scripts/run_finetune.sh) to properly set up the series of experiments. 
