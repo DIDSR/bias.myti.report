@@ -1,4 +1,5 @@
 from math import inf, nan
+import util
 import torch
 from torch import nn, optim
 from args import TestArgParser
@@ -19,40 +20,33 @@ import numpy as np
 import json
 
 custom_subgroups ={ 
-    'sex':{'F','M'},
-    'race':{'Black', 'White'},
-    'COVID_positive':{'Yes', 'No'},
-    'modality':{'CR', 'DX'}
-}
+    'sex':['M','F'],
+    'race':['Black', 'White'],
+    'COVID_positive':['Yes', 'No'],
+    'modality':['CR', 'DX']
+    }
 
 def get_confusion_matrix(predictions, groundtruth, threshold):
-    """
-    function to compute confusion matrix
-    """
     tp = np.sum(np.logical_and(predictions >= threshold, groundtruth == 1))
     tn = np.sum(np.logical_and(predictions < threshold, groundtruth == 0))
     fp = np.sum(np.logical_and(predictions >= threshold, groundtruth == 0))
     fn = np.sum(np.logical_and(predictions < threshold, groundtruth == 1))
     return tp, tn, fp, fn
+      
 
 def subgroup_calculation():
-    """
-    function to read scores and patient attribute info, and calculate subgroup bias measurements
-    """
     sub_dir = args.sub_dir
     threshold = args.threshold
     subgroup_for_eval = []
     subgroup_for_eval.append(args.test_subgroup)
     prediction_file = args.prediction_file
-    if args.post_processed == False:
-      # read scores
+    if args.post_processed:
       predictions = pd.read_csv(os.path.join(args.pred_dir, prediction_file))
       info_pred = predictions.copy()
     else:
       # read validation_2 patient list, and drop duplicate patient ids
       validation_2_list = pd.read_csv(args.info_file)
       validation_2_list.drop_duplicates(subset="patient_id", keep='first', inplace=True)
-      # read scores
       predictions = pd.read_csv(os.path.join(args.pred_dir, prediction_file))
       
       # mapping patient labels to output score
@@ -64,10 +58,9 @@ def subgroup_calculation():
           info_pred[c] = info_pred['patient_id'].map(validation_2_list.set_index("patient_id")[c])
 
     # subgroup calculations
-
+    test_list = custom_subgroups.get(args.test_subgroup)
     # nuanced auroc and AEG
-    grps = list(custom_subgroups[args.test_subgroup])
-    subgroup_df = pd.DataFrame().assign(sub_1=info_pred[grps[0]], sub_2=info_pred[grps[1]])
+    subgroup_df = pd.DataFrame().assign(sub_1=info_pred[test_list[0]], sub_2=info_pred[test_list[1]])
     true_label = pd.DataFrame().assign(target=info_pred['Yes'])
     pred_prob = pd.DataFrame().assign(target=info_pred['Yes score'])
     nuance = NuancedROC()
@@ -79,40 +72,40 @@ def subgroup_calculation():
 
     # fairness measurements
     dp = {}
-    for sub in subgroup_for_eval:
-        for grp in custom_subgroups[sub]:
-            info_sub = info_pred[info_pred[grp].isin(['1'])]
-            task_gt = info_sub["Yes"]
-            task_pred = info_sub["Yes score"]
-            dp[f"{grp}"] = {}
-            tp, tn, fp, fn = get_confusion_matrix(task_pred, task_gt, threshold)
-            #TODO: compute ratio or difference
-            # Add random seeds info
-            dp[f"{grp}"]['Rand_seed'] = f"Rand_{args.rand}"
-            # Average Score
-            dp[f"{grp}"]['Average Score'] = np.mean(task_pred)
-            # Demographic Parity criteria
-            dp[f"{grp}"]['Demographic Parity (thres)'] = (tp+fp) / (tp+tn+fp+fn)
-            # Equalized Odds criteria (sensitivity)
-            dp[f"{grp}"]['TPR'] = tp / (tp+fn)
-            # Predictive Rate Parity
-            dp[f"{grp}"]['PPV'] = tp / (tp+fp)
-            # specificity
-            dp[f"{grp}"]['TNR'] = tn / (tn+fp)
-            # AUROC
-            dp[f"{grp}"]['AUROC'] = sk_metrics.roc_auc_score(y_score=task_pred, y_true=task_gt)
-            # Overall AUROC
-            dp[f"{grp}"]['Overall AUROC'] = sk_metrics.roc_auc_score(y_score=info_pred["Yes score"], y_true=info_pred["Yes"])
-            # NLL (uncertainty estimation)
-            p = torch.tensor(info_pred["Yes score"])
-            l = torch.tensor(info_pred["Yes"])
-            nll_criterion = nn.BCELoss()
-            dp[f"{grp}"]['NLL_overall'] = nll_criterion(p, l.double()).item()
-            p_sub = torch.tensor(task_pred.reset_index(drop=True))
-            l_sub = torch.tensor(task_gt.reset_index(drop=True))
-            dp[f"{grp}"]['NLL'] = nll_criterion(p_sub, l_sub.double()).item()      
-    
-    # output the computed measurements      
+    for grp in test_list:
+        info_sub = info_pred[info_pred[grp].isin(['1'])]
+        task_gt = info_sub["Yes"]
+        task_pred = info_sub["Yes score"]
+        dp[f"{grp}"] = {}
+        tp, tn, fp, fn = get_confusion_matrix(task_pred, task_gt, threshold)
+        #TODO: compute ratio or difference
+        # Add random seeds info
+        dp[f"{grp}"]['Rand_seed'] = f"Rand_{args.rand}"
+        # Average Score
+        dp[f"{grp}"]['Average Score'] = np.mean(task_pred)
+        # Demographic Parity criteria
+        dp[f"{grp}"]['Demographic Parity (thres)'] = (tp+fp) / (tp+tn+fp+fn)
+        # Equalized Odds criteria (sensitivity)
+        dp[f"{grp}"]['TPR'] = tp / (tp+fn)
+        # Predictive Rate Parity
+        dp[f"{grp}"]['PPV'] = tp / (tp+fp)
+        # specificity
+        dp[f"{grp}"]['TNR'] = tn / (tn+fp)
+        # AUROC
+        dp[f"{grp}"]['AUROC'] = sk_metrics.roc_auc_score(y_score=task_pred, y_true=task_gt)
+        # Overall AUROC for COVID
+        dp[f"{grp}"]['Overall AUROC'] = sk_metrics.roc_auc_score(y_score=info_pred["Yes score"], y_true=info_pred["Yes"])
+        # AUROC for subgroup classification
+        dp[f"{grp}"]['AUROC_sub'] = sk_metrics.roc_auc_score(y_score=info_pred["Yes score"], y_true=info_pred[grp])
+        # NLL (uncertainty estimation)
+        p = torch.tensor(info_pred["Yes score"])
+        l = torch.tensor(info_pred["Yes"])
+        nll_criterion = nn.BCELoss()
+        dp[f"{grp}"]['NLL_overall'] = nll_criterion(p, l.double()).item()
+        p_sub = torch.tensor(task_pred.reset_index(drop=True))
+        l_sub = torch.tensor(task_gt.reset_index(drop=True))
+        dp[f"{grp}"]['NLL'] = nll_criterion(p_sub, l_sub.double()).item()      
+            
     metrics_summary = pd.DataFrame.from_dict({i: dp[i] 
                            for i in dp.keys()},
                        orient='index')
@@ -129,7 +122,8 @@ if __name__ == '__main__':
     parser.add_argument('--test_subgroup',type=str)
     parser.add_argument('--prediction_file',type=str)
     parser.add_argument('--info_file',type=str)
-    parser.add_argument('--post_processed',default=False,type=bool)
+    parser.add_argument('--post_processed',default=False,type=util.str_to_bool)
     args = parser.parse_args()
+    #auroc_cal()
     subgroup_calculation()
     print("Done\n")

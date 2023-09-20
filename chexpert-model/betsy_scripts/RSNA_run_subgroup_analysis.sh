@@ -1,24 +1,20 @@
 #!/bin/bash
-#shell script to run subgroup bias measurements computation
-#input a csv prediction file contains output score, and a csv info file contains patient attribute info
-#output 2 csv files contain nuanced measurements and other measurements
-#current support nuanced AUCs (subgroup-background AUROC, AEGs),
-#demographic parity, TPR/TNR, subgroup AUROC, subgroup NLL, PPV
-
-#use this script for bias amplification with both indirect/direct approaches (#1a, 1b, 1c, 2a, 2b)
-
-#different frozen layers during bias amplification (see 2023 RSNA submission)
-declare -a LAYER_ARRAY=("last_17" "last_6" "last_4" "last_3" "direct")
+declare -a LAYER_ARRAY=("last_17" "last_6" "last_4" "last_3" "direct" "reverse_last_17" "reverse_last_6" "reverse_last_4" "reverse_last_3")
+#declare -a LAYER_ARRAY=("0BP" "10BP" "25BP" "50BP" "75BP" "90BP" "100BP")
+declare -a WEIGHT_ARRAY=("0.5" "0.6" "0.7" "0.8" "0.9" "1" "1.1" "1.2" "1.3" "1.4" "1.5")
 BASE_WEIGHTS=CheXpert_Resnet
 EXPERIMENT_NAME=${BASE_WEIGHTS}_subgroup_size_decay_30_lr_5e-5
-TEST_SUBGROUP="sex"  #interested subgroup to measure bias, can be "sex", "race", "modality"
-PRED_FILE=ensemble_by_patient_predictions.csv
-POST_PRCS=False #whether the input file is after bias mitigation
-for BATCH in 0
+TEST_SUBGROUP="sex"
+#PRED_FILE=ensemble_by_patient_predictions.csv
+#PRED_FILE=ensemble_calibrated_predictions.csv
+for WEIGHT in ${WEIGHT_ARRAY[@]}
 do
-for RAND in 0 1 2 3 4
+PRED_FILE=cali_eq_odds_${WEIGHT}_ensemble_calibrated_predictions.csv
+for BATCH in 0 1 2 4
 do
-MAIN_DIR=/scratch/yuhang.zhang/OUT/temp/batch_${BATCH}
+for RAND in 0
+do
+MAIN_DIR=/scratch/yuhang.zhang/OUT/latent_space_run/batch_${BATCH}
 INFO_FILE=${MAIN_DIR}/validation_1_image.csv
 for RD in 0
 do
@@ -32,7 +28,8 @@ python ../RSNA_subgroup_analysis.py  --rand ${RAND} \
                                 --test_subgroup ${TEST_SUBGROUP} \
                                 --prediction_file ${PRED_FILE} \
                                 --info_file ${INFO_FILE} \
-                                --post_processed ${POST_PRCS} 
+                                --post_processed True
+done
 done
 done
 done
