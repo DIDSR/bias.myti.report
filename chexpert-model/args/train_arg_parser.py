@@ -11,7 +11,7 @@ class TrainArgParser(BaseArgParser):
         # Selection args -> affect the selection of "best.pth.tar"
         self.parser.add_argument("--loss_threshold",
                                  dest='selection_args.loss_threshold',
-                                 default=0.2,
+                                 default=0.6,
                                  help='maximum loss value to allow current model as best')
         self.parser.add_argument("--loss_std",
                                  dest='selection_args.max_std',
@@ -32,8 +32,8 @@ class TrainArgParser(BaseArgParser):
                                           'SENet154', 'MNASNet'),
                                  default='DenseNet121',
                                  help='Model name.')
-        self.parser.add_argument('--pretrained', dest='model_args.pretrained',
-                                 type=util.str_to_bool, default=True,
+        self.parser.add_argument('--weights', dest='model_args.weights',
+                                 type=str, default=None,
                                  help='Use a pretrained network.')
 
         self.parser.add_argument('--moco', dest='model_args.moco',
@@ -54,6 +54,12 @@ class TrainArgParser(BaseArgParser):
                                  dest='data_args.csv',
                                  type=str, default=None,
                                  help='csv for custom dataset.')
+        self.parser.add_argument('--apply_reweighing', dest='data_args.apply_reweighing',
+                                 type=util.str_to_bool, default=False,
+                                 help='Using reweighing for bias mitigation')
+        self.parser.add_argument('--reweighing_subgroup', 
+                                 dest='data_args.reweighing_subgroup', type=str,
+                                 help='Choose reweighing for which subgroup')
         self.parser.add_argument('--val_custom_csv',
                                  dest='data_args.csv_dev',
                                  type=str, default=None,

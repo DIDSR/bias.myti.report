@@ -28,7 +28,12 @@ ckpt_files_open_hpc = {
 }
 
 ckpt_files_betsy = {
-    "CheXpert_Resnet": "/scratch/alexis.burgon/2022_CXR/model_runs/moco_checkpoints/checkpoint_0019.pth.tar"
+    "CheXpert_Resnet": "/scratch/alexis.burgon/2022_CXR/model_runs/moco_checkpoints/chexpert__resnet18/checkpoint_0019.pth.tar",
+    "Mimic_Resnet":"/scratch/alexis.burgon/2022_CXR/model_runs/moco_checkpoints/mimic__resnet18/checkpoint_0019.pth.tar",
+    "CheXpert-Mimic_Resnet":"/scratch/alexis.burgon/2022_CXR/model_runs/moco_checkpoints/chexpert_mimic__resnet18/checkpoint_0019.pth.tar",
+    "CheXpert-Mimic_Densenet":"/scratch/alexis.burgon/2022_CXR/model_runs/moco_checkpoints/chexpert_mimic__densenet121/checkpoint_0019.pth.tar",
+    "CheXpert-Mimic_Resnext":"/scratch/alexis.burgon/2022_CXR/model_runs/moco_checkpoints/chexpert_mimic__resnext50/checkpoint_0019.pth.tar",
+    "CheXpert-Mimic_WideResnet":"/scratch/alexis.burgon/2022_CXR/model_runs/moco_checkpoints/chexpert_mimic__wide_resnet50/checkpoint_0019.pth.tar"
 }
 def train(args):
     import os # Why does os only import properly if in the function?
@@ -140,12 +145,26 @@ def train(args):
     # print('==========================')
     
     # Get train and valid loader objects.
-    train_loader = get_loader(phase="train",
-                             data_args=data_args,
-                             transform_args=transform_args,
-                             is_training=True,
-                             return_info_dict=True,
-                             logger=logger)
+    
+    # reweighing for bias mitigation
+    if data_args.apply_reweighing:
+        weights, patient_id = weight_calculation(data_args.csv, data_args.reweighing_subgroup)
+        weight_df = pd.DataFrame(list(zip(patient_id, weights)), columns=['patient_id', 'weights'])
+        weight_df.to_csv(os.path.join(logger_args.save_dir, "reweighing_weights.csv"), index=False)
+        train_loader = get_loader(phase="train",
+                                 data_args=data_args,
+                                 transform_args=transform_args,
+                                 is_training=True,
+                                 return_info_dict=True,
+                                 logger=logger,
+                                 weights=weights)
+    else:
+        train_loader = get_loader(phase="train",
+                                 data_args=data_args,
+                                 transform_args=transform_args,
+                                 is_training=True,
+                                 return_info_dict=True,
+                                 logger=logger)
     # # options for multiple validation sets
     print("loading validation loader!")
     if data_args.csv_dev.endswith(".csv"):
@@ -380,6 +399,44 @@ def train(args):
             tracking_info['best iter info']['AUROC'] = best_ckpt_dict['ckpt_info']['custom-AUROC']
         with open(model_tracking_fp, 'w') as fp:
                 json.dump(tracking_info, fp, indent=1)
+                
+def weight_calculation(df_path, subgroup):
+    custom_subgroups ={ 
+        'sex':['F','M'],
+        'race':['Black', 'White']
+        }
+    df = pd.read_csv(df_path)
+    len_total = df.shape[0]
+    test_list = custom_subgroups.get(subgroup)
+    df_1P = df.loc[(df[test_list[0]]==1) & (df['Yes']==1)]
+    df_1N = df.loc[(df[test_list[0]]==1) & (df['Yes']==0)]
+    df_2P = df.loc[(df[test_list[1]]==1) & (df['Yes']==1)]
+    df_2N = df.loc[(df[test_list[1]]==1) & (df['Yes']==0)]
+    len_1P = df_1P.shape[0]
+    len_1N = df_1N.shape[0]
+    len_2P = df_2P.shape[0]
+    len_2N = df_2N.shape[0]
+    weight_1P = 0.25*len_total/len_1P
+    weight_1N = 0.25*len_total/len_1N
+    weight_2P = 0.25*len_total/len_2P
+    weight_2N = 0.25*len_total/len_2N
+    weights = [1] * len_total
+    patient_id = []
+    for index, row in df.iterrows():
+        if row[test_list[0]] == 1:
+            if row['Yes'] == 1:
+                weights[index] = weight_1P
+            else:
+                weights[index] = weight_1N
+        else:
+            if row['Yes'] == 1:
+                weights[index] = weight_2P
+            else:
+                weights[index] = weight_2N
+        patient_id.append(row['patient_id'])
+    #print(weights)
+    return weights, patient_id
+    
 
 if __name__ == '__main__':
     print("Beginning Training...")

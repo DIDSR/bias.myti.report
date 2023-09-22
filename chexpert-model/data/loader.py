@@ -1,5 +1,5 @@
 import torch.utils.data as data
-
+import torch 
 from .chexpert_dataset import CheXpertDataset
 from .custom_dataset import CustomDataset
 from .pad_collate import PadCollate
@@ -8,7 +8,7 @@ from constants import *
 
 def get_loader(phase, data_args, transform_args,
                is_training, return_info_dict,
-               logger=None):
+               logger=None, weights=None):
     """Get PyTorch data loader.
 
     Args:
@@ -51,18 +51,37 @@ def get_loader(phase, data_args, transform_args,
     # Instantiate the Dataset class.
     dataset = Dataset(csv_name, is_training, study_level, transform_args,
                       data_args.toy, return_info_dict, logger, data_args)
-    if study_level:
-        # Pick collate function
-        collate_fn = PadCollate(dim=0)
-        loader = data.DataLoader(dataset,
-                                 batch_size=data_args.batch_size,
-                                 shuffle=shuffle,
-                                 num_workers=data_args.num_workers,
-                                 collate_fn=collate_fn)
-    else:
-        loader = data.DataLoader(dataset,
-                                 batch_size=data_args.batch_size,
-                                 shuffle=shuffle,
-                                 num_workers=data_args.num_workers)
+                      
+    # For reweighing, calculate weights
+    if is_training & data_args.apply_reweighing:
+        weights = torch.DoubleTensor(weights)                                       
+        sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, len(weights))
+        if study_level:
+            # Pick collate function
+            collate_fn = PadCollate(dim=0)
+            loader = data.DataLoader(dataset,
+                                     batch_size=data_args.batch_size,
+                                     sampler=sampler,
+                                     num_workers=data_args.num_workers,
+                                     collate_fn=collate_fn)
+        else:
+            loader = data.DataLoader(dataset,
+                                     batch_size=data_args.batch_size,
+                                     sampler=sampler,
+                                     num_workers=data_args.num_workers)             
+    else:                  
+        if study_level:
+            # Pick collate function
+            collate_fn = PadCollate(dim=0)
+            loader = data.DataLoader(dataset,
+                                     batch_size=data_args.batch_size,
+                                     shuffle=shuffle,
+                                     num_workers=data_args.num_workers,
+                                     collate_fn=collate_fn)
+        else:
+            loader = data.DataLoader(dataset,
+                                     batch_size=data_args.batch_size,
+                                     shuffle=shuffle,
+                                     num_workers=data_args.num_workers)
 
     return loader
