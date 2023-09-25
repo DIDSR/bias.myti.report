@@ -374,6 +374,8 @@ def run_validate(val_loader, model, args, writer):
         result_df1 = pd.DataFrame(list(zip(pid_all, fnames_all, type_all, logits_all, scores_all)), columns=['patient_id', 'ROI_path', 'label', 'logits', 'score'])
         results_path1 = os.path.join(args.output_base_dir, 'results__' + str(master_iter+1) + '.tsv')
         result_df1.to_csv(results_path1, sep='\t', index=False)
+        results_path2 = os.path.join(args.output_base_dir, 'results__last.tsv')
+        result_df1.to_csv(results_path2, sep='\t', index=False)
     # # calc AUC from ROC
     fpr, tpr, _ = metrics.roc_curve(np.array(type_all), np.array(scores_all), pos_label=1)
     auc_val = metrics.auc(fpr, tpr)
