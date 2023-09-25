@@ -214,20 +214,28 @@ def run_deploy_onnx(data_loader, args):
     print(' onnxruntime available providers: ' + str(ort_session.get_providers()))
     print(' onnxruntime running on: ' + onnxruntime.get_device())
     # #
+    pid_all = []
     fnames_all = []
     type_all = []
+    logits_all = []
     scores_all = []
-    for i, (fname, images, target) in enumerate(data_loader):
+    for i, (pid, fname, images, target) in enumerate(data_loader):
         # # compute ONNX Runtime output prediction
         ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(images)}
         ort_outs = ort_session.run(None, ort_inputs)
         # # accumulate
         labl_list = list(target.cpu().numpy())
         type_all += labl_list
+        pid_all += pid
         fnames_all += fname
-        scr = list(ort_outs[0])
-        scr = list(itertools.chain(*scr))
+        lgt = list(ort_outs[0])
+        scr = torch.sigmoid(torch.flatten(torch.from_numpy(ort_outs[0])))
+        lgt = list(itertools.chain(*lgt))
+        logits_all += lgt        
+        scr = list(scr.cpu().numpy())
         scores_all += scr
+        
+        
     
     # # calc AUC from ROC
     fpr, tpr, _ = metrics.roc_curve(np.array(type_all), np.array(scores_all), pos_label=1)
@@ -236,7 +244,7 @@ def run_deploy_onnx(data_loader, args):
     print(' AUROC = %f' % auc_val)
 
     # # save the score file
-    result_df = pd.DataFrame(list(zip(fnames_all, type_all, scores_all)), columns=['ROI_path', 'label', 'score'])
+    result_df = pd.DataFrame(list(zip(pid_all, fnames_all, type_all, logits_all, scores_all)), columns=['patient_id', 'ROI_path', 'label', 'logits', 'score'])
     results_path = os.path.join(os.path.dirname(args.log_path), 'results__' + '.tsv')
     result_df.to_csv(results_path, sep='\t', index=False)
     # #

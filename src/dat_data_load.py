@@ -74,6 +74,7 @@ class Dataset(BaseDataset):
             list_file,
             train_flag=True,
             default_out_class='Yes',
+            default_patient_id='patient_id',
             default_path='Path'
     ):
         # #
@@ -81,14 +82,15 @@ class Dataset(BaseDataset):
         # # read the CSV file with header
         df = pd.read_csv(list_file)
         print(df.columns.values.tolist())
+        ids = df[default_patient_id].tolist() # # Patient IDs
         dats = df[default_path].tolist()   # # JPEGs
         labels = df[default_out_class].tolist() # # class label
 
-        c = list(zip(dats, labels))
+        c = list(zip(ids, dats, labels))
         # # Randomize the list
         if train_flag:
             random.shuffle(c)
-        self.images, self.class_values = zip(*c)
+        self.patient_ids, self.images, self.class_values = zip(*c)
 
 
     def __getitem__(self, i):
@@ -96,7 +98,7 @@ class Dataset(BaseDataset):
         img_o = read_jpg(self.images[i])
         lbl_o = self.class_values[i]
 
-        return os.path.basename(self.images[i]), img_o, int(lbl_o)
+        return self.patient_ids[i], self.images[i], img_o, int(lbl_o)
 
     def __len__(self):
         return len(self.images)
