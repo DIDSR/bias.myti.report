@@ -163,6 +163,9 @@ def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels, is_train
 
 def train(args):
     writer = SummaryWriter(log_dir=args.output_base_dir, flush_secs=1)
+    # set random state, if specified
+    if args.random_state is not None:
+        torch.manual_seed(args.random_state)
     # writer = SummaryWriter()
     # # based on the selected DNN N/W, modify the last layer of the ImageNet pre-trained DNN
     # model = models.__dict__[args.dcnn](pretrained=True)
@@ -311,7 +314,7 @@ def run_train(train_loader, model, criterion, optimizer,  my_lr_scheduler, write
     # switch to train mode
     model.train()
     avg_loss = 0
-    for i, (_, images, target) in enumerate(train_loader):
+    for i, (_, _, images, target) in enumerate(train_loader):
         # # measure data loading time
         master_iter += 1
         images = images.cuda()
@@ -343,26 +346,32 @@ def run_validate(val_loader, model, args, writer):
     # # switch to evaluate mode
     model.eval()
     # #
+    pid_all = []
     fnames_all = []
     type_all = []
+    logits_all = []
     scores_all = []
     with torch.no_grad():
-        for i, (fname, images, target) in enumerate(val_loader):
+        for i, (pid, fname, images, target) in enumerate(val_loader):
             # # compute output
             images = images.cuda()
             output = model(images.float())
             # #
-            target_image_pred_probs = torch.sigmoid(torch.flatten(output))
+            target_image_pred_logits = torch.flatten(output)
+            target_image_pred_probs = torch.sigmoid(target_image_pred_logits)
             # # accumulate the scores
             labl_list = list(target.cpu().numpy())
             type_all += labl_list
+            pid_all += pid
             fnames_all += fname
+            logit = list(target_image_pred_logits.cpu().numpy())
+            logits_all += logit
             scr = list(target_image_pred_probs.cpu().numpy())
             scores_all += scr
 
     # # save the scores, labels in a tsv file
     if args.bsave_valid_results_at_epochs:
-        result_df1 = pd.DataFrame(list(zip(fnames_all, type_all, scores_all)), columns=['ROI_path', 'type', 'probability'])
+        result_df1 = pd.DataFrame(list(zip(pid_all, fnames_all, type_all, logits_all, scores_all)), columns=['patient_id', 'ROI_path', 'label', 'logits', 'score'])
         results_path1 = os.path.join(args.output_base_dir, 'results__' + str(master_iter+1) + '.tsv')
         result_df1.to_csv(results_path1, sep='\t', index=False)
     # # calc AUC from ROC
@@ -405,9 +414,14 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--custom_checkpoint_file', 
         default="/gpfs_projects/ravi.samala/OUT/moco/experiments/ravi.samala/r8w1n416_20220715h15_tr_mocov2_20220715-172742/checkpoint_0019.pth.tar", 
         help='custom checkpoint file to start')
+    parser.add_argument('--random_state', type=int, default=None)
 
     args = parser.parse_args()
     print(args)
+    
+    # # create the output dirctory if not exist
+    if not os.path.exists(args.output_base_dir):
+        os.makedirs(args.output_base_dir)
 
     # # save the args
     with open(os.path.join(args.output_base_dir, 'training_args.json'), 'w') as fp:
