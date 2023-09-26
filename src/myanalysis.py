@@ -4,6 +4,7 @@ import pandas as pd
 from scipy.special import logit
 from math import inf, nan
 from nuancedmetric import *
+from calib_eq_odds import *
 import torch
 import sklearn.metrics as sk_metrics
 import numpy as np
@@ -103,8 +104,43 @@ def ROC_mitigation(validation_info_pred, test_list, threshold=0.5, output_file=N
                            for i in dp.keys()},
                        orient='index')
     if output_file:
-        metrics_summary.to_csv(output_file)
+        metrics_summary.to_csv(output_file, index=False)
     return [threshold + optimal_threds, threshold - optimal_threds], [group_p, group_u]
+    
+def calib_eq_odds_mitigation(validation_info_pred, testing_info_pred, test_list, output_file, rate_list):
+    # Create model objects - one for each group, validation and test 
+    group_0_vali_data = validation_info_pred[validation_info_pred[test_list[0]] == 1]
+    group_1_vali_data = validation_info_pred[validation_info_pred[test_list[0]] == 0]   
+    group_0_test_data = testing_info_pred[testing_info_pred[test_list[0]] == 1]
+    group_1_test_data = testing_info_pred[testing_info_pred[test_list[0]] == 0]
+    
+    group_0_vali_model = CalibEqOddsModel(group_0_vali_data['score'].values, group_0_vali_data['label'].values)
+    group_1_vali_model = CalibEqOddsModel(group_1_vali_data['score'].values, group_1_vali_data['label'].values)
+    group_0_test_model = CalibEqOddsModel(group_0_test_data['score'].values, group_0_test_data['label'].values)
+    group_1_test_model = CalibEqOddsModel(group_1_test_data['score'].values, group_1_test_data['label'].values)
+    
+
+    # Find mixing rates for equalized odds models
+    fp_rate = rate_list[0]
+    fn_rate = rate_list[1]
+    _, _, mix_rates = CalibEqOddsModel.calib_eq_odds(group_0_vali_model, group_1_vali_model, fp_rate, fn_rate)
+    # Apply the mixing rates to the test models
+    calib_eq_odds_group_0_test_model, calib_eq_odds_group_1_test_model = CalibEqOddsModel.calib_eq_odds(group_0_test_model,
+                                                                                             group_1_test_model,
+                                                                                             fp_rate, fn_rate,
+                                                                                             mix_rates)
+    
+    # Reorganize the prediction scores and output as a new file
+    pred_1 = pd.DataFrame(list(zip(calib_eq_odds_group_0_test_model.label, calib_eq_odds_group_0_test_model.pred)), columns=['label', 'score'])
+    pred_1[test_list[0]] = 1
+    pred_1[test_list[1]] = 0    
+    pred_2 = pd.DataFrame(list(zip(calib_eq_odds_group_1_test_model.label, calib_eq_odds_group_1_test_model.pred)), columns=['label', 'score'])
+    pred_2[test_list[0]] = 0
+    pred_2[test_list[1]] = 1    
+    pred_all = pd.concat([pred_1, pred_2], axis=0)
+    pred_all.to_csv(output_file, index=False)
+    return pred_all
+
 
 def subgroup_bias_calculation(info_pred, test_list, output_file, thresholds):
     '''
@@ -146,8 +182,8 @@ def subgroup_bias_calculation(info_pred, test_list, output_file, thresholds):
         # AUROC for subgroup classification
         dp[f"{grp}"]['AUROC_subgroup'] = sk_metrics.roc_auc_score(y_score=info_pred["score"], y_true=info_pred[grp])
         # NLL (uncertainty estimation)
-        p = torch.tensor(info_pred['score'])
-        l = torch.tensor(info_pred['label'])
+        p = torch.tensor(info_pred['score'].reset_index(drop=True))
+        l = torch.tensor(info_pred['label'].reset_index(drop=True))
         nll_criterion = torch.nn.BCELoss()
         dp[f"{grp}"]['NLL_overall'] = nll_criterion(p, l.double()).item()
         p_sub = torch.tensor(task_pred.reset_index(drop=True))
@@ -160,7 +196,7 @@ def subgroup_bias_calculation(info_pred, test_list, output_file, thresholds):
                            for i in dp.keys()},
                        orient='index')
     metrics_summary = pd.concat([fairness_summary, nuance_result, aeg_result], join='outer',axis=1)
-    metrics_summary.to_csv(output_file)
+    metrics_summary.to_csv(output_file, index=False)
     return metrics_summary
     
 def analysis(args):
@@ -184,10 +220,17 @@ def analysis(args):
         ensembled_vali = model_ensemble(main_dir, exp_name, args.validation_file, args.model_number)
         validation_info_pred = info_pred_mapping(vali_info, ensembled_vali)
         if args.post_bias_mitigation == 'reject_object_class':
+            # # run reject objective classification bias mitigation methods
             roc_file = os.path.join(main_dir, f'{exp_name}_RD_0', 'validation_roc_searching.csv')
             optim_threds, subgroups = ROC_mitigation(validation_info_pred, test_list, threshold, roc_file)
             roc_output_file = os.path.join(main_dir, f'{exp_name}_RD_0', 'subgroup_bias_measure_post_roc.csv')
             metrics_summary = subgroup_bias_calculation(test_info_pred, subgroups, roc_output_file, optim_threds)
+        elif args.post_bias_mitigation == 'calib_eq_odds':
+            # # run calibrated equalized odds bias mitigation methods
+            calib_eq_odds_file = os.path.join(main_dir, f'{exp_name}_RD_0', 'calib_eq_odds_prediction.csv')
+            calib_eq_odds_result = calib_eq_odds_mitigation(validation_info_pred, test_info_pred, test_list, calib_eq_odds_file, args.calib_eq_odds_rates)
+            calib_eq_odds_output_file = os.path.join(main_dir, f'{exp_name}_RD_0', 'subgroup_bias_measure_post_calib_eq_odds.csv')
+            metrics_summary = subgroup_bias_calculation(calib_eq_odds_result, test_list, calib_eq_odds_output_file, [threshold, threshold])
         else:
             raise RuntimeError('Current post processing bias mitigation method is not supported!')
         
@@ -205,7 +248,10 @@ if __name__ == '__main__':
     parser.add_argument('--testing_info_file',type=str)
     parser.add_argument('--threshold',type=float,default=0.5)
     parser.add_argument('--test_subgroup',nargs='+',type=str)
-    parser.add_argument('--post_bias_mitigation', help="which post processing bias mitigation method to use: 'reject_object_class'")
+    parser.add_argument('--post_bias_mitigation', 
+    help="which post processing bias mitigation method to use: 'reject_object_class', 'calib_eq_odds'")
+    parser.add_argument('--calib_eq_odds_rates',nargs=2,type=float, default=[0.5, 1],
+    help="Specify 2 weights for FPR and FNR in calibrated equalized odds mitigation method")
     args = parser.parse_args()
     analysis(args)
     
