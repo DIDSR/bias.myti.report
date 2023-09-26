@@ -5,6 +5,7 @@ from scipy.special import logit
 from math import inf, nan
 from nuancedmetric import *
 from calib_eq_odds import *
+from calibration_utils import *
 import torch
 import sklearn.metrics as sk_metrics
 import numpy as np
@@ -57,6 +58,45 @@ def model_ensemble(main_dir, exp_name, prediction_file, model_number=10):
     pred['logits'] = logits_new
     pred.to_csv(os.path.join(main_dir, f'{exp_name}_RD_0', f'ensemble_{prediction_file}'),index=False)
     return pred
+    
+
+def calibrate_model(ensembled_vali, ensembled_test, output_file=None):
+    '''
+    function to calibrate models using temperature scaling. 
+    Use the validation set to calculate temperature and apply to testing set
+    Return validation and test results with calibated scores
+    '''
+    print("Beginning model calibration")
+    # # get uncalibrated logits and labels
+    vali_logit = ensembled_vali['logits'].values
+    vali_label = ensembled_vali['label'].values
+    test_logit = ensembled_test['logits'].values
+    test_label = ensembled_test['label'].values
+    # # temperature scaling, compute temperature from validation set    
+    model_calib = CalibratedModel()
+    vali_results = [vali_logit, vali_label]
+    t = model_calib.set_temperature(vali_results)
+    calib_vali_logit = model_calib.temperature_scale(vali_logit)
+    calib_vali_score = torch.sigmoid(calib_vali_logit)
+        
+    # # apply the temperature to test set
+    #metrics before calibration
+    metric_pre_calib = get_metrics(test_logit, test_label)
+    calib_test_logit = model_calib.temperature_scale(test_logit)
+    calib_test_score = torch.sigmoid(calib_test_logit)
+    #metrics after calibration
+    metric_post_calib = get_metrics(calib_test_logit, test_label)
+    if output_file:
+        metric_out = [metric_pre_calib, metric_post_calib]
+        metric_out.to_csv(output_file, index=False)
+    # # save results and return
+    ensembled_vali['logits'] = calib_vali_logit
+    ensembled_vali['score'] = calib_vali_score
+    ensembled_test['logits'] = calib_test_logit
+    ensembled_test['score'] = calib_test_score
+    return ensembled_vali, ensembled_test
+    
+    
     
 def ROC_mitigation(validation_info_pred, test_list, threshold=0.5, output_file=None):
     '''
@@ -209,6 +249,11 @@ def analysis(args):
     
     # # ensemble prediction results
     ensembled_test = model_ensemble(main_dir, exp_name, args.testing_file, args.model_number)
+    ensembled_vali = model_ensemble(main_dir, exp_name, args.validation_file, args.model_number)
+    
+    # # run model calibration
+    calib_file = os.path.join(main_dir, f'{exp_name}_RD_0', 'calibration_metrics.csv')
+    calib_vali, calib_test = calibrate_model(ensembled_vali, ensembled_test, calib_file)
     
     # # calculate original bias measurements
     test_info_pred = info_pred_mapping(test_info, ensembled_test)
@@ -217,8 +262,7 @@ def analysis(args):
     
     # # apply post processing bias mitigation methods if the user choose to    
     if args.post_bias_mitigation is not None:
-        ensembled_vali = model_ensemble(main_dir, exp_name, args.validation_file, args.model_number)
-        validation_info_pred = info_pred_mapping(vali_info, ensembled_vali)
+        validation_info_pred = info_pred_mapping(vali_info, calib_vali)
         if args.post_bias_mitigation == 'reject_object_class':
             # # run reject objective classification bias mitigation methods
             roc_file = os.path.join(main_dir, f'{exp_name}_RD_0', 'validation_roc_searching.csv')
