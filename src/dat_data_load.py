@@ -86,11 +86,7 @@ class Dataset(BaseDataset):
         dats = df[default_path].tolist()   # # JPEGs
         labels = df[default_out_class].tolist() # # class label
 
-        c = list(zip(ids, dats, labels))
-        # # Randomize the list
-        if train_flag:
-            random.shuffle(c)
-        self.patient_ids, self.images, self.class_values = zip(*c)
+        self.patient_ids, self.images, self.class_values = ids, dats, labels
 
 
     def __getitem__(self, i):

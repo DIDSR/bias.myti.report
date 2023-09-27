@@ -39,6 +39,7 @@ def model_ensemble(main_dir, exp_name, prediction_file, model_number=10):
     it is slightly favorable suggested by the paper.
     The output score is saved under the randome_state_0 directory.
     '''
+    print("\nStart model ensemble")
     predictions_all = []
     # load scores from models
     for RD in range(model_number):
@@ -57,6 +58,7 @@ def model_ensemble(main_dir, exp_name, prediction_file, model_number=10):
     pred['score'] = ensemble_scores['score']
     pred['logits'] = logits_new
     pred.to_csv(os.path.join(main_dir, f'{exp_name}_RD_0', f'ensemble_{prediction_file}'),index=False)
+    print("\nModel ensemble Done\n")
     return pred
     
 
@@ -66,7 +68,7 @@ def calibrate_model(ensembled_vali, ensembled_test, output_file=None):
     Use the validation set to calculate temperature and apply to testing set
     Return validation and test results with calibated scores
     '''
-    print("Beginning model calibration")
+    print("\nStart model calibration")
     # # get uncalibrated logits and labels
     vali_logit = ensembled_vali['logits'].values
     vali_label = ensembled_vali['label'].values
@@ -96,18 +98,20 @@ def calibrate_model(ensembled_vali, ensembled_test, output_file=None):
     ensembled_vali['score'] = calib_vali_score
     ensembled_test['logits'] = calib_test_logit
     ensembled_test['score'] = calib_test_score
+    print("\nModel calibration Done\n")
     return ensembled_vali, ensembled_test
     
     
     
 def ROC_mitigation(validation_info_pred, test_list, threshold=0.5, output_file=None):
     '''
-    reject ojective classification method for bias mitigation.Uuse the validation dataset to find 
+    reject oject classification method for bias mitigation.Use the validation dataset to find 
     prviliged and unprivileged subgroup, as well as the best threshold.
     searching results can optionally save as a csv file.
     '''          
-    # determine the privileged group
-    print("Beginning bias mitigation using reject ojective classification")
+    
+    print("\nStart bias mitigation using reject oject classification")
+    # # determine the privileged group
     dp = {}     
     for grp in test_list:
         info_sub = validation_info_pred.loc[(validation_info_pred[grp]==1)]
@@ -147,9 +151,17 @@ def ROC_mitigation(validation_info_pred, test_list, threshold=0.5, output_file=N
                        orient='index')
     if output_file:
         metrics_summary.to_csv(output_file, index=False)
+    print("\nBias mitigation using reject oject classification done")
     return [threshold + optimal_threds, threshold - optimal_threds], [group_p, group_u]
+
     
 def calib_eq_odds_mitigation(validation_info_pred, testing_info_pred, test_list, output_file, rate_list):
+    '''
+    calibrated equalized odds method for bias mitigation.Uuse the validation dataset to find 
+    prviliged and unprivileged subgroup, and the ratio for returning group average probability.
+    new prediction scores save as a csv file.
+    '''
+    print("\nStart bias mitigation using calibrated equalized odds")
     # Create model objects - one for each group, validation and test 
     group_0_vali_data = validation_info_pred[validation_info_pred[test_list[0]] == 1]
     group_1_vali_data = validation_info_pred[validation_info_pred[test_list[0]] == 0]   
@@ -181,6 +193,7 @@ def calib_eq_odds_mitigation(validation_info_pred, testing_info_pred, test_list,
     pred_2[test_list[1]] = 1    
     pred_all = pd.concat([pred_1, pred_2], axis=0)
     pred_all.to_csv(output_file, index=False)
+    print("\nBias mitigation using calibrated equalized odds done")
     return pred_all
 
 
@@ -190,6 +203,7 @@ def subgroup_bias_calculation(info_pred, test_list, output_file, thresholds):
     input prediction_info file, subgroups to test and threshold
     save the calculated measurements to a csv file
     '''
+    print("\nStart subgroup bias measurements")
     # nuanced auroc and AEG
     subgroup_df = info_pred[[test_list[0],test_list[1]]].copy()
     true_label = info_pred[['label']].copy()
@@ -238,7 +252,8 @@ def subgroup_bias_calculation(info_pred, test_list, output_file, thresholds):
                            for i in dp.keys()},
                        orient='index')
     metrics_summary = pd.concat([fairness_summary, nuance_result, aeg_result], join='outer',axis=1)
-    metrics_summary.to_csv(output_file, index=False)
+    metrics_summary.to_csv(output_file)
+    print("\nSubgroup bias measurements done")
     return metrics_summary
     
 def analysis(args):
@@ -250,15 +265,17 @@ def analysis(args):
     threshold = args.threshold
     
     # # ensemble prediction results
-    ensembled_test = model_ensemble(main_dir, exp_name, args.testing_file, args.model_number)
-    ensembled_vali = model_ensemble(main_dir, exp_name, args.validation_file, args.model_number)
+    #ensembled_test = model_ensemble(main_dir, exp_name, args.testing_file, args.model_number)
+    #ensembled_vali = model_ensemble(main_dir, exp_name, args.validation_file, args.model_number)
+    ensembled_test = pd.read_csv(os.path.join(main_dir, f'{exp_name}_RD_0', args.testing_file), sep='\t')
+    ensembled_vali = pd.read_csv(os.path.join(main_dir, f'{exp_name}_RD_0', args.validation_file), sep='\t')
     
     # # run model calibration
     calib_file = os.path.join(main_dir, f'{exp_name}_RD_0', 'calibration_metrics.csv')
     calib_vali, calib_test = calibrate_model(ensembled_vali, ensembled_test, calib_file)
     
     # # calculate original bias measurements
-    test_info_pred = info_pred_mapping(test_info, ensembled_test)
+    test_info_pred = info_pred_mapping(test_info, calib_test)
     output_file = os.path.join(main_dir, f'{exp_name}_RD_0', 'subgroup_bias_measure.csv')
     metrics_summary = subgroup_bias_calculation(test_info_pred, test_list, output_file, [threshold, threshold])
     
@@ -285,21 +302,21 @@ def analysis(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--main_dir',type=str)
-    parser.add_argument('--exp_name',type=str)
-    parser.add_argument('--model_number',type=int, default=10)
-    parser.add_argument('--validation_file',type=str)
-    parser.add_argument('--testing_file',type=str)
-    parser.add_argument('--validation_info_file',type=str)
-    parser.add_argument('--testing_info_file',type=str)
+    parser.add_argument('-m', '--main_dir',type=str)
+    parser.add_argument('-e', '--exp_name',type=str)
+    parser.add_argument('-n', '--model_number',type=int, default=10)
+    parser.add_argument('-v', '--validation_file',type=str)
+    parser.add_argument('-t', '--testing_file',type=str)
+    parser.add_argument('-iv', '--validation_info_file',type=str)
+    parser.add_argument('-it', '--testing_info_file',type=str)
     parser.add_argument('--threshold',type=float,default=0.5)
-    parser.add_argument('--test_subgroup',nargs='+',type=str)
-    parser.add_argument('--post_bias_mitigation', 
+    parser.add_argument('-s', '--test_subgroup',nargs='+',type=str)
+    parser.add_argument('-p', '--post_bias_mitigation', 
     help="which post processing bias mitigation method to use: 'reject_object_class', 'calib_eq_odds'")
-    parser.add_argument('--calib_eq_odds_rates',nargs=2,type=float, default=[0.5, 1],
+    parser.add_argument('-r', '--calib_eq_odds_rates',nargs=2,type=float, default=[0.5, 1],
     help="Specify 2 weights for FPR and FNR in calibrated equalized odds mitigation method")
     args = parser.parse_args()
     analysis(args)
     
-    print("Done\n")
+    print("\nDone\n")
 

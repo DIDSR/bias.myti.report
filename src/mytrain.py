@@ -160,6 +160,50 @@ def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels, is_train
     model = nn.Sequential(model, new_layers)
 
     return model
+    
+def reweighing_weights_calculation(df_path, subgroups, task, output_file):
+    '''
+    functions to calculate weights if the user wants to reweighing on training sets
+    result weights save as a csv file
+    '''
+    df = pd.read_csv(df_path)
+    len_total = df.shape[0]
+    # initialize the weights
+    weights = [1] * len_total
+    # check if training file has subgroup information
+    if not all(item in df.columns.values.tolist() for item in subgroups):
+        print('Input training file does not have assigned subgroup information. Not apply reweighing')
+        return weights
+    # # calculate weights for each subgroup+class combination 
+    dp = {}
+    for i in range(2):
+        for j in range(2):
+            df_sub = df.loc[(df[subgroups[i]]==1) & (df[task]==j)]
+            # check if at least one sample in each subgroup+class combination 
+            len_sub = df_sub.shape[0]
+            if len_sub == 0:
+                print(f"{subgroups[i]}_{task}_{j} has zero samples, cannot reweighing.")
+                return weights
+            dp[f"{subgroups[i]}_{task}_{j}"] = {}
+            dp[f"{subgroups[i]}_{task}_{j}"]['Weights'] = len_total / len_sub
+    # # assign weights for each sample        
+    for index, row in df.iterrows():
+        if row[subgroups[0]] == 1 and row[task] == 1:
+            weights[index] = dp[f"{subgroups[0]}_{task}_{1}"]['Weights']
+        elif row[subgroups[0]] == 1 and row[task] == 0:
+            weights[index] = dp[f"{subgroups[0]}_{task}_{0}"]['Weights']
+        elif row[subgroups[1]] == 1 and row[task] == 1:
+            weights[index] = dp[f"{subgroups[1]}_{task}_{1}"]['Weights']
+        elif row[subgroups[1]] == 1 and row[task] == 0:
+            weights[index] = dp[f"{subgroups[1]}_{task}_{0}"]['Weights']
+        else:
+            print(f"Sample {index} does not have correct subgroup or label info, skip reweighing for it")
+    # # save weights
+    weights_summary = pd.DataFrame.from_dict({i: dp[i] 
+                           for i in dp.keys()},
+                       orient='index')
+    weights_summary.to_csv(output_file)
+    return weights
 
 def train(args):
     writer = SummaryWriter(log_dir=args.output_base_dir, flush_secs=1)
@@ -228,10 +272,17 @@ def train(args):
     torch.cuda.set_device(args.gpu_id)
     model.cuda(args.gpu_id)
     # # Create tr and vd datasets
-    train_dataset = Dataset(args.input_train_file, train_flag=True)
-    valid_dataset = Dataset(args.validation_file, train_flag=False)
+    train_dataset = Dataset(args.input_train_file, train_flag=True, default_out_class=args.train_task)
+    valid_dataset = Dataset(args.validation_file, train_flag=False, default_out_class=args.train_task)
     # # Create tr and vd data loaders
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.threads)
+    #if implement reweighing bias mitigation
+    if args.reweighing_subgroup is not None:
+        weights_output_file = os.path.join(args.output_base_dir, 'reweighing_weights.csv')
+        weights = reweighing_weights_calculation(args.input_train_file, args.reweighing_subgroup, args.train_task, weights_output_file)
+        sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, int(10*len(weights)), replacement=True)
+        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, sampler=sampler, num_workers=args.threads)
+    else:    
+        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.threads)
     valid_loader = DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.threads)
     num_steps_in_epoch = len(train_loader)
     # # select the optimizer
@@ -417,6 +468,10 @@ if __name__ == '__main__':
         default="/gpfs_projects/ravi.samala/OUT/moco/experiments/ravi.samala/r8w1n416_20220715h15_tr_mocov2_20220715-172742/checkpoint_0019.pth.tar", 
         help='custom checkpoint file to start')
     parser.add_argument('--random_state', type=int, default=None)
+    parser.add_argument('--train_task', type=str, default='Yes', help='specify training task')
+    parser.add_argument('--reweighing_subgroup', nargs='+',type=str, default=None, 
+    help='if input with subgroup names, the model will implement reweighing for bias mitigation')
+    
 
     args = parser.parse_args()
     print(args)
