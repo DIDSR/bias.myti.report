@@ -4,60 +4,60 @@ from torch.nn import functional as F
 import os
 import numpy as np
 import pandas as pd
-from scipy.special import expit, logit
+from scipy.special import expit
+from sklearn.metrics import brier_score_loss
 import json
 
 class CalibratedModel():
     def __init__(self, calibration_mode='temperature'):
         super(CalibratedModel, self).__init__()
         self.calibration_mode = calibration_mode
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         if self.calibration_mode == 'temperature':
             self.temperature = nn.Parameter(torch.ones(1)*1.5)
 
     def temperature_scale(self, logits):
-        temperature = self.temperature.unsqueeze(1).expand(logits.size(-1), logits.size(0))
+        temperature = self.temperature.expand(logits.size(0)).to(self.device)
         return logits / temperature
 
     def get_metrics(self, logits, labels):
         '''Returns AUROC, Brier, ECE, and NLL scores for binary classification tasks'''
-        brier = brier_score_loss(labels, torch.sigmoid(torch.from_numpy(logits)).numpy(), pos_label=1)
+        brier = brier_score_loss(labels, expit(logits), pos_label=1)
         # convert to tensors
         p = torch.tensor(logits)
         l = torch.tensor(labels)
-        #ece = calibration_error(target=l.int(), preds=p, norm='l1').item()
-        ece_criterion = _ECELoss().cuda()
-        ece = ece_criterion(logits, l).item()
-        nll_criterion = nn.BCEWithLogitsLoss()
+        ece_criterion = _ECELoss().to(self.device)
+        ece = ece_criterion(p, l).item()
+        nll_criterion = nn.BCEWithLogitsLoss().to(self.device)
         nll = nll_criterion(p, l.double()).item()
         out = pd.DataFrame({'Brier':[brier], 'NLL':[nll], 'ECE':[ece]})
         return out
 
     def set_temperature(self, valid_results, lr=0.01, max_iter=50):
-        self.temperature.cuda()
+        self.temperature.to(self.device)
         self.temp_metrics = {}
         # NOTE: Brier score only works for binary classificaiton, assumes first column is positive percentage
         self.temp_lr = lr
         self.temp_max_iter = max_iter
         #nll_criterion = nn.CrossEntropyLoss().cuda()
-        nll_criterion = nn.BCEWithLogitsLoss().cuda()
-        ece_criterion = _ECELoss().cuda()
+        nll_criterion = nn.BCEWithLogitsLoss().to(self.device)
         # expects valid_predictions = [preds, labels]
         if len([valid_results[1].shape]) != 1:
-            labels = torch.argmax(valid_results[1], dim=1).cuda()
+            labels = torch.argmax(valid_results[1], dim=1).to(self.device)
         else:
-            labels = torch.from_numpy(valid_results[1]).cuda()
-        logits = torch.from_numpy(valid_results[0]).cuda()
+            labels = torch.from_numpy(valid_results[1]).to(self.device)
+        logits = torch.from_numpy(valid_results[0]).to(self.device)
         if len([logits.shape]) == 1:
             # binary classification
-            nll_criterion = nn.BCEWithLogitsLoss().cuda()
+            nll_criterion = nn.BCEWithLogitsLoss().to(self.device)
         optimizer = optim.LBFGS([self.temperature], lr=self.temp_lr, max_iter=self.temp_max_iter)
         def eval():
             optimizer.zero_grad()
-            loss = nll_criterion(self.temperature_scale(logits), labels)
+            loss = nll_criterion(self.temperature_scale(logits), labels.to(torch.float))
             loss.backward()
             return loss
         optimizer.step(eval)
-        return self.temperature.detach().cpu().float()
+        return self.temperature.detach().cpu().numpy()
 
 
 class _ECELoss(nn.Module):
@@ -89,9 +89,8 @@ class _ECELoss(nn.Module):
         self.bin_uppers = bin_boundaries[1:]
 
     def forward(self, logits, labels):
-        softmaxes = torch.sigmoid(logits)
-        confidences, predictions = torch.max(softmaxes, 1)
-        #confidences, predictions = torch.max(logits, 1)
+        scores = torch.sigmoid(logits)
+        confidences, predictions = torch.max(scores, 0)
         accuracies = predictions.eq(labels)
 
         ece = torch.zeros(1, device=logits.device)

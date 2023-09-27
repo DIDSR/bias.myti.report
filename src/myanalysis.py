@@ -1,7 +1,7 @@
 import argparse
 import os
 import pandas as pd
-from scipy.special import logit
+from scipy.special import logit, expit
 from math import inf, nan
 from nuancedmetric import *
 from calib_eq_odds import *
@@ -76,18 +76,20 @@ def calibrate_model(ensembled_vali, ensembled_test, output_file=None):
     model_calib = CalibratedModel()
     vali_results = [vali_logit, vali_label]
     t = model_calib.set_temperature(vali_results)
-    calib_vali_logit = model_calib.temperature_scale(vali_logit)
-    calib_vali_score = torch.sigmoid(calib_vali_logit)
+    calib_vali_logit = vali_logit / t
+    calib_vali_score = expit(calib_vali_logit)
         
     # # apply the temperature to test set
     #metrics before calibration
-    metric_pre_calib = get_metrics(test_logit, test_label)
-    calib_test_logit = model_calib.temperature_scale(test_logit)
-    calib_test_score = torch.sigmoid(calib_test_logit)
+    metric_pre_calib = model_calib.get_metrics(test_logit, test_label)
+    metric_pre_calib.insert(0, 'Status', 'Before Calibration')
+    calib_test_logit = test_logit / t
+    calib_test_score = expit(calib_test_logit)
     #metrics after calibration
-    metric_post_calib = get_metrics(calib_test_logit, test_label)
+    metric_post_calib = model_calib.get_metrics(calib_test_logit, test_label)
+    metric_post_calib.insert(0, 'Status', 'After Calibration')
     if output_file:
-        metric_out = [metric_pre_calib, metric_post_calib]
+        metric_out = pd.concat([metric_pre_calib, metric_post_calib])
         metric_out.to_csv(output_file, index=False)
     # # save results and return
     ensembled_vali['logits'] = calib_vali_logit
