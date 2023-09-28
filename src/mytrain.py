@@ -49,7 +49,6 @@ import onnx
 import onnxruntime
 # #
 # # CONSTANTS
-resnet18_ordered_layer_names = ['conv1', 'layer1', 'layer2', 'layer3', 'layer4', 'fc']
 densenet121_ordered_layer_names = ['Conv2d_conv0', 'denseblock1', 'denseblock2', 'denseblock3', 'denseblock4', 'classifier']
 master_iter = 0
 
@@ -58,35 +57,35 @@ def save_checkpoint(state, filename='checkpoint.pth.tar'):
     torch.save(state, filename)
 
 
-def apply_custom_transfer_learning__resnet18(net, custom_layer_name):
-    first_non_frozen_layer_name = custom_layer_name[args.upto_freeze + 1]
-    spacer = ''
-    start_not_freezing_from_next_layer = False
-    # # set the requires_grad to False to all first
-    for param in net.parameters():
-        param.requires_grad = False
-    print('Partial fine tuning selected')
-    print('Will freeze upto {} with the layer name of {}'.format(args.upto_freeze, first_non_frozen_layer_name))
-    # # while iterating over the layers, check with the 
-    for name, param in net.named_parameters():
-        # # check if the names in custom_layer_name is in this name
-        if len(custom_layer_name) > 0:
-            for ii, each_layer_name in enumerate(custom_layer_name):
-                # # the index in the name.split is important and may change
-                # # based on the pretrained model
-                if each_layer_name == name.split('.')[1]:
-                    if each_layer_name == first_non_frozen_layer_name:
-                        # # start un-freezing from here onwards
-                        start_not_freezing_from_next_layer = True
-                    # # found it
-                    custom_layer_name.pop(ii)
-                    spacer += '\t'
-                    break
-        if start_not_freezing_from_next_layer:
-            param.requires_grad = True
-            print('{} {} {}'.format(spacer, 'T', name))
+def apply_custom_transfer_learning__resnet18(net):
+    
+    # # get all the layer names
+    model_layers = [name for name,para in net.named_parameters()]
+    idxs = []
+    for i, lyr in enumerate(model_layers):
+        if lyr.endswith('bias'):
+            if i == len(model_layers)-1:
+                continue
+            if 'downsample' in model_layers[i+1]:
+                continue
+            idxs.append(i+1)
+    for ii, idx in enumerate(idxs):
+        if ii == 0:
+            layers = [','.join(model_layers[:idx])]          
         else:
-            print('{} {} {}'.format(spacer, 'F', name))
+            layers += [','.join(model_layers[idxs[ii-1]:idx])]
+    
+    # # set requires_grad to False for freezing layers
+    fine_tune_layers = ','.join(layers[args.upto_freeze-len(layers):]).split(',')    
+    for name, param in net.named_parameters():
+        print(name)
+        if name not in fine_tune_layers:
+            param.requires_grad = False
+    
+    parameters = list(filter(lambda p: p.requires_grad, net.parameters()))
+    print([len(parameters), len(fine_tune_layers)])
+    assert len(parameters) == len(fine_tune_layers)
+                
     return net
 
 
@@ -185,7 +184,7 @@ def reweighing_weights_calculation(df_path, subgroups, task, output_file):
                 print(f"{subgroups[i]}_{task}_{j} has zero samples, cannot reweighing.")
                 return weights
             dp[f"{subgroups[i]}_{task}_{j}"] = {}
-            dp[f"{subgroups[i]}_{task}_{j}"]['Weights'] = len_total / len_sub
+            dp[f"{subgroups[i]}_{task}_{j}"]['Weights'] = 0.25 * len_total / len_sub
     # # assign weights for each sample        
     for index, row in df.iterrows():
         if row[subgroups[0]] == 1 and row[task] == 1:
@@ -221,7 +220,7 @@ def train(args):
     elif args.dcnn == 'resnet18':
         model = models.__dict__[args.dcnn](pretrained=True)
         model = add_classification_layer_v1(model, num_channels)
-        custom_layer_name = resnet18_ordered_layer_names.copy()
+        #custom_layer_name = resnet18_ordered_layer_names.copy()
     elif args.dcnn == 'wide_resnet50_2':
         model = models.__dict__[args.dcnn](pretrained=True)
         model = add_classification_layer_v1(model, num_channels)
@@ -232,26 +231,28 @@ def train(args):
     elif args.dcnn == 'resnext50_32x4d':
         model = models.__dict__[args.dcnn](pretrained=True)
         model = add_classification_layer_v1(model, num_channels)
-    elif args.dcnn == 'CheXpert_Resnet':
-        model = load_custom_checkpoint(args.custom_checkpoint_file, 'resnet18', args.gpu_id, num_channels)
-        custom_layer_name = resnet18_ordered_layer_names.copy()
-        print(custom_layer_name)
+    elif args.dcnn == 'CheXpert_Resnet' or args.dcnn == 'Mimic_Resnet' or args.dcnn == 'CheXpert-Mimic_Resnet':
+        model = load_custom_checkpoint(args.custom_checkpoint_file, 'resnet18', args.gpu_id, num_channels)      
+    elif args.dcnn == 'CheXpert-Mimic_Densenet':
+        model = load_custom_checkpoint(args.custom_checkpoint_file, 'densenet121', args.gpu_id, num_channels)
+        custom_layer_name = densenet121_ordered_layer_names.copy()
         print('Using custom pretrained checkpoint file')
     else:
         print('ERROR. UNKNOWN model.')
         return
+    
 
     # # custom transfer learning >>
     if args.fine_tuning == 'partial':
         if args.dcnn == 'googlenet':
             print('ERROR. Custom transfer learning not implemented for this model.')
         elif args.dcnn == 'resnet18':
-            model = apply_custom_transfer_learning__resnet18(model, custom_layer_name)
-        elif args.dcnn == 'CheXpert_Resnet':        
-            model = apply_custom_transfer_learning__resnet18(model, custom_layer_name)
+            model = apply_custom_transfer_learning__resnet18(model)
+        elif args.dcnn == 'CheXpert_Resnet' or args.dcnn == 'Mimic_Resnet' or args.dcnn == 'CheXpert-Mimic_Resnet':        
+            model = apply_custom_transfer_learning__resnet18(model)
         elif args.dcnn == 'wide_resnet50_2':
             print('ERROR. Custom transfer learning not implemented for this model.')
-        elif args.dcnn == 'densenet121':
+        elif args.dcnn == 'densenet121' or args.dcnn == 'CheXpert-Mimic_Densenet':
             model = apply_custom_transfer_learning__densenet121(model, custom_layer_name)
         elif args.dcnn == 'resnext50_32x4d':
             print('ERROR. Custom transfer learning not implemented for this model.')
@@ -279,7 +280,7 @@ def train(args):
     if args.reweighing_subgroup is not None:
         weights_output_file = os.path.join(args.output_base_dir, 'reweighing_weights.csv')
         weights = reweighing_weights_calculation(args.input_train_file, args.reweighing_subgroup, args.train_task, weights_output_file)
-        sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, int(10*len(weights)), replacement=True)
+        sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, len(weights), replacement=True)
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, sampler=sampler, num_workers=args.threads)
     else:    
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.threads)
@@ -295,7 +296,7 @@ def train(args):
         print('ERROR. UNKNOWN optimizer.')
         return
     # # learning rate scheduler
-    my_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=num_steps_in_epoch*args.decay_every_N_epoch, gamma=args.decay_multiplier)
+    my_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.decay_every_N_epoch, gamma=args.decay_multiplier)
     # #
     print('Training...')
     print('EPOCH\tTR-AVG-LOSS\tVD-AUC')
@@ -305,6 +306,7 @@ def train(args):
     for epoch in range(args.num_epochs):
         # # train for one epoch
         avg_loss = run_train(train_loader, model, criterion, optimizer, my_lr_scheduler, writer)
+        my_lr_scheduler.step()
         # # save
         if epoch % args.save_every_N_epochs == 0 or epoch == args.num_epochs-1:
             # # evaluate on validation set
@@ -380,7 +382,7 @@ def run_train(train_loader, model, criterion, optimizer,  my_lr_scheduler, write
         # # compute gradient and do SGD step
         loss.backward()
         optimizer.step()
-        my_lr_scheduler.step()
+        #my_lr_scheduler.step()
         # #
         writer.add_scalar("LR/train", my_lr_scheduler.get_last_lr()[0], master_iter)
     return avg_loss/len(train_loader)
@@ -443,7 +445,8 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--validation_file', help='input validation list file', required=True)
     parser.add_argument('-o', '--output_base_dir', help='output based dir', required=True)
     parser.add_argument('-d', '--dcnn', 
-        help="which dcnn to use: 'googlenet', 'resnet18', 'wide_resnet50_2', 'resnext50_32x4d' or 'densenet121', 'CheXpert_Resnet'", required=True)
+        help="which dcnn to use: 'googlenet', 'resnet18', 'wide_resnet50_2', 'resnext50_32x4d' or 'densenet121', 'CheXpert_Resnet',
+        'Mimic_Resnet', 'CheXpert-Mimic_Resnet', 'CheXpert-Mimic_Densenet'", required=True)
     # parser.add_argument('-f', '--freeze_up_to', help="Must be a freezable layer in the structure e.g. FirstLayer", required=True)
     # Must be one of: 'FirstLayer', 'Mixed_3b', 'Mixed_3c', 'Mixed_4b', 'Mixed_4c', 'Mixed_4d', 'Mixed_4e', 'Mixed_4f', 'Mixed_5b', 'Mixed_5c'
     parser.add_argument('-f', '--fine_tuning', default='full', help="options: 'full' or 'partial'")
