@@ -445,8 +445,7 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--validation_file', help='input validation list file', required=True)
     parser.add_argument('-o', '--output_base_dir', help='output based dir', required=True)
     parser.add_argument('-d', '--dcnn', 
-        help="which dcnn to use: 'googlenet', 'resnet18', 'wide_resnet50_2', 'resnext50_32x4d' or 'densenet121', 'CheXpert_Resnet',
-        'Mimic_Resnet', 'CheXpert-Mimic_Resnet', 'CheXpert-Mimic_Densenet'", required=True)
+        help="which dcnn to use: 'googlenet', 'resnet18', 'wide_resnet50_2', 'resnext50_32x4d', 'densenet121', 'CheXpert_Resnet', 'Mimic_Resnet', 'CheXpert-Mimic_Resnet', 'CheXpert-Mimic_Densenet'", required=True)        
     # parser.add_argument('-f', '--freeze_up_to', help="Must be a freezable layer in the structure e.g. FirstLayer", required=True)
     # Must be one of: 'FirstLayer', 'Mixed_3b', 'Mixed_3c', 'Mixed_4b', 'Mixed_4c', 'Mixed_4d', 'Mixed_4e', 'Mixed_4f', 'Mixed_5b', 'Mixed_5c'
     parser.add_argument('-f', '--fine_tuning', default='full', help="options: 'full' or 'partial'")
