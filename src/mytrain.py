@@ -58,7 +58,8 @@ def save_checkpoint(state, filename='checkpoint.pth.tar'):
 
 
 def apply_custom_transfer_learning__resnet18(net):
-    
+    """ Set the ResNet18 model to freeze first certain number of layers.
+    """
     # # get all the layer names
     model_layers = [name for name,para in net.named_parameters()]
     idxs = []
@@ -90,6 +91,8 @@ def apply_custom_transfer_learning__resnet18(net):
 
 
 def apply_custom_transfer_learning__densenet121(net, custom_layer_name):
+    """ Set the DenseNet121 model to freeze first certain number of layers.
+    """
     first_non_frozen_layer_name = custom_layer_name[args.upto_freeze + 1]
     spacer = ''
     start_not_freezing_from_next_layer = False
@@ -127,6 +130,27 @@ def add_classification_layer_v1(model, num_channels, p=0.2):
     return model
 
 def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels, is_training=True):
+    """ Load customized pre-trained models
+    
+    Arguments
+    =========
+    ckpt_path
+        File path of the pre-trained model.
+    base_dcnn
+        Name of the model architecture, e.g. resnet18, densenet121, etc.
+    gpu_ids
+        Current GPU ID.
+    num_channels
+        Number of channels.
+    is_training
+        Indicate if is in training mode.
+
+    Returns
+    =======
+    model
+        Loaded pre-trained model.
+    
+    """
     device = f'cuda:{gpu_ids}'
     ckpt_dict = torch.load(ckpt_path, map_location=device)
 
@@ -161,10 +185,24 @@ def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels, is_train
     return model
     
 def reweighing_weights_calculation(df_path, subgroups, task, output_file):
-    '''
-    functions to calculate weights if the user wants to reweighing on training sets
-    result weights save as a csv file
-    '''
+    """ Calculate weights for reweighing bias mitigation method on training sets
+    
+    Arguments
+    =========
+    df_path
+        File path of the csv file containing training sets.
+    subgroups
+        List of subgroups to implement reweighing, should be included in the training data csv file.
+    task
+        The training task, should be included in the training data csv file.
+    output_file
+        The file path to store calculated weights for each subgroup+class combo.
+
+    Returns
+    =======
+    list
+        List of calculated weights for each samples.
+    """
     df = pd.read_csv(df_path)
     len_total = df.shape[0]
     # initialize the weights
@@ -359,9 +397,8 @@ def train(args):
 
 
 def run_train(train_loader, model, criterion, optimizer,  my_lr_scheduler, writer):
-    '''
-        function that runs the training
-    '''
+    """ Function that runs the training
+    """
     global master_iter
 
     # switch to train mode
@@ -389,11 +426,8 @@ def run_train(train_loader, model, criterion, optimizer,  my_lr_scheduler, write
 
 
 def run_validate(val_loader, model, args, writer):
-    '''
-        function the deploys on the input data loader
-        calculates sample based AUC
-        saves the scores in a tsv file
-    '''
+    """ Function that deploys on the input data loader, calculates sample based AUC and saves the scores in a tsv file.
+    """
     global master_iter
 
     # # switch to evaluate mode

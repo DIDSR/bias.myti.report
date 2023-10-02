@@ -209,6 +209,8 @@ def inference_onnx(args):
 
 
 def run_deploy_onnx(data_loader, args):
+    """ Function that deploys on the validation data loader, calculates sample based AUC and saves the scores in a tsv file.
+    """
     start = timeit.default_timer()
     ort_session = onnxruntime.InferenceSession(args.weight_file,  providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
     print(' onnxruntime available providers: ' + str(ort_session.get_providers()))

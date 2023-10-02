@@ -7,18 +7,53 @@ import torch
 import sklearn.metrics as sk_metrics
 import numpy as np
 
-def get_confusion_matrix(predictions, groundtruth, threshold):
+def get_confusion_matrix(predictions:np.array, groundtruth:np.array, threshold:float)->tuple[int, int, int, int]:
+    """ Get counts of true/false positives and true/false negatives. 
+    
+    Arguments
+    =========
+    predictions
+        numpy array contains prediction scores.
+    groundtruth
+        numpy array contains ture labels.
+    threshold
+        Threshold to calculate true/false positives and true/false negatives.
+
+    Returns
+    =======
+    tp 
+        counts of true positive
+    tn 
+        counts of true negative
+    fp 
+        counts of false positive
+    fn 
+        counts of false negative
+    
+    """
     tp = np.sum(np.logical_and(predictions > threshold, groundtruth == 1))
     tn = np.sum(np.logical_and(predictions <= threshold, groundtruth == 0))
     fp = np.sum(np.logical_and(predictions > threshold, groundtruth == 0))
     fn = np.sum(np.logical_and(predictions <= threshold, groundtruth == 1))
     return tp, tn, fp, fn 
 
-def info_pred_mapping(info, pred):
-    '''
-    map patient subgroup information (e.g. sex, race) to prediction score and labels
-    according to the patient id 
-    '''
+def info_pred_mapping(info:pd.DataFrame, pred:pd.DataFrame)->pd.DataFrame:
+    """ Map patient attributes information (e.g. sex, race) to prediction score and labels
+    according to the patient id
+    
+    Arguments
+    =========
+    info
+        Dataframe contains patient attributes info.
+    pred
+        Dataframe contains model prediction scores.
+
+    Returns
+    =======
+    pandas.DataFrame
+        Dataframe combines patient attributes and predictions.
+    
+    """
     # drop duplicate patient ids
     info.drop_duplicates(subset="patient_id", keep='first', inplace=True)
     # read prediction result file
@@ -29,13 +64,27 @@ def info_pred_mapping(info, pred):
         info_pred[c] = info_pred['patient_id'].map(info.set_index("patient_id")[c])
     return info_pred
     
-def model_ensemble(main_dir, exp_name, prediction_file, model_number=10):
-    '''
-    load predicted scores from each model, and average them together into one
-    ensembled prediction score. Choose to ensemble rather than logits because
-    it is slightly favorable suggested by the paper.
-    The output score is saved under the randome_state_0 directory.
-    '''
+def model_ensemble(main_dir:str, exp_name:str, prediction_file:str, model_number:int=10)->pd.DataFrame:
+    """ Gets the ensembled prediction scores from models with different initial random seeds.
+    
+    Arguments
+    =========
+    main_dir
+        Main path of the experiment.
+    exp_name
+        The name indicating the current experiment.
+    prediction_file
+        Name of the file which contains prediction scores.
+    model_number
+        Number of models to ensemble.
+
+    Returns
+    =======
+    pandas.DataFrame
+        Dataframe contains ensembled prediction scores and logits.
+    
+    """
+    
     print("\nStart model ensemble")
     predictions_all = []
     # load scores from models
@@ -59,12 +108,26 @@ def model_ensemble(main_dir, exp_name, prediction_file, model_number=10):
     return pred
     
 
-def calibrate_model(ensembled_vali, ensembled_test, output_file=None):
-    '''
-    function to calibrate models using temperature scaling. 
-    Use the validation set to calculate temperature and apply to testing set
-    Return validation and test results with calibated scores
-    '''
+def calibrate_model(ensembled_vali:pd.DataFrame, ensembled_test:pd.DataFrame, output_file:str=None)->tuple[pd.DataFrame, pd.DataFrame]:
+    """ Calibrate models using temperature scaling.
+    
+    Arguments
+    =========
+    ensembled_vali
+        Dataframe contains predictions of validation set.
+    ensembled_test
+        Dataframe contains predictions of testing set.
+    output_file
+        File path to store calibration metrics.
+
+    Returns
+    =======
+    calib_vali
+        Dataframe contains validation prediction scores after calibration.
+    calib_test
+        Dataframe contains testing prediction scores after calibration.
+    
+    """
     print("\nStart model calibration")
     # # get uncalibrated logits and labels
     vali_logit = ensembled_vali['logits'].values
@@ -91,22 +154,39 @@ def calibrate_model(ensembled_vali, ensembled_test, output_file=None):
         metric_out = pd.concat([metric_pre_calib, metric_post_calib])
         metric_out.to_csv(output_file, index=False)
     # # save results and return
-    ensembled_vali['logits'] = calib_vali_logit
-    ensembled_vali['score'] = calib_vali_score
-    ensembled_test['logits'] = calib_test_logit
-    ensembled_test['score'] = calib_test_score
+    calib_vali = ensembled_vali.copy()
+    calib_vali['logits'] = calib_vali_logit
+    calib_vali['score'] = calib_vali_score
+    calib_test = ensembled_test.copy()
+    calib_test['logits'] = calib_test_logit
+    calib_test['score'] = calib_test_score
     print("\nModel calibration Done\n")
-    return ensembled_vali, ensembled_test
+    return calib_vali, calib_test
     
     
     
-def ROC_mitigation(validation_info_pred, test_list, threshold=0.5, output_file=None):
-    '''
-    reject oject classification method for bias mitigation.Use the validation dataset to find 
-    prviliged and unprivileged subgroup, as well as the best threshold.
-    searching results can optionally save as a csv file.
-    '''          
+def ROC_mitigation(validation_info_pred:pd.DataFrame, test_list:list, threshold:float=0.5, output_file:str=None)->tuple[list, list]:          
+    """ Post-processing bias mitigation using reject oject classification method.
     
+    Arguments
+    =========
+    validation_info_pred
+        Dataframe contains patient attributes and predictions of validation set.
+    test_list
+        List of subgroups for bias mitigation.
+    threshold
+        Default threshold
+    output_file
+        File path to store new threshold searching results.
+
+    Returns
+    =======
+    threds_list
+        lists contains new thresholds for mitigation subgroups.
+    group_list
+        list specify privilege and unprivileged subgroup
+    
+    """
     print("\nStart bias mitigation using reject oject classification")
     # # determine the privileged group
     dp = {}     
@@ -149,15 +229,33 @@ def ROC_mitigation(validation_info_pred, test_list, threshold=0.5, output_file=N
     if output_file:
         metrics_summary.to_csv(output_file, index=False)
     print("\nBias mitigation using reject oject classification done")
-    return [threshold + optimal_threds, threshold - optimal_threds], [group_p, group_u]
+    threds_list = [threshold + optimal_threds, threshold - optimal_threds]
+    group_list = [group_p, group_u]
+    return threds_list, group_list
 
     
-def calib_eq_odds_mitigation(validation_info_pred, testing_info_pred, test_list, output_file, rate_list):
-    '''
-    calibrated equalized odds method for bias mitigation.Uuse the validation dataset to find 
-    prviliged and unprivileged subgroup, and the ratio for returning group average probability.
-    new prediction scores save as a csv file.
-    '''
+def calib_eq_odds_mitigation(validation_info_pred:pd.DataFrame, testing_info_pred:pd.DataFrame, test_list:list, output_file:str, rate_list:list)->pd.DataFrame:
+    """ Post-processing bias mitigation using calibrated equalized odds method.
+    
+    Arguments
+    =========
+    validation_info_pred
+        Dataframe contains patient attributes and predictions of validation set.
+    testing_info_pred
+        Dataframe contains patient attributes and predictions of testing set.
+    test_list
+        List of subgroups for bias mitigation.
+    output_file
+        File path to store predictions after implementation of calibrated equalized odds.
+    rate_list
+        weight lists for FPR and FNR
+
+    Returns
+    =======
+    pandas.DataFrame
+        Dataframe contains prediction scores for testing after implementation of calibrated equalized odds.
+    
+    """
     print("\nStart bias mitigation using calibrated equalized odds")
     # Create model objects - one for each group, validation and test 
     group_0_vali_data = validation_info_pred[validation_info_pred[test_list[0]] == 1]
@@ -194,12 +292,26 @@ def calib_eq_odds_mitigation(validation_info_pred, testing_info_pred, test_list,
     return pred_all
 
 
-def subgroup_bias_calculation(info_pred, test_list, output_file, thresholds):
-    '''
-    function to calculate measurements for subgroup bias
-    input prediction_info file, subgroups to test and threshold
-    save the calculated measurements to a csv file
-    '''
+def subgroup_bias_calculation(info_pred:pd.DataFrame, test_list:list, output_file:str, thresholds:list)->pd.DataFrame:
+    """ Calculate performance and bias measurements for subgroups. 
+    
+    Arguments
+    =========
+    info_pred
+        Dataframe contains patient attributes and predictions.
+    test_list
+        List of subgroups for bias measurements calculation.
+    output_file
+        File path to store calculated performance and bias measurements.
+    thresholds
+        List of thresholds used for subgroups in test_list.
+
+    Returns
+    =======
+    pandas.DataFrame
+        Dataframe contains calculated performance and bias measurements.
+    
+    """
     print("\nStart subgroup bias measurements")
     # nuanced auroc and AEG
     subgroup_df = info_pred[[test_list[0],test_list[1]]].copy()

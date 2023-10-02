@@ -17,7 +17,15 @@ def get_dcms(file_path):
                 dcms.append(fp)
     return dcms
 
-def crop_convert_image_loop(img_info):
+def crop_convert_image_loop(img_info:list):
+    """ Read dicom files, do histogram equalization, cropping the image and save as jpeg file.
+    
+    Arguments
+    =========
+    img_info
+        List contains file path for the dicom file, and file path to store resulted jpeg file.
+    
+    """
     img = img_info[0]
     jpeg_path = img_info[1]
     if os.path.exists(jpeg_path):
@@ -41,11 +49,8 @@ def crop_convert_image_loop(img_info):
     cv2.imwrite(jpeg_path, crop_image)
 
 def crop_convert_dicom_to_jpeg(args):
-    '''
-    convert and crop dicom files and save as jpeg files, where the name of the jpeg is patient_id_#
-    create conversion_table.json, which holds all of the matched up file names,
-    save in img_save_loc
-    '''
+    """ Convert and crop dicom files and save as jpeg files, where the name of the jpeg is patient_id_#.
+    """
     print("\nStart image cropping and convert to jpeg")
     input_file = args.input_file
     img_save_loc = args.save_dir

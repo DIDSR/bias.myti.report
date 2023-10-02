@@ -11,10 +11,17 @@ from scipy.stats import mannwhitneyu
 
 
 class CalibratedModel():
-    '''
-    Temperature scaling for model calibration
-    
-    '''
+    """ Class for model calibration using temperature scaling 
+
+    Parameters
+    ----------
+    calibration_mode : :obj:`str`
+        string to indicate calibration mode.
+    device : :obj:`str`
+        Current available device: cuda or cpu.
+    temperature
+        the scalar parameter to calibrate predictions.
+    """
     def __init__(self, calibration_mode='temperature'):
         super(CalibratedModel, self).__init__()
         self.calibration_mode = calibration_mode
@@ -69,8 +76,6 @@ class CalibratedModel():
 class _ECELoss(nn.Module):
     """
     Calculates the Expected Calibration Error of a model.
-    (This isn't necessary for temperature scaling, just a cool metric).
-
     The input to this loss is the logits of a model, NOT the softmax scores.
 
     This divides the confidence outputs into equally-sized interval bins.
@@ -78,12 +83,12 @@ class _ECELoss(nn.Module):
 
     bin_gap = | avg_confidence_in_bin - accuracy_in_bin |
 
-    We then return a weighted average of the gaps, based on the number
+    Then return a weighted average of the gaps, based on the number
     of samples in each bin
-
-    See: Naeini, Mahdi Pakdaman, Gregory F. Cooper, and Milos Hauskrecht.
-    "Obtaining Well Calibrated Probabilities Using Bayesian Binning." AAAI.
-    2015.
+    Parameters
+    ----------
+    n_bins : :obj:`int`
+        Number of bins to divide intervals between 0 and 1.
     """
     def __init__(self, n_bins=15):
         """
@@ -378,6 +383,8 @@ class AEG:
 
 
 class CalibEqOddsModel(namedtuple('CalibEqOddsModel', 'pred label')):
+    """ Class for calibrated equalized odds method as a post-processing bias mitigation method. 
+    """
     def logits(self):
         raw_logits = np.clip(np.log(self.pred / (1 - self.pred)), -100, 100)
         return raw_logits

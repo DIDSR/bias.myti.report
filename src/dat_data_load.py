@@ -61,14 +61,23 @@ transform = transforms.Compose([
 
 
 def read_jpg(imageName):
-    '''
-    function to read jpg image with rotation enabled for 
-    data augmentation
-    '''
+    """ Function to read jpg image with rotation enabled for data augmentation.
+    """
     return transform(Image.open(imageName).convert('RGB'))
 
 
 class Dataset(BaseDataset):
+    """ Class for customized dataset 
+
+    Parameters
+    ----------
+    patient_ids
+        list of patient IDs in dataset.
+    images
+        list of image paths in dataset.
+    class_values
+        list of task labels in dataset.
+    """
     def __init__(
             self,
             list_file,
