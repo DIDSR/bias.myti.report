@@ -7,7 +7,7 @@ import torch
 import sklearn.metrics as sk_metrics
 import numpy as np
 
-def get_confusion_matrix(predictions:np.array, groundtruth:np.array, threshold:float)->tuple[int, int, int, int]:
+def get_confusion_matrix(predictions, groundtruth, threshold):
     """ Get counts of true/false positives and true/false negatives. 
     
     Arguments
@@ -108,7 +108,7 @@ def model_ensemble(main_dir:str, exp_name:str, prediction_file:str, model_number
     return pred
     
 
-def calibrate_model(ensembled_vali:pd.DataFrame, ensembled_test:pd.DataFrame, output_file:str=None)->tuple[pd.DataFrame, pd.DataFrame]:
+def calibrate_model(ensembled_vali:pd.DataFrame, ensembled_test:pd.DataFrame, output_file:str=None):
     """ Calibrate models using temperature scaling.
     
     Arguments
@@ -165,7 +165,7 @@ def calibrate_model(ensembled_vali:pd.DataFrame, ensembled_test:pd.DataFrame, ou
     
     
     
-def ROC_mitigation(validation_info_pred:pd.DataFrame, test_list:list, threshold:float=0.5, output_file:str=None)->tuple[list, list]:          
+def ROC_mitigation(validation_info_pred:pd.DataFrame, test_list:list, threshold:float=0.5, output_file:str=None):          
     """ Post-processing bias mitigation using reject oject classification method.
     
     Arguments
