@@ -1,12 +1,14 @@
 #!/bin/bash
-#split the dataset evenly for each subgroup (sex, race and COVID)
-#take a csv file as input and output 2 csv files that contain splitted datasets
-#can use this script to split dataset in bias amplification indirect approachs (#1b)
+#subsampling the dataset with the same rate in each subgroup (sex, race and COVID)
+#manipulate on diease prevalence in different subgroups. Current supports race and sex.
+#take a csv data file as input and output a csv file contains result data 
+#can use this script to split dataset in bias amplification direct approachs
 
-#NOTES: currently automatically split based on sex, race and COVID
+#NOTES: diease prevalence is complementary in subgroups. For example, 10% prevalence in female
+#correpsonds to 90% prevalence in male.
+
 INPUT_FILE="train.csv"
-declare -a FRACTION_ARRAY=('0.5' '0.75' '0.9' '1')
-FRACTION=0.5 # valid range from 0 to 1
+declare -a FRACTION_ARRAY=('0' '0.1' '0.25' '0.5' '0.75' '0.9' '1') #ranging from 0 to 1
 for BATCH in 0
 do
 for RAND in 0
@@ -15,8 +17,9 @@ for FRACTION in ${FRACTION_ARRAY[@]}
 do
 IN_DIR=/scratch/yuhang.zhang/OUT/temp/batch_${BATCH}/RAND_${RAND}
 SAVE_DIR=/scratch/yuhang.zhang/OUT/temp/batch_${BATCH}/RAND_${RAND}
-python ../src/csv_data_split.py --fraction ${FRACTION} \
-                                --test_subgroup Black White \
+python ../src/csv_data_split.py --prevalence ${FRACTION} \
+                                --subsample 0.5 \
+                                --test_subgroup Black \
                                 --in_dir ${IN_DIR} \
                                 --save_dir ${SAVE_DIR} \
                                 --input_file ${INPUT_FILE}
