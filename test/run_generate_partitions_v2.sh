@@ -11,7 +11,6 @@
     # partition_info.log -> holds the input arguments, for future reference
 
 # =================== SETTINGS ===================
-EXE="/home/yuhang.zhang/code/mycode/continual_learning_evaluation/src/generate_partitions_v2.py"
 
 declare -a IN_summary=("/scratch/alexis.burgon/2022_CXR/data_summarization/20221010/summary_table__open_A1.json")
 # declare -a IN_summary=("/scratch/alexis.burgon/2022_CXR/data_summarization/20220823/summary_table__MIDRC_RICORD_1C.json")
@@ -40,17 +39,17 @@ ALLOW_OTHER=False
 
 # Save options
     # folder w/ name {PARTITION_NAME} will automatically be created in {OUT_dir}, RAND folders will be created within
-PARTITION_NAME=batch_0
 OUT_dir="/scratch/yuhang.zhang/OUT/temp/"
 
 # Number of imgs/patient selection_modes = random, first, last (how to select images if a max is specified)
     # NOTE: random selection mode will potentially cause issues with TEST_RAND != None, use with caution
 MIN_IMG=0
 MAX_IMG=None
-IMG_SELECTION=first
-
-for RAND in 0 1 2 3 4
-# for RAND in 0
+IMG_SELECTION=last
+for BATCH in 0
+do
+PARTITION_NAME=batch_${BATCH}
+for RAND in 0
 do
 # # ==================================================================
 # # Nothing below this point should need to be edited for regular use
@@ -71,10 +70,10 @@ do
     done
 # # ======================================
 echo ================ RAND ${RAND} ================
-python $EXE $param_IN_summary \
+python ../src/generate_partitions_v2.py  $param_IN_summary \
                                          $param_TASKS \
                                          -random_seed $RAND \
-                                         -random_seed_initial 2007 \
+                                         -random_seed_initial ${BATCH} \
                                          -test_size $TEST_SIZE \
                                          -validation_size_2 $VAL_2_SIZE \
                                          -consistent_test_random_state $TEST_RAND \
@@ -88,4 +87,5 @@ python $EXE $param_IN_summary \
                                          -max_img_per_patient $MAX_IMG \
                                          -patient_img_selection_mode $IMG_SELECTION \
                                          -remaining_to_test $REMAINING_TO_TEST
+done
 done

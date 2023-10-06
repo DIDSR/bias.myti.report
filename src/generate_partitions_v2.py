@@ -47,6 +47,10 @@ conversion_files_betsy = {repo:f"/scratch/alexis.burgon/2022_CXR/data_summarizat
 conversion_files_betsy['open_A1'] = "/scratch/alexis.burgon/2022_CXR/data_summarization/20221010/open_A1_jpegs/conversion_table.json" 
 
 def bootstrapping(args):
+    """ Partitioning patient data into train, validation, validation_2 and testing.
+    In each dataset, patient can be partitioned equally or by customized ratio in race, sex, image modality and COVID. 
+    
+    """
     print("Beginning bootstrapping")
     # 0) check for issues with input arguments ======================================================================
     if args.test_rand is not None:
