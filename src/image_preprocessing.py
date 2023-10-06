@@ -6,6 +6,10 @@ import cv2
 import os
 import sys
 from multiprocessing import Pool
+from distutils.util import strtobool
+from skimage.measure import label
+from skimage.morphology import closing, disk
+from scipy import ndimage
 import tqdm
 
 def get_dcms(file_path):
@@ -17,7 +21,13 @@ def get_dcms(file_path):
                 dcms.append(fp)
     return dcms
 
-def crop_convert_image_loop(img_info:list):
+def get_largest_region(segmentation):
+    labels = label(segmentation)
+    assert( labels.max() != 0 ) # assume at least 1 CC
+    largest_region = labels == np.argmax(np.bincount(labels.flat)[1:])+1
+    return largest_region
+
+def process_convert_image_loop(img_info:list):
     """ Read dicom files, do histogram equalization, cropping the image and save as jpeg file.
     
     Arguments
@@ -41,14 +51,50 @@ def crop_convert_image_loop(img_info:list):
         rescaled_img = cv2.bitwise_not(rescaled_img)
     # perform histogram equalization
     adjusted_image = cv2.equalizeHist(rescaled_img)
-    # crop images
     rows = dcm.Rows
     columns = dcm.Columns
-    crop_image = adjusted_image[round(rows*args.crop_ratios[0]):round(rows*(1-args.crop_ratios[1])), round(columns*args.crop_ratios[2]):round(columns*(1-args.crop_ratios[3]))]
+    
+    # # crop images
+    
+    final_image = adjusted_image[round(rows*args.crop_ratios[0]):round(rows*(1-args.crop_ratios[1])), round(columns*args.crop_ratios[2]):round(columns*(1-args.crop_ratios[3]))]
+    
+    # # Diaphragm segmentation
+    if args.threshold is not None:
+        # force to only segment on bottom part of the image
+        rows, columns = np.shape(final_image)
+        half_img = final_image[round(rows*0.5):,:]
+        mask_img = np.zeros((rows,columns)).astype(bool)
+        # thresholding
+        v_min = np.min(half_img)
+        v_max = np.max(half_img)
+        thred = v_min + args.threshold * (v_max - v_min)
+        thred_image = np.where(half_img > thred, 1, 0)
+        # get largest region from segments
+        thred_largest = get_largest_region(thred_image)
+        # fill holes
+        thred_holefill = ndimage.binary_fill_holes(thred_largest)
+        # morphological filter to smooth edges
+        footprint = disk(20)
+        thred_morph = closing(thred_holefill, footprint)
+        thred_morph = ndimage.binary_fill_holes(thred_morph)
+        mask_img[round(rows*0.5):,:] = thred_morph
+        # diaphragm removal
+        masked_image = np.multiply(final_image, ~mask_img)
+        # fill removed region with average intensity
+        average = np.sum(final_image) / (rows * columns)
+        average_fill = np.multiply(np.full((rows,columns), average).astype(np.uint8), mask_img)
+        final_image = np.add(masked_image, average_fill)
+    
+    # # bilateral filtering
+    if args.bilateral_filter:
+        # parameters: diameter = 5, s color = s space = 75
+        final_image =cv2.bilateralFilter(final_image, 5, 75, 75)
+        
+    
     # save image
-    cv2.imwrite(jpeg_path, crop_image)
+    cv2.imwrite(jpeg_path, final_image)
 
-def crop_convert_dicom_to_jpeg(args):
+def process_convert_dicom_to_jpeg(args):
     """ Convert and crop dicom files and save as jpeg files, where the name of the jpeg is patient_id_#.
     """
     print("\nStart image cropping and convert to jpeg")
@@ -79,7 +125,7 @@ def crop_convert_dicom_to_jpeg(args):
     
     # # parallelize
     pool = Pool(os.cpu_count()-1)
-    for _ in tqdm.tqdm(pool.imap_unordered(crop_convert_image_loop, img_info[:args.stop_at]), total=args.stop_at):
+    for _ in tqdm.tqdm(pool.imap_unordered(process_convert_image_loop, img_info[:args.stop_at]), total=args.stop_at):
         pass
     
     # save the conversion information
@@ -91,10 +137,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--save_dir',type=str)
     parser.add_argument('-s', '--stop_at',type=int, default=0)
+    parser.add_argument('-t', '--threshold',type=float, default=None,
+    help="threshold for diaphragm segmentation, don't apply segmentation if not specified")
+    parser.add_argument('-f', '--bilateral_filter', default=True, type=lambda x: bool(strtobool(x)),
+    help="applying bilateral filtering to the image")
     parser.add_argument('-i', '--input_file', required=True,
     help="json file that contains all the dicom file information")
     parser.add_argument('-c', '--crop_ratios',nargs=4,type=float,default=[0,0,0,0],
     help="Specify 4 cropping ratios on top, bottom, left and right side of the image, no cropping if not specified")
     args = parser.parse_args()    
-    crop_convert_dicom_to_jpeg(args)
+    process_convert_dicom_to_jpeg(args)
     print("\nDONE\n")
