@@ -10,7 +10,9 @@
     # output csv includes a new column "days_from_study_to_test" a negative value indicates that the test was taken before
     # the image, while a positive value indicates that the test was taken after the image
     # when a single patient has multiple images taken on the same day, the image selection is random from those images
-MAIN_PATH="/scratch/yuhang.zhang/OUT/temp/batch_0/"
+for BATCH in 0
+do
+MAIN_PATH=/scratch/yuhang.zhang/OUT/temp/batch_${BATCH}/
 # NUM_IMAGES -> maximum number of images for each patient
 NUM_IMAGES=1
 # INPUT_CSV -> current test/validation/etc. csv file to limit the number of images/patient
@@ -26,7 +28,7 @@ python ../src/csv_limit_images.py -i ${INPUT_CSV_TS} \
                                   -o ${OUTPUT_CSV_TS} \
                                   -n ${NUM_IMAGES} \
                                   --allow_null
-for RAND in 0 1 2 3 4
+for RAND in 0
 do
 INPUT_CSV_VA=$MAIN_PATH"/RAND_${RAND}/validation.csv"
 INPUT_CSV_TR=$MAIN_PATH"/RAND_${RAND}/train.csv"
@@ -43,4 +45,5 @@ python ../src/csv_limit_images.py -i ${INPUT_CSV_VA} \
                                   -o ${OUTPUT_CSV_VA} \
                                   -n ${NUM_IMAGES} \
                                   --allow_null
+done
 done
