@@ -253,21 +253,21 @@ def train(args):
     num_channels = 1
     custom_layer_name = []
     if args.dcnn == 'googlenet':
-        model = models.__dict__[args.dcnn](pretrained=True)
+        model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
         model = add_classification_layer_v1(model, num_channels)
     elif args.dcnn == 'resnet18':
-        model = models.__dict__[args.dcnn](pretrained=True)
+        model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
         model = add_classification_layer_v1(model, num_channels)
         #custom_layer_name = resnet18_ordered_layer_names.copy()
     elif args.dcnn == 'wide_resnet50_2':
-        model = models.__dict__[args.dcnn](pretrained=True)
+        model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
         model = add_classification_layer_v1(model, num_channels)
     elif args.dcnn == 'densenet121':
-        model = models.__dict__[args.dcnn](pretrained=True)
+        model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
         model = add_classification_layer_v1(model, num_channels)
         custom_layer_name = densenet121_ordered_layer_names.copy()
     elif args.dcnn == 'resnext50_32x4d':
-        model = models.__dict__[args.dcnn](pretrained=True)
+        model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
         model = add_classification_layer_v1(model, num_channels)
     elif args.dcnn == 'CheXpert_Resnet' or args.dcnn == 'Mimic_Resnet' or args.dcnn == 'CheXpert-Mimic_Resnet':
         model = load_custom_checkpoint(args.custom_checkpoint_file, 'resnet18', args.gpu_id, num_channels)      
@@ -482,6 +482,8 @@ if __name__ == '__main__':
         help="which dcnn to use: 'googlenet', 'resnet18', 'wide_resnet50_2', 'resnext50_32x4d', 'densenet121', 'CheXpert_Resnet', 'Mimic_Resnet', 'CheXpert-Mimic_Resnet', 'CheXpert-Mimic_Densenet'", required=True)        
     # parser.add_argument('-f', '--freeze_up_to', help="Must be a freezable layer in the structure e.g. FirstLayer", required=True)
     # Must be one of: 'FirstLayer', 'Mixed_3b', 'Mixed_3c', 'Mixed_4b', 'Mixed_4c', 'Mixed_4d', 'Mixed_4e', 'Mixed_4f', 'Mixed_5b', 'Mixed_5c'
+    
+    parser.add_argument('--pretrained_weights', default=True, type=lambda x: bool(strtobool(x)), help="False if train from scratch.")
     parser.add_argument('-f', '--fine_tuning', default='full', help="options: 'full' or 'partial'")
     parser.add_argument('-m', '--moco', default=True, type=lambda x: bool(strtobool(x)))
     parser.add_argument('-u', '--upto_freeze', type=int, default=0, 
