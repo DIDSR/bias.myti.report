@@ -166,7 +166,7 @@ def calibrate_model(ensembled_vali:pd.DataFrame, ensembled_test:pd.DataFrame, ou
     
     
 def ROC_mitigation(validation_info_pred:pd.DataFrame, test_list:list, threshold:float=0.5, output_file:str=None):          
-    """ Post-processing bias mitigation using reject oject classification method.
+    """ Post-processing bias mitigation using reject option classification method.
     
     Arguments
     =========
@@ -187,7 +187,7 @@ def ROC_mitigation(validation_info_pred:pd.DataFrame, test_list:list, threshold:
         list specify privilege and unprivileged subgroup
     
     """
-    print("\nStart bias mitigation using reject oject classification")
+    print("\nStart bias mitigation using reject option classification")
     # # determine the privileged group
     dp = {}     
     for grp in test_list:
@@ -228,7 +228,7 @@ def ROC_mitigation(validation_info_pred:pd.DataFrame, test_list:list, threshold:
                        orient='index')
     if output_file:
         metrics_summary.to_csv(output_file, index=False)
-    print("\nBias mitigation using reject oject classification done")
+    print("\nBias mitigation using reject option classification done")
     threds_list = [threshold + optimal_threds, threshold - optimal_threds]
     group_list = [group_p, group_u]
     return threds_list, group_list
@@ -374,10 +374,9 @@ def analysis(args):
     threshold = args.threshold
     
     # # ensemble prediction results
-    #ensembled_test = model_ensemble(main_dir, exp_name, args.testing_file, args.model_number)
-    #ensembled_vali = model_ensemble(main_dir, exp_name, args.validation_file, args.model_number)
-    ensembled_test = pd.read_csv(os.path.join(main_dir, f'{exp_name}_RD_0', args.testing_file), sep='\t')
-    ensembled_vali = pd.read_csv(os.path.join(main_dir, f'{exp_name}_RD_0', args.validation_file), sep='\t')
+    ensembled_test = model_ensemble(main_dir, exp_name, args.testing_file, args.model_number)
+    ensembled_vali = model_ensemble(main_dir, exp_name, args.validation_file, args.model_number)
+
     
     # # run model calibration
     calib_file = os.path.join(main_dir, f'{exp_name}_RD_0', 'calibration_metrics.csv')
@@ -391,7 +390,7 @@ def analysis(args):
     # # apply post processing bias mitigation methods if the user choose to    
     if args.post_bias_mitigation is not None:
         validation_info_pred = info_pred_mapping(vali_info, calib_vali)
-        if args.post_bias_mitigation == 'reject_object_class':
+        if args.post_bias_mitigation == 'reject_option_class':
             # # run reject objective classification bias mitigation methods
             roc_file = os.path.join(main_dir, f'{exp_name}_RD_0', 'validation_roc_searching.csv')
             optim_threds, subgroups = ROC_mitigation(validation_info_pred, test_list, threshold, roc_file)
@@ -421,7 +420,7 @@ if __name__ == '__main__':
     parser.add_argument('--threshold',type=float,default=0.5)
     parser.add_argument('-s', '--test_subgroup',nargs='+',type=str)
     parser.add_argument('-p', '--post_bias_mitigation', 
-    help="which post processing bias mitigation method to use: 'reject_object_class', 'calib_eq_odds'")
+    help="which post processing bias mitigation method to use: 'reject_option_class', 'calib_eq_odds'")
     parser.add_argument('-r', '--calib_eq_odds_rates',nargs=2,type=float, default=[0.5, 1],
     help="Specify 2 weights for FPR and FNR in calibrated equalized odds mitigation method")
     args = parser.parse_args()
