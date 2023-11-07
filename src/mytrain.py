@@ -49,7 +49,6 @@ import onnx
 import onnxruntime
 # #
 # # CONSTANTS
-densenet121_ordered_layer_names = ['Conv2d_conv0', 'denseblock1', 'denseblock2', 'denseblock3', 'denseblock4', 'classifier']
 master_iter = 0
 
 
@@ -88,40 +87,31 @@ def apply_custom_transfer_learning__resnet18(net):
     assert len(parameters) == len(fine_tune_layers)
                 
     return net
+    
 
-
-def apply_custom_transfer_learning__densenet121(net, custom_layer_name):
-    """ Set the DenseNet121 model to freeze first certain number of layers.
-    """
-    first_non_frozen_layer_name = custom_layer_name[args.upto_freeze + 1]
-    spacer = ''
-    start_not_freezing_from_next_layer = False
-    # # set the requires_grad to False to all first
-    for param in net.parameters():
-        param.requires_grad = False
-    print('Partial fine tuning selected')
-    print('Will freeze upto {} with the layer name of {}'.format(args.upto_freeze, first_non_frozen_layer_name))
-    # # while iterating over the layers, check with the 
+def apply_custom_transfer_learning__densenet121(net):
+    model_layers = [name for name,para in net.named_parameters()]
+    
+    for ii in range(125):
+            if ii == 0:
+                layers = [','.join(model_layers[:2])]          
+            elif ii <= 119 and ii > 0:
+                layers += [','.join(model_layers[(ii*3):(ii*3+2)])]
+            else:
+                layers += [','.join(model_layers[(360+(ii-120)*2):(361+(ii-120)*2)])]
+                
+    fine_tune_layers = ','.join(layers[args.upto_freeze-len(layers):]).split(',')    
     for name, param in net.named_parameters():
-        # # check if the names in custom_layer_name is in this name
-        if len(custom_layer_name) > 0:
-            for ii, each_layer_name in enumerate(custom_layer_name):
-                # # the index in the name.split is important and may change
-                # # based on the pretrained model
-                if each_layer_name == name.split('.')[2] or each_layer_name == name.split('.')[1]:
-                    if each_layer_name == first_non_frozen_layer_name:
-                        # # start un-freezing from here onwards
-                        start_not_freezing_from_next_layer = True
-                    # # found it
-                    custom_layer_name.pop(ii)
-                    spacer += '\t'
-                    break
-        if start_not_freezing_from_next_layer:
-            param.requires_grad = True
-            print('{} {} {}'.format(spacer, 'T', name))
-        else:
-            print('{} {} {}'.format(spacer, 'F', name))
+        print(name)
+        if name not in fine_tune_layers:
+            param.requires_grad = False
+        
+    parameters = list(filter(lambda p: p.requires_grad, net.parameters()))
+    print([len(parameters), len(fine_tune_layers)])
+    assert len(parameters) == len(fine_tune_layers)
+    
     return net
+
 
 
 def add_classification_layer_v1(model, num_channels, p=0.2):
@@ -265,7 +255,6 @@ def train(args):
     elif args.dcnn == 'densenet121':
         model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
         model = add_classification_layer_v1(model, num_channels)
-        custom_layer_name = densenet121_ordered_layer_names.copy()
     elif args.dcnn == 'resnext50_32x4d':
         model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
         model = add_classification_layer_v1(model, num_channels)
@@ -273,7 +262,6 @@ def train(args):
         model = load_custom_checkpoint(args.custom_checkpoint_file, 'resnet18', args.gpu_id, num_channels)      
     elif args.dcnn == 'CheXpert-Mimic_Densenet':
         model = load_custom_checkpoint(args.custom_checkpoint_file, 'densenet121', args.gpu_id, num_channels)
-        custom_layer_name = densenet121_ordered_layer_names.copy()
         print('Using custom pretrained checkpoint file')
     else:
         print('ERROR. UNKNOWN model.')
@@ -291,7 +279,7 @@ def train(args):
         elif args.dcnn == 'wide_resnet50_2':
             print('ERROR. Custom transfer learning not implemented for this model.')
         elif args.dcnn == 'densenet121' or args.dcnn == 'CheXpert-Mimic_Densenet':
-            model = apply_custom_transfer_learning__densenet121(model, custom_layer_name)
+            model = apply_custom_transfer_learning__densenet121(model)
         elif args.dcnn == 'resnext50_32x4d':
             print('ERROR. Custom transfer learning not implemented for this model.')
         else:
