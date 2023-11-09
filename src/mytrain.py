@@ -48,6 +48,7 @@ import torch.onnx
 import onnx
 import onnxruntime
 # #
+from sklearn.linear_model import LogisticRegression
 # # CONSTANTS
 master_iter = 0
 
@@ -174,6 +175,49 @@ def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels, is_train
 
     return model
     
+    
+def last_layer_retraining(model, data_file):
+    """ WIP: bias mitigation by retraining the last layers 
+    
+    Arguments
+    =========
+    model
+        The model to be bias-mitigated
+    data_file
+        Data used for retraining
+    Returns
+    =======
+    model
+        Bias-mitigated model
+    """
+    # # replace the last fc layer with an identity layer 
+    new_model = nn.Sequential(*list(model.children())[:-1])
+    new_model.fc = torch.nn.Identity()
+    print(new_model)
+    new_model.cuda()
+    new_model.eval()
+    # # load tuning dataset
+    tune_dataset = Dataset(data_file, train_flag=True, default_out_class=args.train_task)
+    tune_loader = DataLoader(tune_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.threads)
+    # # get embedding outputs from the model
+    x_train = []
+    y_train = []
+    with torch.no_grad():
+        for i, (pid, fname, images, target) in enumerate(tune_loader):
+            # # compute output
+            images = images.cuda()
+            output = model(images.float())
+            x_train.append(output.detach().cpu().numpy())
+            y_train.append(target.detach().cpu().numpy())
+    # # training the logistic regression with embedding outputs and la
+    logreg = LogisticRegression(penalty=11, C=0.1, solver="liblinear")
+    logreg.fit(x_train, y_train)
+    
+    
+    
+    
+    
+    
 def reweighing_weights_calculation(df_path, subgroups, task, output_file):
     """ Calculate weights for reweighing bias mitigation method on training sets
     
@@ -246,7 +290,10 @@ def train(args):
         model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
         model = add_classification_layer_v1(model, num_channels)
     elif args.dcnn == 'resnet18':
-        model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
+        if args.pretrained_weights == True:
+            model = models.__dict__[args.dcnn](weights='IMAGENET1K_V1')
+        else:
+            model = models.__dict__[args.dcnn]()
         model = add_classification_layer_v1(model, num_channels)
         #custom_layer_name = resnet18_ordered_layer_names.copy()
     elif args.dcnn == 'wide_resnet50_2':
@@ -294,7 +341,7 @@ def train(args):
     
     # # debug code to understand how a ROI passes through the network
     x=torch.rand(16,3,320,320)
-    print(summary(model, x))
+    #print(summary(model, x))
     # # 
     torch.cuda.set_device(args.gpu_id)
     model.cuda(args.gpu_id)
