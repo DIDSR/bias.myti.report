@@ -27,7 +27,7 @@ def save_checkpoint(state, filename='checkpoint.pth.tar'):
 
 
 def add_classification_layer_v1(model, num_channels, p=0.2):
-    new_layers = nn.Sequential(nn.Dropout(p), nn.Linear(1000, 512), nn.Linear(512, 128), nn.Linear(128, num_channels))
+    new_layers = nn.Sequential(nn.Dropout(p), nn.Linear(512, 1000), nn.Linear(1000, 512), nn.Linear(512, 128), nn.Linear(128, num_channels))
     model = nn.Sequential(model, new_layers)
     return model
 
@@ -104,22 +104,23 @@ def last_layer_retrain(args):
     num_channels = 1
     custom_layer_name = []
     if args.dcnn == 'resnet18':
-        origin_model = load_custom_checkpoint(args.custom_checkpoint_file, 'resnet18', args.gpu_id, num_channels)      
+        origin_model = load_custom_checkpoint(args.model_file, 'resnet18', args.gpu_id, num_channels)      
     elif args.dcnn == 'densenet121':
-        origin_model = load_custom_checkpoint(args.custom_checkpoint_file, 'densenet121', args.gpu_id, num_channels)
+        origin_model = load_custom_checkpoint(args.model_file, 'densenet121', args.gpu_id, num_channels)
         print('Using custom pretrained checkpoint file')
     else:
         print('ERROR. UNKNOWN model.')
         return
     
     # # re-initialize the fc layers
-    model = nn.Sequential(*list(origin_model.children())[:-1])    
-    nn.init.ones_(model.fc)
+    model = nn.Sequential(*list(origin_model.children())[:-1])
+    #model = nn.Sequential(*list(origin_model.children()))
+    #nn.init.ones_(model[-1])
     model = add_classification_layer_v1(model, num_channels)
     # # freezing all but last linear layers
     model_layers = [name for name,para in model.named_parameters()]
     fine_tune_layers = model_layers[-8:]
-    for name, param in net.named_parameters():
+    for name, param in model.named_parameters():
         print(name)
         if name not in fine_tune_layers:
             param.requires_grad = False
@@ -269,6 +270,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Training using pytorch')
     parser.add_argument('-i', '--input_train_file', help='input training list file', required=True)
+    parser.add_argument('-v', '--validation_file', help='input validation list file', required=True)
     parser.add_argument('-o', '--output_base_dir', help='output based dir', required=True)
     parser.add_argument('-d', '--dcnn', 
         help="which dcnn to use: 'resnet18', 'densenet121'", required=True)        
@@ -287,9 +289,7 @@ if __name__ == '__main__':
     parser.add_argument('--bsave_valid_results_at_epochs', type=bool, default=False, 
         help='save validation results csv at every epoch, True/False')
     parser.add_argument('-g', '--gpu_id', type=int, default=0, help='GPU ID')
-    parser.add_argument('-c', '--custom_checkpoint_file', 
-        default="/gpfs_projects/ravi.samala/OUT/moco/experiments/ravi.samala/r8w1n416_20220715h15_tr_mocov2_20220715-172742/checkpoint_0019.pth.tar", 
-        help='custom checkpoint file to start')
+    parser.add_argument('-f', '--model_file', help='the biased model file to retrain')
     parser.add_argument('--random_state', type=int, default=None)
     parser.add_argument('--train_task', type=str, default='Yes', help='specify training task')
     
