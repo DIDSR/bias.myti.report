@@ -1,33 +1,4 @@
-'''
-    Training program based on pytorch
-    All params have brief descriptions in the argparse.ArgumentParser below
-    Tensorboard can be used to track the training process
-    
-    Supported models:
-            "googlenet" 
-            "resnet18" 
-            "wide_resnet50_2" 
-            "densenet121" 
-            "resnext50_32x4d"
-    
-    How are the pre-trained models adapted to a binary output:
-        Implementation in add_classification_layer_v1 function: 
-            - add the following layers in sequence: dropout (default p=0.2), linear(1000x512), linear(512x128), linear(128x1)
-    
-    Added functionality to do custom transfer learning, freezing at different points. Each DCNN structure requires
-    custom code to work. The following are the supported models. This list will be updated as additional DCNNs are added.
-            "resnet18"
-            "densenet121"
 
-    RKS, started Aug 1, 2022. 
-    Git is used to track the versions.
-
-    Worked in the following virtual environment:
-        >> source /gpfs_projects/ravi.samala/venvs/venv_Pytorch/bin/activate
-    
-    When running the first time, pytorch will download the pretrained model
-
-'''
 import torch
 import torch.nn as nn
 import torchvision.models as models
@@ -53,64 +24,6 @@ master_iter = 0
 
 def save_checkpoint(state, filename='checkpoint.pth.tar'):
     torch.save(state, filename)
-
-
-def apply_custom_transfer_learning__resnet18(net):
-    """ Set the ResNet18 model to freeze first certain number of layers.
-    """
-    # # get all the layer names
-    model_layers = [name for name,para in net.named_parameters()]
-    idxs = []
-    for i, lyr in enumerate(model_layers):
-        if lyr.endswith('bias'):
-            if i == len(model_layers)-1:
-                continue
-            if 'downsample' in model_layers[i+1]:
-                continue
-            idxs.append(i+1)
-    for ii, idx in enumerate(idxs):
-        if ii == 0:
-            layers = [','.join(model_layers[:idx])]          
-        else:
-            layers += [','.join(model_layers[idxs[ii-1]:idx])]
-    
-    # # set requires_grad to False for freezing layers
-    fine_tune_layers = ','.join(layers[args.upto_freeze-len(layers):]).split(',')    
-    for name, param in net.named_parameters():
-        print(name)
-        if name not in fine_tune_layers:
-            param.requires_grad = False
-    
-    parameters = list(filter(lambda p: p.requires_grad, net.parameters()))
-    print([len(parameters), len(fine_tune_layers)])
-    assert len(parameters) == len(fine_tune_layers)
-                
-    return net
-    
-
-def apply_custom_transfer_learning__densenet121(net):
-    model_layers = [name for name,para in net.named_parameters()]
-    
-    for ii in range(125):
-            if ii == 0:
-                layers = [','.join(model_layers[:2])]          
-            elif ii <= 119 and ii > 0:
-                layers += [','.join(model_layers[(ii*3):(ii*3+2)])]
-            else:
-                layers += [','.join(model_layers[(360+(ii-120)*2):(361+(ii-120)*2)])]
-                
-    fine_tune_layers = ','.join(layers[args.upto_freeze-len(layers):]).split(',')    
-    for name, param in net.named_parameters():
-        print(name)
-        if name not in fine_tune_layers:
-            param.requires_grad = False
-        
-    parameters = list(filter(lambda p: p.requires_grad, net.parameters()))
-    print([len(parameters), len(fine_tune_layers)])
-    assert len(parameters) == len(fine_tune_layers)
-    
-    return net
-
 
 
 def add_classification_layer_v1(model, num_channels, p=0.2):
@@ -167,137 +80,50 @@ def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels, is_train
         # # this is copying the weights and biases
         model.load_state_dict(state_dict, strict=False)
 
-    # # modify the last layers
-    new_layers = nn.Sequential(nn.Dropout(0.2), nn.Linear(1000, 512), nn.Linear(512, 128), nn.Linear(128, num_channels))
-    model = nn.Sequential(model, new_layers)
-
     return model
-        
     
-def reweighing_weights_calculation(df_path, subgroups, task, output_file):
-    """ Calculate weights for reweighing bias mitigation method on training sets
+    
+def last_layer_retrain(args):
+    """ bias mitigation by retraining the last layers 
     
     Arguments
     =========
-    df_path
-        File path of the csv file containing training sets.
-    subgroups
-        List of subgroups to implement reweighing, should be included in the training data csv file.
-    task
-        The training task, should be included in the training data csv file.
-    output_file
-        The file path to store calculated weights for each subgroup+class combo.
-
+    model
+        The model to be bias-mitigated
+    data_file
+        Data used for retraining
     Returns
     =======
-    list
-        List of calculated weights for each samples.
+    model
+        Bias-mitigated model
     """
-    df = pd.read_csv(df_path)
-    len_total = df.shape[0]
-    # initialize the weights
-    weights = [1] * len_total
-    # check if training file has subgroup information
-    if not all(item in df.columns.values.tolist() for item in subgroups):
-        print('Input training file does not have assigned subgroup information. Not apply reweighing')
-        return weights
-    # # calculate weights for each subgroup+class combination 
-    dp = {}
-    for i in range(2):
-        for j in range(2):
-            df_sub = df.loc[(df[subgroups[i]]==1) & (df[task]==j)]
-            # check if at least one sample in each subgroup+class combination 
-            len_sub = df_sub.shape[0]
-            if len_sub == 0:
-                print(f"{subgroups[i]}_{task}_{j} has zero samples, cannot reweighing.")
-                return weights
-            dp[f"{subgroups[i]}_{task}_{j}"] = {}
-            dp[f"{subgroups[i]}_{task}_{j}"]['Weights'] = 0.25 * len_total / len_sub
-    # # assign weights for each sample        
-    for index, row in df.iterrows():
-        if row[subgroups[0]] == 1 and row[task] == 1:
-            weights[index] = dp[f"{subgroups[0]}_{task}_{1}"]['Weights']
-        elif row[subgroups[0]] == 1 and row[task] == 0:
-            weights[index] = dp[f"{subgroups[0]}_{task}_{0}"]['Weights']
-        elif row[subgroups[1]] == 1 and row[task] == 1:
-            weights[index] = dp[f"{subgroups[1]}_{task}_{1}"]['Weights']
-        elif row[subgroups[1]] == 1 and row[task] == 0:
-            weights[index] = dp[f"{subgroups[1]}_{task}_{0}"]['Weights']
-        else:
-            print(f"Sample {index} does not have correct subgroup or label info, skip reweighing for it")
-    # # save weights
-    weights_summary = pd.DataFrame.from_dict({i: dp[i] 
-                           for i in dp.keys()},
-                       orient='index')
-    weights_summary.to_csv(output_file)
-    return weights
-
-def train(args):
     writer = SummaryWriter(log_dir=args.output_base_dir, flush_secs=1)
     # set random state, if specified
     if args.random_state is not None:
         torch.manual_seed(args.random_state)
-    # writer = SummaryWriter()
-    # # based on the selected DNN N/W, modify the last layer of the ImageNet pre-trained DNN
-    # model = models.__dict__[args.dcnn](pretrained=True)
     num_channels = 1
     custom_layer_name = []
-    if args.dcnn == 'googlenet':
-        model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
-        model = add_classification_layer_v1(model, num_channels)
-    elif args.dcnn == 'resnet18':
-        if args.pretrained_weights == True:
-            model = models.__dict__[args.dcnn](weights='IMAGENET1K_V1')
-        else:
-            model = models.__dict__[args.dcnn]()
-        model = add_classification_layer_v1(model, num_channels)
-        #custom_layer_name = resnet18_ordered_layer_names.copy()
-    elif args.dcnn == 'wide_resnet50_2':
-        model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
-        model = add_classification_layer_v1(model, num_channels)
+    if args.dcnn == 'resnet18':
+        origin_model = load_custom_checkpoint(args.custom_checkpoint_file, 'resnet18', args.gpu_id, num_channels)      
     elif args.dcnn == 'densenet121':
-        model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
-        model = add_classification_layer_v1(model, num_channels)
-    elif args.dcnn == 'resnext50_32x4d':
-        model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
-        model = add_classification_layer_v1(model, num_channels)
-    elif args.dcnn == 'CheXpert_Resnet' or args.dcnn == 'Mimic_Resnet' or args.dcnn == 'CheXpert-Mimic_Resnet':
-        model = load_custom_checkpoint(args.custom_checkpoint_file, 'resnet18', args.gpu_id, num_channels)      
-    elif args.dcnn == 'CheXpert-Mimic_Densenet':
-        model = load_custom_checkpoint(args.custom_checkpoint_file, 'densenet121', args.gpu_id, num_channels)
+        origin_model = load_custom_checkpoint(args.custom_checkpoint_file, 'densenet121', args.gpu_id, num_channels)
         print('Using custom pretrained checkpoint file')
     else:
         print('ERROR. UNKNOWN model.')
         return
     
-
-    # # custom transfer learning >>
-    if args.fine_tuning == 'partial':
-        if args.dcnn == 'googlenet':
-            print('ERROR. Custom transfer learning not implemented for this model.')
-        elif args.dcnn == 'resnet18':
-            model = apply_custom_transfer_learning__resnet18(model)
-        elif args.dcnn == 'CheXpert_Resnet' or args.dcnn == 'Mimic_Resnet' or args.dcnn == 'CheXpert-Mimic_Resnet':        
-            model = apply_custom_transfer_learning__resnet18(model)
-        elif args.dcnn == 'wide_resnet50_2':
-            print('ERROR. Custom transfer learning not implemented for this model.')
-        elif args.dcnn == 'densenet121' or args.dcnn == 'CheXpert-Mimic_Densenet':
-            model = apply_custom_transfer_learning__densenet121(model)
-        elif args.dcnn == 'resnext50_32x4d':
-            print('ERROR. Custom transfer learning not implemented for this model.')
-        else:
-            print('ERROR. UNKNOWN model.')
-            return
-    elif args.fine_tuning == 'full':
-        print('Full fine tuning selected')
-    else:
-        print('ERROR. UNKNOWN option for fine_tuning')
-        return
-    # # <<
+    # # re-initialize the fc layers
+    model = nn.Sequential(*list(origin_model.children())[:-1])    
+    nn.init.ones_(model.fc)
+    model = add_classification_layer_v1(model, num_channels)
+    # # freezing all but last linear layers
+    model_layers = [name for name,para in model.named_parameters()]
+    fine_tune_layers = model_layers[-8:]
+    for name, param in net.named_parameters():
+        print(name)
+        if name not in fine_tune_layers:
+            param.requires_grad = False
     
-    # # debug code to understand how a ROI passes through the network
-    x=torch.rand(16,3,320,320)
-    #print(summary(model, x))
     # # 
     torch.cuda.set_device(args.gpu_id)
     model.cuda(args.gpu_id)
@@ -305,14 +131,8 @@ def train(args):
     train_dataset = Dataset(args.input_train_file, train_flag=True, default_out_class=args.train_task)
     valid_dataset = Dataset(args.validation_file, train_flag=False, default_out_class=args.train_task)
     # # Create tr and vd data loaders
-    #if implement reweighing bias mitigation
-    if args.reweighing_subgroup is not None:
-        weights_output_file = os.path.join(args.output_base_dir, 'reweighing_weights.csv')
-        weights = reweighing_weights_calculation(args.input_train_file, args.reweighing_subgroup, args.train_task, weights_output_file)
-        sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, len(weights), replacement=True)
-        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, sampler=sampler, num_workers=args.threads)
-    else:    
-        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.threads)
+    #if implement reweighing bias mitigation    
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.threads)
     valid_loader = DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.threads)
     num_steps_in_epoch = len(train_loader)
     # # select the optimizer
@@ -327,7 +147,7 @@ def train(args):
     # # learning rate scheduler
     my_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.decay_every_N_epoch, gamma=args.decay_multiplier)
     # #
-    print('Training...')
+    print('Retraining last layer...')
     print('EPOCH\tTR-AVG-LOSS\tVD-AUC')
     # criterion = nn.BCELoss()
     criterion = nn.BCEWithLogitsLoss()
@@ -354,9 +174,8 @@ def train(args):
     
     # # save ONNX
     # Export the model
-    # x = torch.randn(args.batch_size, 3, 320, 320, requires_grad=True)
-    # torch_out = model(x.cuda())
-    onnx_model_path = os.path.join(args.output_base_dir, 'pytorch_last_epoch_model.onnx')
+    x=torch.rand(16,3,320,320)
+    onnx_model_path = os.path.join(args.output_base_dir, 'pytorch_last_layer_retrained_model.onnx')
     torch.onnx.export(model,                   # model being run
                     x.cuda(),                         # model input (or a tuple for multiple inputs)
                     onnx_model_path,           # where to save the model (can be a file or file-like object)
@@ -368,23 +187,6 @@ def train(args):
                     dynamic_axes={'input' : {0 : 'args.batch_size'},    # variable length axes
                                     'output' : {0 : 'args.batch_size'}})
     print('Final epoch model saved to: ' + onnx_model_path)
-    
-    # onnx_model = onnx.load(onnx_model_path)
-    # onnx.checker.check_model(onnx_model)
-
-    # ort_session = onnxruntime.InferenceSession(onnx_model_path)
-
-    # def to_numpy(tensor):
-    #     return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
-
-    # # compute ONNX Runtime output prediction
-    # ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(x)}
-    # ort_outs = ort_session.run(None, ort_inputs)
-
-    # # compare ONNX Runtime and PyTorch results
-    # np.testing.assert_allclose(to_numpy(torch_out), ort_outs[0], rtol=1e-03, atol=1e-05)
-
-    # print("Exported model has been tested with ONNXRuntime, and the result looks good!")
 
 
 def run_train(train_loader, model, criterion, optimizer,  my_lr_scheduler, writer):
@@ -467,18 +269,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Training using pytorch')
     parser.add_argument('-i', '--input_train_file', help='input training list file', required=True)
-    parser.add_argument('-v', '--validation_file', help='input validation list file', required=True)
     parser.add_argument('-o', '--output_base_dir', help='output based dir', required=True)
     parser.add_argument('-d', '--dcnn', 
-        help="which dcnn to use: 'googlenet', 'resnet18', 'wide_resnet50_2', 'resnext50_32x4d', 'densenet121', 'CheXpert_Resnet', 'Mimic_Resnet', 'CheXpert-Mimic_Resnet', 'CheXpert-Mimic_Densenet'", required=True)        
-    # parser.add_argument('-f', '--freeze_up_to', help="Must be a freezable layer in the structure e.g. FirstLayer", required=True)
-    # Must be one of: 'FirstLayer', 'Mixed_3b', 'Mixed_3c', 'Mixed_4b', 'Mixed_4c', 'Mixed_4d', 'Mixed_4e', 'Mixed_4f', 'Mixed_5b', 'Mixed_5c'
-    
-    parser.add_argument('--pretrained_weights', default=True, type=lambda x: bool(strtobool(x)), help="False if train from scratch.")
-    parser.add_argument('-f', '--fine_tuning', default='full', help="options: 'full' or 'partial'")
+        help="which dcnn to use: 'resnet18', 'densenet121'", required=True)        
     parser.add_argument('-m', '--moco', default=True, type=lambda x: bool(strtobool(x)))
-    parser.add_argument('-u', '--upto_freeze', type=int, default=0, 
-        help="options: provide the layer number upto which to freeze")
     parser.add_argument('-l', '--log_path', help='log saving path', required=True)
     parser.add_argument('-p', '--optimizer', help='which optimizer to use: \'adam\' or \'sgd\'', required=True)
     parser.add_argument('-b', '--batch_size', type=int, default=64, help='batch size.')
@@ -498,8 +292,6 @@ if __name__ == '__main__':
         help='custom checkpoint file to start')
     parser.add_argument('--random_state', type=int, default=None)
     parser.add_argument('--train_task', type=str, default='Yes', help='specify training task')
-    parser.add_argument('--reweighing_subgroup', nargs='+',type=str, default=None, 
-    help='if input with subgroup names, the model will implement reweighing for bias mitigation')
     
 
     args = parser.parse_args()
@@ -513,5 +305,5 @@ if __name__ == '__main__':
     with open(os.path.join(args.output_base_dir, 'training_args.json'), 'w') as fp:
         json.dump(args.__dict__, fp, indent=2)
     # # # ========================================
-    train(args)
+    last_layer_retrain(args)
     print('END.')
