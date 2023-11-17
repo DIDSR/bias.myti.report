@@ -27,7 +27,7 @@ def save_checkpoint(state, filename='checkpoint.pth.tar'):
 
 
 def add_classification_layer_v1(model, num_channels, p=0.2):
-    new_layers = nn.Sequential(nn.Dropout(p), nn.Linear(512, 1000), nn.Linear(1000, 512), nn.Linear(512, 128), nn.Linear(128, num_channels))
+    new_layers = nn.Sequential(nn.Dropout(p), nn.Linear(1000, 512), nn.Linear(512, 128), nn.Linear(128, num_channels))
     model = nn.Sequential(model, new_layers)
     return model
 
@@ -104,24 +104,27 @@ def last_layer_retrain(args):
     num_channels = 1
     custom_layer_name = []
     if args.dcnn == 'resnet18':
-        origin_model = load_custom_checkpoint(args.model_file, 'resnet18', args.gpu_id, num_channels)      
+        model = load_custom_checkpoint(args.model_file, 'resnet18', args.gpu_id, num_channels)      
     elif args.dcnn == 'densenet121':
-        origin_model = load_custom_checkpoint(args.model_file, 'densenet121', args.gpu_id, num_channels)
+        model = load_custom_checkpoint(args.model_file, 'densenet121', args.gpu_id, num_channels)
         print('Using custom pretrained checkpoint file')
     else:
         print('ERROR. UNKNOWN model.')
         return
     
     # # re-initialize the fc layers
-    model = nn.Sequential(*list(origin_model.children())[:-1])
+    #model = nn.Sequential(*list(origin_model.children())[:-1])
     #model = nn.Sequential(*list(origin_model.children()))
-    #nn.init.ones_(model[-1])
+    layer=list(model.children())[-1]
+    layer.reset_parameters()
     model = add_classification_layer_v1(model, num_channels)
+    x=torch.rand(16,3,320,320)
+    print(summary(model, x))
     # # freezing all but last linear layers
     model_layers = [name for name,para in model.named_parameters()]
     fine_tune_layers = model_layers[-8:]
     for name, param in model.named_parameters():
-        print(name)
+        #print(name)
         if name not in fine_tune_layers:
             param.requires_grad = False
     
