@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchsummaryX import summary
 from distutils.util import strtobool
+from collections import OrderedDict
 # #
 from dat_data_load import Dataset
 import os
@@ -62,6 +63,7 @@ def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels, is_train
         state_dict = ckpt_dict['model_state']
     else:
         state_dict = ckpt_dict['state_dict']
+                    
     for k in list(state_dict.keys()):
         # retain only encoder_q up to before the embedding layer
         if k.startswith('module.encoder_q') and not k.startswith('module.encoder_q.fc'):
@@ -77,8 +79,17 @@ def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels, is_train
             #     state_dict['module.model.fc' + k[len("module.encoder_q.fc.2"):]] = state_dict[k]
             # TODO: JBY these are bad
             del state_dict[k]
-        # # this is copying the weights and biases
-        model.load_state_dict(state_dict, strict=False)
+            
+    # # modify key names in the state_dict to match the new model
+    new_state_dict = OrderedDict()
+    for k, v in state_dict.items():
+        if k.startswith('0.'):
+            name = k[2:]  # remove `module.`
+        else:
+            name = k
+        new_state_dict[name] = v
+    # # this is copying the weights and biases
+    model.load_state_dict(new_state_dict, strict=False)
 
     return model
     
@@ -128,6 +139,9 @@ def last_layer_retrain(args):
         if name not in fine_tune_layers:
             param.requires_grad = False
     
+    parameters = list(filter(lambda p: p.requires_grad, model.parameters()))
+    print([len(parameters), len(fine_tune_layers)])
+    assert len(parameters) == len(fine_tune_layers)
     # # 
     torch.cuda.set_device(args.gpu_id)
     model.cuda(args.gpu_id)

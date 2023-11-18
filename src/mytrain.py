@@ -164,8 +164,16 @@ def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels, is_train
             #     state_dict['module.model.fc' + k[len("module.encoder_q.fc.2"):]] = state_dict[k]
             # TODO: JBY these are bad
             del state_dict[k]
-        # # this is copying the weights and biases
-        model.load_state_dict(state_dict, strict=False)
+    # # modify key names in the state_dict to match the new model
+    new_state_dict = OrderedDict()
+    for k, v in state_dict.items():
+        if k.startswith('0.'):
+            name = k[2:]  # remove `module.`
+        else:
+            name = k
+        new_state_dict[name] = v
+    # # this is copying the weights and biases
+    model.load_state_dict(new_state_dict, strict=False)
 
     # # modify the last layers
     new_layers = nn.Sequential(nn.Dropout(0.2), nn.Linear(1000, 512), nn.Linear(512, 128), nn.Linear(128, num_channels))
