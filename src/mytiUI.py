@@ -7,16 +7,19 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import * 
 from PyQt6.QtGui import QPixmap
 import sys 
+import shutil
 
-csv_path = '../example/example.csv'
-exp_type = 'Direct Approach'
-sample_size = False
-miti_compare = False
+from plot_generation import *
+
 class InitialPage(QWidget):
 
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Myti.Report')
+        self.csv_path = '../example/example.csv'
+        self.exp_type = 'Direct Approach'
+        self.sample_size = False
+        self.miti_compare = False
         self.UIComponents()
 
 
@@ -29,7 +32,7 @@ class InitialPage(QWidget):
         self.lbl_up_load_file.move(100, 55)
         
         # # edit box for file directory   
-        self.edit_up_load_file = QLineEdit('testing', self)     
+        self.edit_up_load_file = QLineEdit('../example/example.csv', self)     
         self.edit_up_load_file.resize(350,25)
         self.edit_up_load_file.move(240,50)
 
@@ -85,13 +88,12 @@ class InitialPage(QWidget):
         dialog = QFileDialog()
         fname = dialog.getOpenFileName(None, "Import CSV", "", "CSV data files (*.csv)")
         self.edit_up_load_file.setText(fname[0])
-        global csv_path
-        csv_path = fname[0]
+        self.csv_path = fname[0]
         
     def approach_type(self):
         text = str(self.combo_exp_type.currentText())
         global exp_type
-        exp_type = text 
+        self.exp_type = text 
         if text == 'Direct Approach':
             info = 'Direct approach applies data selection prior to training so that the disease prevalence is different for different patient subgroups.\n' + \
             '\nThe degree to which bias is promoted can be controlled by changing the degree of prevalence gap between subgroups.'
@@ -103,22 +105,26 @@ class InitialPage(QWidget):
         self.lbl_exp_dscp.setText(info)
     
     def sample_size_check(self):
-        global sample_size
-        sample_size = True if self.cb_sample_size.isChecked() else False
+        self.sample_size = True if self.cb_sample_size.isChecked() else False
         
     def miti_compare_check(self):
-        global miti_compare
-        miti_compare = True if self.cb_miti_compare.isChecked() else False        
+        self.miti_compare = True if self.cb_miti_compare.isChecked() else False        
     
     def next_page(self):
+        secondpage = SecondPage(self.csv_path, self.exp_type, self.sample_size, self.miti_compare) 
+        widget.addWidget(secondpage)   # adding second page
         widget.setCurrentWidget(secondpage)
 
 
 class SecondPage(QWidget):
 
-    def __init__(self):
+    def __init__(self, csv_path, exp_type, sample_size=False, miti_compare=False):
         super().__init__()
         self.setWindowTitle('CSV Information')
+        self.csv_path = csv_path
+        self.exp_type = exp_type
+        self.sample_size = sample_size
+        self.miti_compare = miti_compare
         self.UIComponents()
         
     def UIComponents(self):
@@ -127,35 +133,35 @@ class SecondPage(QWidget):
         self.lbl_title = QLabel('Indicate Columns', self)
         self.lbl_title.move(100, 50)
         
-        column_list = self.get_columns()
+        column_list = self.get_columns()    
         # # subgroup label selection
-        self.lbl_subgroup = QLabel('Subgroup Label:', self)
-        self.lbl_subgroup.move(100, 100)
-        self.combo_subgroup = QComboBox(self)
-        self.combo_subgroup.addItem('patient_sex')
-        self.combo_subgroup.addItems(column_list)
-        self.combo_subgroup.move(300, 100)
-        # # output score selection
-        self.lbl_output = QLabel('Model Output:', self)
-        self.lbl_output.move(100, 150)
-        self.combo_output = QComboBox(self)
-        self.combo_output.addItem('output_socre')
-        self.combo_output.addItems(column_list)
-        self.combo_output.move(300, 150)
-        # # actual label selection
-        self.lbl_label = QLabel('Sample Label:', self)
-        self.lbl_label.move(100, 200)
-        self.combo_label = QComboBox(self)
-        self.combo_label.addItem('actual_class')
-        self.combo_label.addItems(column_list)
-        self.combo_label.move(300, 200)
-        # # experimeny type selection
-        self.lbl_exp = QLabel('Experiment:', self)
-        self.lbl_exp.move(100, 250)
-        self.combo_exp = QComboBox(self)
-        self.combo_exp.addItem('100_female_prev')
-        self.combo_exp.addItems(column_list)
-        self.combo_exp.move(300, 250)
+        self.lbl_subg = QLabel('Subgroup label:', self)
+        self.lbl_subg.move(100, 100)
+        self.combo_subg = QComboBox(self)
+        self.combo_subg.addItem('Subgroup')
+        self.combo_subg.addItems(column_list)
+        self.combo_subg.move(300, 100)
+        # # plot metric selection
+        self.lbl_metric = QLabel('Metric for plot:', self)
+        self.lbl_metric.move(100, 150)
+        self.combo_metric = QComboBox(self)
+        self.combo_metric.addItem('Sensitivity')
+        self.combo_metric.addItems(column_list)
+        self.combo_metric.move(300, 150)
+        # # prevalence selection
+        self.lbl_exp_1 = QLabel('Prevalence 1:', self)
+        self.lbl_exp_1.move(100, 200)
+        self.combo_exp_1 = QComboBox(self)
+        self.combo_exp_1.addItem('Prevalence F')
+        self.combo_exp_1.addItems(column_list)
+        self.combo_exp_1.move(300, 200)
+        self.lbl_exp_2 = QLabel('Prevalence 2:', self)
+        self.lbl_exp_2.move(100, 250)
+        self.combo_exp_2 = QComboBox(self)
+        self.combo_exp_2.addItem('Prevalence M')
+        self.combo_exp_2.addItems(column_list)
+        self.combo_exp_2.move(300, 250)
+
         
         # # button to the previous page
         self.btn_prev_page = QPushButton('Previous Page', self)
@@ -169,11 +175,15 @@ class SecondPage(QWidget):
         self.btn_next_page.clicked.connect(self.next_page)
 
     def get_columns(self):
-        data = pd.read_csv(csv_path)
+        data = pd.read_csv(self.csv_path)
         return list(data.columns)
 
-    def next_page(self):
-        widget.setCurrentWidget(thirdpage)
+    def next_page(self):        
+        result_plotting(str(self.combo_subg.currentText()), str(self.combo_metric.currentText()), 
+        str(self.combo_exp_1.currentText()), str(self.combo_exp_2.currentText()), self.csv_path)
+        thirdpage = FinalPage() 
+        widget.addWidget(thirdpage)   # adding last page
+        widget.setCurrentWidget(thirdpage)    
         
     def prev_page(self):
         widget.setCurrentWidget(firstpage)
@@ -183,6 +193,7 @@ class FinalPage(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Myti Results')
+        self.current_plot = 0
         self.UIComponents()
         
         
@@ -245,7 +256,7 @@ class FinalPage(QWidget):
         self.btn_quit_page = QPushButton('Quit', self)
         self.btn_quit_page.resize(self.btn_quit_page.sizeHint())
         self.btn_quit_page.move(600, 550)
-        self.btn_quit_page.clicked.connect(QApplication.instance().quit)
+        self.btn_quit_page.clicked.connect(self.quit_page)
 
 
     def fig_1_click(self, event):
@@ -253,28 +264,34 @@ class FinalPage(QWidget):
         self.fig_2_label.setStyleSheet("border : 0px solid Black;")
         self.fig_3_label.setStyleSheet("border : 0px solid Black;")
         self.lbl_selected_plot.setPixmap(self.pixmap_1.scaled(360,270))
-        info = 'Example description here. Example description here. Example description here. Example description here. Example description here. Example description here.'
-        self.lbl_selected_dscp.setText(info)       
+        info = open('../example/tmp/description_1.txt').read()
+        self.lbl_selected_dscp.setText(info)
+        self.current_plot = 1       
         
     def fig_2_click(self, event):
         self.fig_2_label.setStyleSheet("border : 4px solid Green;")
         self.fig_1_label.setStyleSheet("border : 0px solid Black;")
         self.fig_3_label.setStyleSheet("border : 0px solid Black;") 
         self.lbl_selected_plot.setPixmap(self.pixmap_2.scaled(360,270))
-        info = 'Example description here. Example description here. Example description here. Example description here. Example description here. Example description here.'
-        self.lbl_selected_dscp.setText(info)   
+        info = open('../example/tmp/description_2.txt').read()
+        self.lbl_selected_dscp.setText(info)
+        self.current_plot = 2   
         
     def fig_3_click(self, event):
         self.fig_3_label.setStyleSheet("border : 4px solid Green;")
         self.fig_2_label.setStyleSheet("border : 0px solid Black;")
         self.fig_1_label.setStyleSheet("border : 0px solid Black;")
         self.lbl_selected_plot.setPixmap(self.pixmap_3.scaled(360,270))
-        info = 'Example description here. Example description here. Example description here. Example description here. Example description here. Example description here.'
+        info = open('../example/tmp/description_3.txt').read()
         self.lbl_selected_dscp.setText(info)
+        self.current_plot = 3
         
     def prev_page(self):
         widget.setCurrentWidget(secondpage)
-        print(csv_path)
+    
+    def quit_page(self):
+        shutil.rmtree('../example/tmp/')
+        widget.close()
     
     def save_fig(self):
         name = QFileDialog.getSaveFileName(self, 'Save File',"PNG (*.png)")
@@ -282,18 +299,16 @@ class FinalPage(QWidget):
         screen = self.grab()
         figure = screen.copy(rect)
         figure.save(name[0], 'png')
+        #save_fig_text(self.current_plot, name[0])
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     widget = QStackedWidget()
     firstpage = InitialPage()
-    widget.addWidget(firstpage)   # create an instance of the first page class and add it to stackedwidget
-    secondpage = SecondPage() 
-    widget.addWidget(secondpage)   # adding second page
-    thirdpage = FinalPage() 
-    widget.addWidget(thirdpage)   # adding last page    
+    widget.addWidget(firstpage)   # create an instance of the first page class and add it to stackedwidget   
     widget.setFixedHeight(600)
     widget.setFixedWidth(800)
     widget.setCurrentWidget(firstpage)   # setting the page that you want to load when application starts up. you can also use setCurrentIndex(int)
     widget.show()
+    
     sys.exit(app.exec())
