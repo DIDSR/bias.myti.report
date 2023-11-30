@@ -53,6 +53,7 @@ def result_plotting(sub, metric, exp_1, exp_2, csv_path):
     f'The baseline at 50% show that the {metric} difference\n is at {abs(scores_1[4]-scores_2[4])} when data is well balanced.'
     with open("../example/tmp/description_1.txt", "w") as f:
         f.write(text)
+    save_fig_text(1, fig, ax, text)
     
     fig, ax = plt.subplots()
     ax.set_xticks(x)
@@ -73,6 +74,7 @@ def result_plotting(sub, metric, exp_1, exp_2, csv_path):
     f'The extreme case at 0% and 100% has\n the {metric} difference of {abs(scores_1[0]-scores_2[0])}  and {abs(scores_1[-1]-scores_2[-1])}.'
     with open("../example/tmp/description_2.txt", "w") as f:
         f.write(text)
+    save_fig_text(2, fig, ax, text)
     
     x_2 = abs(data_1[exp_1].to_numpy() - data_1[exp_2].to_numpy())[-4:]
     
@@ -96,15 +98,15 @@ def result_plotting(sub, metric, exp_1, exp_2, csv_path):
     text = f'The plot emphasizes the difference in subgroup predicted prevalence.'
     with open("../example/tmp/description_3.txt", "w") as f:
         f.write(text)
+    save_fig_text(3, fig, ax, text)
     
 
-def save_fig_text(index, fname):
-    plot = cv2.imread(f'../example/example_{index}.png')
-    text_img = cv2.imread(f'../example/tmp/text.png')
+def save_fig_text(index, fig, ax, text):
+    l, b, w, h = ax.get_position().bounds
+    ax.set_position([l, b + 0.2*h, w, h*0.8])        
+    plt.text(0.02,0.02,text,fontsize=10,transform=fig.transFigure)
+    plt.savefig(f'../example/tmp/fig_text_{index}.png')
 
-    
-    comb_img = cv2.vconcat([plot, text_img])
-    cv2.imwrite(fname, comb_img)  
     
        
     

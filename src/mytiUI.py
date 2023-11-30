@@ -295,11 +295,7 @@ class FinalPage(QWidget):
     
     def save_fig(self):
         name = QFileDialog.getSaveFileName(self, 'Save File',"PNG (*.png)")
-        rect = QRect(300,40,720,650)
-        screen = self.grab()
-        figure = screen.copy(rect)
-        figure.save(name[0], 'png')
-        #save_fig_text(self.current_plot, name[0])
+        shutil.copy(f'../example/tmp/fig_text_{self.current_plot}.png', name[0])
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
