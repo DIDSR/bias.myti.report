@@ -24,64 +24,68 @@ class InitialPage(QWidget):
 
 
     def UIComponents(self):
-    
+        # # program title
+        self.lbl_title = QLabel('Myti Report', self)
+        self.lbl_title.move(100, 50)
+        self.lbl_title.setFont(QFont('Arial', 20)) 
+        
         # # csv file upload part
         # #
         # # file indicating label
         self.lbl_up_load_file = QLabel('Uploaded Input File', self)
-        self.lbl_up_load_file.move(100, 55)
+        self.lbl_up_load_file.move(100, 155)
         
         # # edit box for file directory   
         self.edit_up_load_file = QLineEdit('../example/example.csv', self)     
         self.edit_up_load_file.resize(350,25)
-        self.edit_up_load_file.move(240,50)
+        self.edit_up_load_file.move(240,150)
 
         # # button to browse the csv file  
         self.btn_up_load_file = QPushButton('Browse', self)      
         self.btn_up_load_file.setToolTip('Select <b>CSV File</b> from folder')
         self.btn_up_load_file.resize(self.btn_up_load_file.sizeHint())
-        self.btn_up_load_file.move(620, 50)
+        self.btn_up_load_file.move(620, 150)
         self.btn_up_load_file.clicked.connect(self.upload_csv)
         
         # # experiment setting part
         # #
         # # Experiment explanation 
         self.lbl_exp_title = QLabel('Description of the approach', self)       
-        self.lbl_exp_title.move(400, 120)
+        self.lbl_exp_title.move(400, 220)
         self.lbl_exp_dscp = QLabel('Please select an experiment type.', self)
         self.lbl_exp_dscp.setStyleSheet("border : 2px solid black;") 
-        self.lbl_exp_dscp.setGeometry(400, 160, 300, 250)
+        self.lbl_exp_dscp.setGeometry(400, 260, 300, 250)
         self.lbl_exp_dscp.setWordWrap(True) 
         # # experimeny type indicating label
         self.lbl_exp_type = QLabel('Select Experiment Type', self)        
-        self.lbl_exp_type.move(100, 120)
+        self.lbl_exp_type.move(100, 220)
         # # direct or indirect selection menu  
         self.combo_exp_type = QComboBox(self)      
         self.combo_exp_type.addItem('-Please Select-')
         self.combo_exp_type.addItems(['Direct Approach','Indirect Approach'])
-        self.combo_exp_type.move(100, 170)
+        self.combo_exp_type.move(100, 270)
         self.combo_exp_type.currentTextChanged.connect(self.approach_type)
         # # finite sample size checkbox          
         self.cb_sample_size = QCheckBox('Finite Sample Size', self)      
-        self.cb_sample_size.move(100, 220)
+        self.cb_sample_size.move(100, 320)
         self.cb_sample_size.toggled.connect(self.sample_size_check) 
         sample_size_info = 'If finite sample size is selected, results using different training dataset size will be computed and visualized.'
         self.lbl_sample_size = QLabel(sample_size_info, self)
-        self.lbl_sample_size.setGeometry(100, 240, 250, 100)
+        self.lbl_sample_size.setGeometry(100, 340, 250, 100)
         self.lbl_sample_size.setWordWrap(True) 
         # # mitigation method compare checkbox
         self.cb_miti_compare = QCheckBox('Compare Bias Mitigation Methods', self)        
-        self.cb_miti_compare.move(100, 330)
+        self.cb_miti_compare.move(100, 430)
         self.cb_miti_compare.toggled.connect(self.miti_compare_check) 
         miti_compare_info = 'If comparing bias mitigation methods is selected, results using different bias mitigation methods will be campared and visualized.'
         self.lbl_miti_compare = QLabel(sample_size_info, self)
-        self.lbl_miti_compare.setGeometry(100, 350, 250, 100)
+        self.lbl_miti_compare.setGeometry(100, 450, 250, 100)
         self.lbl_miti_compare.setWordWrap(True) 
                         
         # # button for next page    
         self.btn_next_page = QPushButton('Next Page', self)    
         self.btn_next_page.resize(self.btn_next_page.sizeHint())
-        self.btn_next_page.move(600, 550)
+        self.btn_next_page.move(600, 650)
         self.btn_next_page.clicked.connect(self.next_page)
 
     def upload_csv(self):
@@ -128,50 +132,54 @@ class SecondPage(QWidget):
         self.UIComponents()
         
     def UIComponents(self):
+        # # program title
+        self.lbl_title = QLabel('Myti Report', self)
+        self.lbl_title.move(100, 50)
+        self.lbl_title.setFont(QFont('Arial', 20)) 
        
         # # Title Label
         self.lbl_title = QLabel('Indicate Columns', self)
-        self.lbl_title.move(100, 50)
+        self.lbl_title.move(100, 150)
         
         column_list = self.get_columns()    
         # # subgroup label selection
         self.lbl_subg = QLabel('Subgroup label:', self)
-        self.lbl_subg.move(100, 100)
+        self.lbl_subg.move(100, 200)
         self.combo_subg = QComboBox(self)
         self.combo_subg.addItem('Subgroup')
         self.combo_subg.addItems(column_list)
-        self.combo_subg.move(300, 100)
+        self.combo_subg.move(300, 200)
         # # plot metric selection
         self.lbl_metric = QLabel('Metric for plot:', self)
-        self.lbl_metric.move(100, 150)
+        self.lbl_metric.move(100, 250)
         self.combo_metric = QComboBox(self)
         self.combo_metric.addItem('Sensitivity')
         self.combo_metric.addItems(column_list)
-        self.combo_metric.move(300, 150)
+        self.combo_metric.move(300, 250)
         # # prevalence selection
         self.lbl_exp_1 = QLabel('Prevalence 1:', self)
-        self.lbl_exp_1.move(100, 200)
+        self.lbl_exp_1.move(100, 300)
         self.combo_exp_1 = QComboBox(self)
         self.combo_exp_1.addItem('Prevalence F')
         self.combo_exp_1.addItems(column_list)
-        self.combo_exp_1.move(300, 200)
+        self.combo_exp_1.move(300, 300)
         self.lbl_exp_2 = QLabel('Prevalence 2:', self)
-        self.lbl_exp_2.move(100, 250)
+        self.lbl_exp_2.move(100, 350)
         self.combo_exp_2 = QComboBox(self)
         self.combo_exp_2.addItem('Prevalence M')
         self.combo_exp_2.addItems(column_list)
-        self.combo_exp_2.move(300, 250)
+        self.combo_exp_2.move(300, 350)
 
         
         # # button to the previous page
         self.btn_prev_page = QPushButton('Previous Page', self)
         self.btn_prev_page.resize(self.btn_prev_page.sizeHint())
-        self.btn_prev_page.move(500, 550)
+        self.btn_prev_page.move(500, 650)
         self.btn_prev_page.clicked.connect(self.prev_page)
         # # button to the next page
         self.btn_next_page = QPushButton('Next Page', self)
         self.btn_next_page.resize(self.btn_next_page.sizeHint())
-        self.btn_next_page.move(600, 550)
+        self.btn_next_page.move(600, 650)
         self.btn_next_page.clicked.connect(self.next_page)
 
     def get_columns(self):
@@ -198,49 +206,53 @@ class FinalPage(QWidget):
         
         
     def UIComponents(self):
+        # # program title
+        self.lbl_title = QLabel('Myti Report', self)
+        self.lbl_title.move(100, 50)
+        self.lbl_title.setFont(QFont('Arial', 20))
         
         # # title for plot selection
         self.lbl_option = QLabel('Plot Options', self)
-        self.lbl_option.move(100, 20)
+        self.lbl_option.move(100, 120)
  
         # # adding example image
         self.fig_1_label = QLabel(self)
         self.pixmap_1 = QPixmap('../example/example_1.png')
-        self.fig_1_label.setPixmap(self.pixmap_1.scaled(200,150))
+        self.fig_1_label.setPixmap(self.pixmap_1.scaled(200,150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         self.fig_1_label.resize(200,150)
-        self.fig_1_label.move(100,40)        
+        self.fig_1_label.move(100,140)        
         self.fig_2_label = QLabel(self)
         self.pixmap_2 = QPixmap('../example/example_2.png')
-        self.fig_2_label.setPixmap(self.pixmap_2.scaled(200,150))
+        self.fig_2_label.setPixmap(self.pixmap_2.scaled(200,150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         self.fig_2_label.resize(200,150)
-        self.fig_2_label.move(100,210)
+        self.fig_2_label.move(100,310)
         
         self.fig_3_label = QLabel(self)
         self.pixmap_3 = QPixmap('../example/example_3.png')
-        self.fig_3_label.setPixmap(self.pixmap_3.scaled(200,150))
+        self.fig_3_label.setPixmap(self.pixmap_3.scaled(200,150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         self.fig_3_label.resize(200,150)
-        self.fig_3_label.move(100,380)
+        self.fig_3_label.move(100,480)
                 
         # # title for displaying plot
         self.lbl_plot = QLabel('Selected Plot', self)
-        self.lbl_plot.move(350, 20)
+        self.lbl_plot.move(350, 120)
         # # title for plot discription
         self.lbl_dscp = QLabel('Plot Description', self)
-        self.lbl_dscp.move(350, 320)
+        self.lbl_dscp.move(350, 420)
         # # position for selected plot
         self.lbl_selected_plot = QLabel(self)
         self.lbl_selected_plot.resize(360,270)
-        self.lbl_selected_plot.move(350,40)
+        self.lbl_selected_plot.move(350,140)
         # # description for the plot
         self.lbl_selected_dscp = QLabel(self)
         self.lbl_selected_dscp.setStyleSheet("border : 2px solid black;")
         self.lbl_selected_dscp.resize(360,200)
-        self.lbl_selected_dscp.move(350,340)
+        self.lbl_selected_dscp.move(350,440)
         self.lbl_selected_dscp.setWordWrap(True) 
         # # button to save figure
         self.btn_save_fig = QPushButton('Save Figure', self)
         self.btn_save_fig.resize(self.btn_save_fig.sizeHint())
-        self.btn_save_fig.move(600, 15)
+        self.btn_save_fig.move(600, 115)
         self.btn_save_fig.clicked.connect(self.save_fig)
         
         # # events when clicking on plot options        
@@ -250,12 +262,12 @@ class FinalPage(QWidget):
         # # button to the previous page
         self.btn_prev_page = QPushButton('Previous Page', self)
         self.btn_prev_page.resize(self.btn_prev_page.sizeHint())
-        self.btn_prev_page.move(500, 550)
+        self.btn_prev_page.move(500, 650)
         self.btn_prev_page.clicked.connect(self.prev_page)
         # # button to quit
         self.btn_quit_page = QPushButton('Quit', self)
         self.btn_quit_page.resize(self.btn_quit_page.sizeHint())
-        self.btn_quit_page.move(600, 550)
+        self.btn_quit_page.move(600, 650)
         self.btn_quit_page.clicked.connect(self.quit_page)
 
 
@@ -263,7 +275,7 @@ class FinalPage(QWidget):
         self.fig_1_label.setStyleSheet("border : 4px solid Green;")
         self.fig_2_label.setStyleSheet("border : 0px solid Black;")
         self.fig_3_label.setStyleSheet("border : 0px solid Black;")
-        self.lbl_selected_plot.setPixmap(self.pixmap_1.scaled(360,270))
+        self.lbl_selected_plot.setPixmap(self.pixmap_1.scaled(360,270, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         info = open('../example/tmp/description_1.txt').read()
         self.lbl_selected_dscp.setText(info)
         self.current_plot = 1       
@@ -272,7 +284,7 @@ class FinalPage(QWidget):
         self.fig_2_label.setStyleSheet("border : 4px solid Green;")
         self.fig_1_label.setStyleSheet("border : 0px solid Black;")
         self.fig_3_label.setStyleSheet("border : 0px solid Black;") 
-        self.lbl_selected_plot.setPixmap(self.pixmap_2.scaled(360,270))
+        self.lbl_selected_plot.setPixmap(self.pixmap_2.scaled(360,270, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         info = open('../example/tmp/description_2.txt').read()
         self.lbl_selected_dscp.setText(info)
         self.current_plot = 2   
@@ -281,7 +293,7 @@ class FinalPage(QWidget):
         self.fig_3_label.setStyleSheet("border : 4px solid Green;")
         self.fig_2_label.setStyleSheet("border : 0px solid Black;")
         self.fig_1_label.setStyleSheet("border : 0px solid Black;")
-        self.lbl_selected_plot.setPixmap(self.pixmap_3.scaled(360,270))
+        self.lbl_selected_plot.setPixmap(self.pixmap_3.scaled(360,270, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         info = open('../example/tmp/description_3.txt').read()
         self.lbl_selected_dscp.setText(info)
         self.current_plot = 3
@@ -302,7 +314,7 @@ if __name__ == '__main__':
     widget = QStackedWidget()
     firstpage = InitialPage()
     widget.addWidget(firstpage)   # create an instance of the first page class and add it to stackedwidget   
-    widget.setFixedHeight(600)
+    widget.setFixedHeight(700)
     widget.setFixedWidth(800)
     widget.setCurrentWidget(firstpage)   # setting the page that you want to load when application starts up. you can also use setCurrentIndex(int)
     widget.show()
