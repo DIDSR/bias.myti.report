@@ -50,7 +50,7 @@ def result_plotting(sub, metric, exp_1, exp_2, csv_path):
     fig.tight_layout()
     plt.savefig('../example/example_1.png')
     text = f'The plot shows the effect of subgroup disease prevalence\n in the training set on the {metric} in the test set.\n'+ \
-    f'The baseline at 50% show that the {metric} difference\n is at {abs(scores_1[4]-scores_2[4])} when data is well balanced.'
+    f'The baseline at 50% show that the {metric} difference\n is at {round(abs(scores_1[4]-scores_2[4]), 3)} when data is well balanced.'
     with open("../example/tmp/description_1.txt", "w") as f:
         f.write(text)
     save_fig_text(1, fig, ax, text)
@@ -70,8 +70,8 @@ def result_plotting(sub, metric, exp_1, exp_2, csv_path):
     ax.set_title(metric, fontweight='bold', bbox=dict(facecolor='khaki', alpha=0.2, edgecolor=(0,0,0,1)))
     plt.savefig('../example/example_2.png')
     text = f'The plot emphasizes the effect of subgroup disease prevalence difference\n in the training set on the subgroup {metric} difference in the test set.\n' + \
-    f'The baseline at 50% show that the {metric} difference\n is at {abs(scores_1[4]-scores_2[4])} when data is well balanced.\n' + \
-    f'The extreme case at 0% and 100% has\n the {metric} difference of {abs(scores_1[0]-scores_2[0])}  and {abs(scores_1[-1]-scores_2[-1])}.'
+    f'The baseline at 50% show that the {metric} difference\n is at {round(abs(scores_1[4]-scores_2[4]), 3)} when data is well balanced.\n' + \
+    f'The extreme case at 0% and 100% has\n the {metric} difference of {round(abs(scores_1[0]-scores_2[0]), 3)}  and {round(abs(scores_1[-1]-scores_2[-1]), 3)}.'
     with open("../example/tmp/description_2.txt", "w") as f:
         f.write(text)
     save_fig_text(2, fig, ax, text)
