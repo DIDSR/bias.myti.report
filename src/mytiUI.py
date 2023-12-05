@@ -15,7 +15,7 @@ class InitialPage(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle('Myti.Report')
+        self.setWindowTitle('myti.Report')
         self.csv_path = '../example/example.csv'
         self.exp_type = 'Direct Approach'
         self.sample_size = False
@@ -25,9 +25,12 @@ class InitialPage(QWidget):
 
     def UIComponents(self):
         # # program title
-        self.lbl_title = QLabel('Myti Report', self)
+        self.lbl_title = QLabel('myti Report', self)
         self.lbl_title.move(100, 50)
-        self.lbl_title.setFont(QFont('Arial', 20)) 
+        self.lbl_title.setFont(QFont('Arial', 20))
+        self.lbl_title = QLabel('A visualization tool to facilitate the comparison of user-implemented bias mitigation methods for AI models', self)
+        self.lbl_title.move(100, 100)
+         
         
         # # csv file upload part
         # #
@@ -133,7 +136,7 @@ class SecondPage(QWidget):
         
     def UIComponents(self):
         # # program title
-        self.lbl_title = QLabel('Myti Report', self)
+        self.lbl_title = QLabel('myti Report', self)
         self.lbl_title.move(100, 50)
         self.lbl_title.setFont(QFont('Arial', 20)) 
        
@@ -189,7 +192,7 @@ class SecondPage(QWidget):
     def next_page(self):        
         result_plotting(str(self.combo_subg.currentText()), str(self.combo_metric.currentText()), 
         str(self.combo_exp_1.currentText()), str(self.combo_exp_2.currentText()), self.csv_path)
-        thirdpage = FinalPage() 
+        thirdpage = FinalPage(self.csv_path, self.exp_type, self.sample_size, self.miti_compare)  
         widget.addWidget(thirdpage)   # adding last page
         widget.setCurrentWidget(thirdpage)    
         
@@ -198,16 +201,20 @@ class SecondPage(QWidget):
         
 class FinalPage(QWidget):
 
-    def __init__(self):
+    def __init__(self, csv_path, exp_type, sample_size=False, miti_compare=False):
         super().__init__()
         self.setWindowTitle('Myti Results')
         self.current_plot = 0
+        self.csv_path = csv_path
+        self.exp_type = exp_type
+        self.sample_size = sample_size
+        self.miti_compare = miti_compare
         self.UIComponents()
         
         
     def UIComponents(self):
         # # program title
-        self.lbl_title = QLabel('Myti Report', self)
+        self.lbl_title = QLabel('myti Report', self)
         self.lbl_title.move(100, 50)
         self.lbl_title.setFont(QFont('Arial', 20))
         
@@ -236,16 +243,12 @@ class FinalPage(QWidget):
         # # title for displaying plot
         self.lbl_plot = QLabel('Selected Plot', self)
         self.lbl_plot.move(350, 120)
-        # # title for plot discription
-        self.lbl_dscp = QLabel('Plot Description', self)
-        self.lbl_dscp.move(350, 420)
         # # position for selected plot
         self.lbl_selected_plot = QLabel(self)
         self.lbl_selected_plot.resize(360,270)
         self.lbl_selected_plot.move(350,140)
         # # description for the plot
         self.lbl_selected_dscp = QLabel(self)
-        self.lbl_selected_dscp.setStyleSheet("border : 2px solid black;")
         self.lbl_selected_dscp.resize(360,200)
         self.lbl_selected_dscp.move(350,440)
         self.lbl_selected_dscp.setWordWrap(True) 
@@ -299,6 +302,8 @@ class FinalPage(QWidget):
         self.current_plot = 3
         
     def prev_page(self):
+        secondpage = SecondPage(self.csv_path, self.exp_type, self.sample_size, self.miti_compare) 
+        widget.addWidget(secondpage)
         widget.setCurrentWidget(secondpage)
     
     def quit_page(self):
