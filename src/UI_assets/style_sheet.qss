@@ -95,6 +95,7 @@ QPushButton#active {
   height: 50px;
   font: bold 20px;
   text-align: left;
+  qproperty-iconSize: 50px;
 }
 
 QPushButton#inactive {
@@ -103,4 +104,5 @@ QPushButton#inactive {
   font: bold 20px;
   color: #000000;
   text-align: left;
+  qproperty-iconSize: 50px;
 }
