@@ -1,0 +1,106 @@
+QWidget {
+  background-color: #DCDCDC;
+}
+
+QTabBar::tab{
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+QStatusBar {
+  background-color: #FFFFFF;
+}
+
+QLabel {
+  font: 14px;
+  margin: 10px;
+}
+
+QLabel#fda_logo {
+  margin: 10px;
+  width: 200px;
+  background-color: #FFFFFF;
+}
+
+QLabel#osel_label {
+  font: bold 10px;
+  color: #007CBA;
+  margin: 0;
+  padding: 0;
+}
+
+QLabel#osel_desc {
+  font: 10px;
+  color: #000000;
+  margin: 0;
+  padding: 0;
+}
+
+QWidget#selected {
+  border: 2px solid #007CBA;
+  
+}
+
+QLabel#heading {
+  font: bold 16px;
+}
+
+QLabel#title {
+  font: bold 30px;
+  color: #007CBA;
+}
+
+QLabel#references {
+  font: italic 10px;
+  color: gray;
+}
+
+QLabel#subtitle {
+  font: italic 16px;
+}
+
+QTabBar {
+  border: none;
+}
+
+QLineEdit {
+  background-color: #FFFFFF;
+  font: 14px;
+}
+
+QComboBox {
+  font: 14px;
+}
+
+QCheckBox {
+  font: 14px;
+}
+
+QWidget#sidebar {
+  background-color: #FFFFFF;
+}
+
+QPushButton {
+  font: 16px;
+  background-color: #007CBA;
+  padding: 5px;
+  color: #FFFFFF;
+}
+
+QPushButton#active {
+  background-color: #007CBA;
+  height: 50px;
+  font: bold 20px;
+  text-align: left;
+}
+
+QPushButton#inactive {
+  background-color: #FFFFFF;
+  height: 50px;
+  font: bold 20px;
+  color: #000000;
+  text-align: left;
+}
