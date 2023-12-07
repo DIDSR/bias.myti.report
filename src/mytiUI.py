@@ -68,7 +68,7 @@ class InitialPage(Page):
         self.lbl_title.setObjectName("title")
         self.layout.addWidget(self.lbl_title)
         #self.lbl_title.setFont(QFont('Arial', 20))
-        self.lbl_subtitle = QLabel('A visualization tool to facilitate the comparison of user-implemented bias mitigation methods for AI models', self)
+        self.lbl_subtitle = QLabel('A tool to facilitate the comparison of user-implemented bias mitigation methods for AI models', self)
         self.lbl_subtitle.setObjectName("subtitle")
         self.layout.addWidget(self.lbl_subtitle)
          
