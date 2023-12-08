@@ -270,8 +270,8 @@ class FinalPage(Page):
         self.layout.addWidget(self.lbl_option, 1,0,1,1)
  
         # # adding example image
-        self.example_images = ['../example/example_1.png', '../example/example_2.png', '../example/example_3.png']
-        self.example_descriptions = ['../example/tmp/description_1.txt','../example/tmp/description_2.txt','../example/tmp/description_3.txt']
+        self.example_images = ['/gpfs_projects/alexis.burgon/OUT/2022_CXR/Bias_manipulation_manuscript/image_of_the_semester_plots/radial_F_positive-associated_AUROC.png', '/gpfs_projects/alexis.burgon/OUT/2022_CXR/Bias_manipulation_manuscript/image_of_the_semester_plots/radial_F_positive-associated_Prevalence.png']
+        self.example_descriptions = ['../example/tmp/description_1.txt','../example/tmp/description_2.txt']
         self.tile_view = QWidget()
         self.tile_layout = QVBoxLayout()
         self.tile_view.setLayout(self.tile_layout)
@@ -286,7 +286,7 @@ class FinalPage(Page):
         # event binding # TODO: set in a loop
         self.tile_figures[0].mousePressEvent = lambda x: self.fig_select(figure_number=0)  
         self.tile_figures[1].mousePressEvent = lambda x: self.fig_select(figure_number=1) 
-        self.tile_figures[2].mousePressEvent = lambda x: self.fig_select(figure_number=2) 
+        #self.tile_figures[2].mousePressEvent = lambda x: self.fig_select(figure_number=2) 
                 
         # Selected Plot
         self.selected_view = QWidget()
@@ -314,7 +314,7 @@ class FinalPage(Page):
         self.lbl_references.setWordWrap(True)
         self.layout.addWidget(self.lbl_references, 3, 1, 1, 2, alignment=Qt.AlignmentFlag.AlignBottom)
         # # button to save figure
-        self.btn_save_fig = QPushButton('Save Figure', self)
+        self.btn_save_fig = QPushButton('Save Report', self)
         self.btn_save_fig.resize(self.btn_save_fig.sizeHint())
         self.btn_save_fig.clicked.connect(self.save_fig)
         self.layout.addWidget(self.btn_save_fig, 0, 2, 1, 1)
@@ -331,7 +331,8 @@ class FinalPage(Page):
         
         # Set the large image and descriptiong
         self.lbl_selected_plot.setPixmap(QPixmap(self.example_images[figure_number]).scaled(360,270, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-        info = open(self.example_descriptions[figure_number]).read()
+        #info = open(self.example_descriptions[figure_number]).read()
+        info = "The figure shows the AUROC before and after bias mitigation across differences in disease prevalence between the subgroups in the training set."
         self.lbl_selected_dscp.setText(info)
         self.current_plot = figure_number+1
     
