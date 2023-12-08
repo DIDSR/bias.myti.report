@@ -75,6 +75,10 @@ QComboBox {
   font: 14px;
 }
 
+QComboBox::hover {
+  font: bold 14px #007CBA;
+}
+
 QCheckBox {
   font: 14px;
 }
