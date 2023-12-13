@@ -46,7 +46,9 @@ def unpack_details(df, details:dict):
     df[k] = df['details'].map(convert[k])
   df['task'] = 'COVID'
   df.loc[df['details'] == 'AUROC sex','task'] = 'Subgroup'
+  df.loc[df['details'] == 'AUROC race','task'] = 'Subgroup'
   df.loc[df['details'] == 'Overall AUROC (Sex)','task'] = 'Subgroup'
+  df.loc[df['details'] == 'Overall AUROC (Race)','task'] = 'Subgroup'
   return df
   
 def clean_data(df, **kwargs):
