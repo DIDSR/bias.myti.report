@@ -8,11 +8,7 @@ import textwrap
 import math
 import os
 
-COLORS = {"F":"#dd337c", "M":"#0fb5ae", "Overall":"#72e06a", "B":"#4046ca", "W":"#f68511", "COVID":"#72e06a", "Subgroup":"#7e84fa",} 
-STYLES = {"Default":"-", "M":"--", "F":"-", "B":"-", "W":"--"} # positive-associated
-ACCENT_COLOR = "#430c82" # used for bias deg indicator arrow and accompanying text
-HIGHLIGHT_COLOR = "#FDCA40"
-SUBGROUP_NAME_MAPPING = {"F":"Female", "M":"Male"} # for the legend(s)
+from plot_formatting import *
 
 def import_data(main_dir="/gpfs_projects/alexis.burgon/OUT/2022_CXR/Bias_manipulation_manuscript/results"):
   data = {}
@@ -58,6 +54,7 @@ class RadialPlot():
         if hide_last_r:
           r_tick_labels[-1] = ""
         self.ax.set_yticks(r_ticks, r_tick_labels)
+        self.ax.tick_params(axis="y", pad=0.5)
         self.ax.set_xlim(0, math.radians(360-annotation_degrees))
         self.ax.set_xticks([])
         self.ax.set_theta_direction(-1) # clockwise
@@ -99,16 +96,16 @@ class RadialPlot():
             section.plot(data, **plot_kwargs) 
         self.legend(**plot_kwargs)
         
-    def legend(self, pad=0.05, name_map_dict=SUBGROUP_NAME_MAPPING, **kwargs):
+    def legend(self, pad=0.0, name_map_dict=SUBGROUP_NAME_MAPPING, **kwargs):
         name_mapping = SUBGROUP_NAME_MAPPING
         for h in self.data[kwargs['hue_col']].unique().tolist():
           if h not in name_mapping:
             name_mapping[h] = h
         hue_lines = [Patch(facecolor=kwargs['color_dict'][h], label=name_mapping[h]) for h in self.data[kwargs['hue_col']].unique().tolist()]
-        hue_legend = self.fig.legend(handles=hue_lines, loc='lower left', bbox_to_anchor=[0+pad,0+pad])
+        hue_legend = self.fig.legend(handles=hue_lines, loc='upper right', bbox_to_anchor=[1-pad,1-pad])
         if 'style_col' in kwargs:
           style_lines = [Line2D([0],[0], ls=kwargs['style_dict'][s], color='k', label=name_mapping[s]) for s in self.data[kwargs['style_col']].unique().tolist()]
-          style_legend = self.fig.legend(handles=style_lines, loc='lower right',bbox_to_anchor=[1-pad,0+pad], title=kwargs['style_col'].title())
+          style_legend = self.fig.legend(handles=style_lines, loc='upper left',bbox_to_anchor=[0+pad,1-pad], title=kwargs['style_col'].title())
           self.fig.add_artist(hue_legend)
         
 class RadialPlotSection():
@@ -172,7 +169,36 @@ class RadialPlotSection():
               text = str(p)
             self.RP.ax.text(theta, self.ticklabel_pos, text, color='k', alpha=self.tick_alpha, ha=ha, va=va)
             
-    def plot(self, data, mean_col, x_col, hue_col,  color_dict, style_col=None, style_dict={}, CI=True, lower_CI_col="lower_CI", upper_CI_col="upper_CI"): # TODO: CI
+    def interpolate_points(self, x_values, *values, step_every=1):
+        """ Interpolates such that there at least one point every step_every. 
+        Note: assumes that the values are sorted according to the x_value order """       
+        steps = np.arange(min(x_values), max(x_values), step=step_every)
+        steps = list(set([*steps, *x_values])) # so that we don't remove any original values
+        steps.sort()
+        
+        final_output = [steps]
+        for val in values:
+            original_points = dict(zip(x_values, val))
+            output = []
+            for x in steps:
+                if x in x_values: # was one of the original values
+                    idx = np.where(x_values == x)
+                    output.append(val[idx][0])
+                else: # linear interpolation
+                    # find upper and lower bounds for interpolation
+                    lower = max(x_values[np.where(x_values < x)])
+                    upper = min(x_values[np.where(x_values > x)])
+                    lower_idx = np.where(x_values == lower)
+                    upper_idx = np.where(x_values == upper)
+                    
+                    # define the linear function
+                    slope = ( val[upper_idx] - val[lower_idx] ) / ( upper - lower )
+                    
+                    output.append((slope*(x - lower) + val[lower_idx])[0])
+            final_output.append(output) 
+        return final_output   
+        
+    def plot(self, data, mean_col, x_col, hue_col,  color_dict, style_col=None, style_dict={}, CI=True, lower_CI_col="lower_CI", upper_CI_col="upper_CI", interpolate=False, step_every=1):
         assert mean_col in data.columns
         assert x_col in data.columns
         assert hue_col in data.columns
@@ -191,13 +217,20 @@ class RadialPlotSection():
           else:
             style='Defualt'
           x_values = df[x_col].values
+          mean_values = df[mean_col].values
+          lower_CI_values = df[lower_CI_col].values
+          upper_CI_values = df[upper_CI_col].values          
+          
+          if interpolate:
+              x_values, mean_values, lower_CI_values, upper_CI_values = self.interpolate_points(x_values, mean_values, lower_CI_values, upper_CI_values, step_every=step_every)
+          
           # convert from x to theta
           theta_values = [self.convert_point(x) for x in x_values]
           
           if CI:
-            self.RP.ax.fill_between(theta_values, df[lower_CI_col].values, df[upper_CI_col].values, color=color_dict[hue], alpha=0.3)
+            self.RP.ax.fill_between(theta_values, lower_CI_values, upper_CI_values, color=color_dict[hue], alpha=CI_ALPHA)
           
-          self.RP.ax.plot(theta_values, df[mean_col].values, c=color_dict[hue], ls=style_dict[style]) 
+          self.RP.ax.plot(theta_values, mean_values, c=color_dict[hue], ls=style_dict[style]) 
           
     def highlight(self, n_points=100):
       inc = (self.rp_xlim[1] - self.rp_xlim[0]) / n_points
@@ -212,17 +245,28 @@ def calculate_CI(df, mean_col='mean', std_col='std', confidence_level=0.95, samp
     return df
   
 if __name__ == "__main__":
-    save_loc = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/Bias_manipulation_manuscript/radial_plots/"
+    print("Beginning Radial Plotting")
+    interpolate = True # whether or not to interpolate points in between available points (to accurately show a linear assumption)
+    if interpolate:
+      print("Plotting with interpolation")
+      save_loc = "/home/alexis.burgon/temp/bias_mit_radial_plot_w_interpolation/"
+    else:
+      print("Plotting without interpolation")
+      save_loc = "/home/alexis.burgon/temp/bias_mit__radial_plots/"
+    #save_loc = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/Bias_manipulation_manuscript/radial_plots/"
     mitigation_methods = ["No Mitigation","Image Cropping", "Reweighing", "Calibrated Equalized Odds", "Reject Option Classification",]
-    plot_kwargs = dict(style_col='Positive-associated', mean_col='Mean', color_dict=COLORS, style_dict=STYLES)
+    plot_kwargs = dict(style_col='Positive-associated', mean_col='Mean', color_dict=COLORS, style_dict=STYLES, interpolate=interpolate)
     all_data = import_data()
     for app in ['direct', 'indirect']:
       if app == 'direct':
+        
         x_col = "Training Prevalence Difference"
         degree_name = "Training Prevalence Difference (%)"
+        plot_kwargs['step_every'] = 10
       elif app == 'indirect':
         x_col = "Frozen Layers"
         degree_name = "Frozen Layers"
+        plot_kwargs['step_every'] = 1
       else:
         raise NotImplementedError()
       plot_kwargs["x_col"] = x_col
@@ -245,8 +289,6 @@ if __name__ == "__main__":
           temp_data['Positive-associated'] = PA
           data_list.append(temp_data)
         data = pd.concat(data_list)
-        
-        
         data = calculate_CI(data)
         
         # separate plots
@@ -265,11 +307,12 @@ if __name__ == "__main__":
                 elif m == 'Prevalence':
                   kwargs = dict(rmax=1, rmin=0, r_label="Predicted\nPrevalence (%)")
                 
-                #print(f"{app}_{exp}_{compare}_{m}")
+                print(f"{app}_{exp}_{compare}_{m}")
                 RP = RadialPlot(section_names=mitigation_methods, data=temp_data.copy(), x_col=x_col, axes_kwargs=dict(center_hole_portion=0.2), degree_name=degree_name, **kwargs)
                 RP.plot(**plot_kwargs, hue_col=compare)
                 
                 for fmt in ["png"]:
                   plt.savefig(os.path.join(save_loc, f"{app}_{exp}_{compare}_{m}.{fmt}"), bbox_inches='tight')
                 plt.close("all")
+    print("Done")
             
