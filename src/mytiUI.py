@@ -131,8 +131,8 @@ class InitialPage(Page):
           self.desc_layout.addWidget(self.exp_descriptions[exp])
         self.desc_layout.addStretch(10)
         
-        # # experimeny type indicating label
-        self.lbl_exp_type = QLabel('Select Experiment Type', self)  
+        # # amplification type indicating label
+        self.lbl_exp_type = QLabel('Select Amplification Type', self)  
         self.settings_layout.addWidget(self.lbl_exp_type, 0,0,1,1)  
         # # direct or indirect selection menu  
         self.combo_exp_type = QComboBox(self)      
@@ -140,25 +140,42 @@ class InitialPage(Page):
         self.combo_exp_type.addItems(list(self.parent.experiments.keys()))
         self.settings_layout.addWidget(self.combo_exp_type, 0, 1, 1, 1)
         self.combo_exp_type.currentTextChanged.connect(self.approach_type)
-        # # finite sample size checkbox          
-        self.cb_sample_size = QCheckBox('Study Finite Sample Size Effect', self)   
-        self.settings_layout.addWidget(self.cb_sample_size, 1, 0, 1, 2)  
-        self.cb_sample_size.toggled.connect(self.sample_size_check) 
+        # # study typr selection menu
+        self.lbl_stdy_type = QLabel('Select Study Type', self)  
+        self.settings_layout.addWidget(self.lbl_stdy_type, 1, 0, 1, 1)   
+        self.rb_sample_size = QRadioButton('Study Finite Sample Size Effect', self)            
+        self.settings_layout.addWidget(self.rb_sample_size, 2, 0, 1, 2)  
+        self.rb_sample_size.toggled.connect(self.study_update) 
         sample_size_info = 'If finite sample size is selected, results using different training dataset size will be computed and visualized.'
         self.lbl_sample_size = QLabel(sample_size_info, self)
         self.lbl_sample_size.resize(250, 100)
-        self.settings_layout.addWidget(self.lbl_sample_size, 2, 0, 1, 2)
+        self.settings_layout.addWidget(self.lbl_sample_size, 3, 0, 1, 2)
         self.lbl_sample_size.setWordWrap(True) 
         # # mitigation method compare checkbox
-        self.cb_miti_compare = QCheckBox('Compare Bias Mitigation Methods', self)  
-        self.settings_layout.addWidget(self.cb_miti_compare, 3, 0, 1, 2)      
-        self.cb_miti_compare.toggled.connect(self.miti_compare_check) 
+        self.rb_miti_compare = QRadioButton('Compare Bias Mitigation Methods', self)  
+        self.settings_layout.addWidget(self.rb_miti_compare, 4, 0, 1, 2)      
+        self.rb_miti_compare.toggled.connect(self.study_update) 
         miti_compare_info = 'If comparing bias mitigation methods is selected, results using different bias mitigation methods will be campared and visualized.'
         self.lbl_miti_compare = QLabel(miti_compare_info, self)
         self.lbl_miti_compare.resize(250, 100)
-        self.settings_layout.addWidget(self.lbl_miti_compare, 4, 0, 1, 2)
-        self.settings_layout.setRowStretch(5, 100)
         self.lbl_miti_compare.setWordWrap(True) 
+        self.settings_layout.addWidget(self.lbl_miti_compare, 5, 0, 1, 2)
+        self.rb_none = QRadioButton('None', self)
+        self.rb_none.setChecked(True)
+        self.rb_none.toggled.connect(self.study_update)
+        self.settings_layout.addWidget(self.rb_none, 6, 0, 1, 2)
+        none_info = 'If none is selected, only results from bias amplification will be visualized.'
+        self.lbl_none = QLabel(none_info, self)
+        self.lbl_none.resize(250, 100)
+        self.lbl_none.setWordWrap(True) 
+        self.settings_layout.addWidget(self.lbl_none, 7, 0, 1, 2)
+        self.lbl_blank = QLabel('', self)
+        self.settings_layout.addWidget(self.lbl_blank, 8, 0, 1, 2)
+        self.settings_layout.setRowStretch(8, 100)
+         
+              
+        
+        
         self.exp_box.setLayout(self.exp_layout)
         self.layout.addWidget(self.exp_box)
         self.layout.addSpacing(1)
@@ -181,11 +198,12 @@ class InitialPage(Page):
             self.exp_descriptions[exp].setObjectName("not_selected")
           self.exp_descriptions[exp].setStyleSheet(styleSheet)
     
-    def sample_size_check(self):
-        self.sample_size = True if self.cb_sample_size.isChecked() else False
+    def study_update(self):
+        rb = self.sender()
+        if rb.isChecked():
+            self.study_type = rb.text()
         
-    def miti_compare_check(self):
-        self.miti_compare = True if self.cb_miti_compare.isChecked() else False        
+       
 
 class SecondPage(Page):
 
@@ -355,8 +373,7 @@ class MainWindow(QMainWindow):
         # Set argument placeholders
         self.csv_path = '../example/example.csv'
         self.exp_type = 'Quantitative Misrepresentation'
-        self.sample_size = False
-        self.miti_compare = False
+        self.study_type = 'None'
         self.current_page = 1
         self.variables = {}
         
