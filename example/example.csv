@@ -1,15 +1,209 @@
-Prevalence F,Prevalence M,Subgroup,Predicted Prevalence,Sensitivity,Subgroup AUROC
-0,100,F,0.148181818,0.188939394,0.584054178
-10,90,F,0.197121212,0.267575758,0.630701905
-25,75,F,0.288560606,0.393030303,0.670369605
-50,50,F,0.506590909,0.646969697,0.693609963
-75,25,F,0.707878788,0.814848485,0.666540404
-90,10,F,0.799090909,0.863484848,0.624360652
-100,0,F,0.85719697,0.892878788,0.578440657
-0,100,M,0.870227273,0.906515152,0.612333563
-10,90,M,0.803636364,0.867121212,0.6597073
-25,75,M,0.685530303,0.798939394,0.690494146
-50,50,M,0.512424242,0.659848485,0.707505739
-75,25,M,0.320530303,0.432575758,0.68190714
-90,10,M,0.208257576,0.272878788,0.646712006
-100,0,M,0.141060606,0.175606061,0.601537534
+details,dist,Mean,Std,Training Prevalence Difference,Positive-associated,mitigation,metric,subgroup,task
+AUROC covid,0BP,0.514189624,0.020812201,100,W,Image Cropping,AUROC,Overall,COVID
+AUROC covid,10BP,0.549496528,0.017351382,80,W,Image Cropping,AUROC,Overall,COVID
+AUROC covid,25BP,0.600046344,0.017283826,50,W,Image Cropping,AUROC,Overall,COVID
+AUROC covid,50BP,0.666070937,0.007139377,0,W,Image Cropping,AUROC,Overall,COVID
+AUROC sex,0BP,0.722325528,0.024731313,100,W,Image Cropping,AUROC,Overall,Subgroup
+AUROC sex,10BP,0.672286932,0.023150636,80,W,Image Cropping,AUROC,Overall,Subgroup
+AUROC sex,25BP,0.587419364,0.010666978,50,W,Image Cropping,AUROC,Overall,Subgroup
+AUROC sex,50BP,0.646887483,0.012553941,0,W,Image Cropping,AUROC,Overall,Subgroup
+Prevalence B,0BP,0.444848485,0.046235091,100,W,Image Cropping,Prevalence,B,COVID
+Prevalence B,10BP,0.464621212,0.035903616,80,W,Image Cropping,Prevalence,B,COVID
+Prevalence B,25BP,0.503106061,0.037946341,50,W,Image Cropping,Prevalence,B,COVID
+Prevalence B,50BP,0.664772727,0.038838228,0,W,Image Cropping,Prevalence,B,COVID
+Prevalence W,0BP,0.768712121,0.050059222,100,W,Image Cropping,Prevalence,W,COVID
+Prevalence W,10BP,0.718106061,0.044811903,80,W,Image Cropping,Prevalence,W,COVID
+Prevalence W,25BP,0.632348485,0.047649498,50,W,Image Cropping,Prevalence,W,COVID
+Prevalence W,50BP,0.440984848,0.015373376,0,W,Image Cropping,Prevalence,W,COVID
+Subgroup AUROC B,0BP,0.531629362,0.027319774,100,W,Image Cropping,AUROC,B,COVID
+Subgroup AUROC B,10BP,0.552520661,0.023596646,80,W,Image Cropping,AUROC,B,COVID
+Subgroup AUROC B,25BP,0.586720041,0.020171538,50,W,Image Cropping,AUROC,B,COVID
+Subgroup AUROC B,50BP,0.637200413,0.022270325,0,W,Image Cropping,AUROC,B,COVID
+Subgroup AUROC W,0BP,0.508728765,0.015494099,100,W,Image Cropping,AUROC,W,COVID
+Subgroup AUROC W,10BP,0.555140611,0.014924669,80,W,Image Cropping,AUROC,W,COVID
+Subgroup AUROC W,25BP,0.616112833,0.027560389,50,W,Image Cropping,AUROC,W,COVID
+Subgroup AUROC W,50BP,0.703006772,0.017896504,0,W,Image Cropping,AUROC,W,COVID
+Overall AUROC (COVID),0BP,0.508523445,0.017397895,100,W,No Mitigation,AUROC,Overall,COVID
+Overall AUROC (COVID),10BP,0.566501521,0.019150348,80,W,No Mitigation,AUROC,Overall,COVID
+Overall AUROC (COVID),25BP,0.641287448,0.017312774,50,W,No Mitigation,AUROC,Overall,COVID
+Overall AUROC (COVID),50BP,0.700989153,0.011562291,0,W,No Mitigation,AUROC,Overall,COVID
+Overall AUROC (Race),0BP,0.841514721,0.016599852,100,W,No Mitigation,AUROC,Overall,Subgroup
+Overall AUROC (Race),10BP,0.760038309,0.021984583,80,W,No Mitigation,AUROC,Overall,Subgroup
+Overall AUROC (Race),25BP,0.597154069,0.02525497,50,W,No Mitigation,AUROC,Overall,Subgroup
+Overall AUROC (Race),50BP,0.679952365,0.019287836,0,W,No Mitigation,AUROC,Overall,Subgroup
+Prevalence B,0BP,0.23219697,0.024687895,100,W,No Mitigation,Prevalence,B,COVID
+Prevalence B,10BP,0.285454545,0.028136954,80,W,No Mitigation,Prevalence,B,COVID
+Prevalence B,25BP,0.405909091,0.034360431,50,W,No Mitigation,Prevalence,B,COVID
+Prevalence B,50BP,0.616439394,0.045628874,0,W,No Mitigation,Prevalence,B,COVID
+Prevalence W,0BP,0.756742424,0.020274,100,W,No Mitigation,Prevalence,W,COVID
+Prevalence W,10BP,0.668787879,0.021366849,80,W,No Mitigation,Prevalence,W,COVID
+Prevalence W,25BP,0.533939394,0.039971096,50,W,No Mitigation,Prevalence,W,COVID
+Prevalence W,50BP,0.371136364,0.03327661,0,W,No Mitigation,Prevalence,W,COVID
+Subgroup AUROC (B),0BP,0.56010101,0.026021317,100,W,No Mitigation,AUROC,B,COVID
+Subgroup AUROC (B),10BP,0.594987948,0.024658554,80,W,No Mitigation,AUROC,B,COVID
+Subgroup AUROC (B),25BP,0.631957071,0.023505345,50,W,No Mitigation,AUROC,B,COVID
+Subgroup AUROC (B),50BP,0.684764118,0.015409907,0,W,No Mitigation,AUROC,B,COVID
+Subgroup AUROC (W),0BP,0.466716024,0.026913451,100,W,No Mitigation,AUROC,W,COVID
+Subgroup AUROC (W),10BP,0.557687098,0.031575256,80,W,No Mitigation,AUROC,W,COVID
+Subgroup AUROC (W),25BP,0.655123967,0.030835038,50,W,No Mitigation,AUROC,W,COVID
+Subgroup AUROC (W),50BP,0.736316001,0.021110816,0,W,No Mitigation,AUROC,W,COVID
+AUROC covid,0BP,0.530820707,0.014173225,100,W,Calibrated Equalized Odds,AUROC,Overall,COVID
+AUROC covid,10BP,0.554709668,0.017533654,80,W,Calibrated Equalized Odds,AUROC,Overall,COVID
+AUROC covid,25BP,0.620280576,0.023578319,50,W,Calibrated Equalized Odds,AUROC,Overall,COVID
+AUROC covid,50BP,0.690077049,0.016354261,0,W,Calibrated Equalized Odds,AUROC,Overall,COVID
+AUROC race,0BP,0.76780303,0.024687895,100,W,Calibrated Equalized Odds,AUROC,Overall,Subgroup
+AUROC race,10BP,0.718493601,0.026228994,80,W,Calibrated Equalized Odds,AUROC,Overall,Subgroup
+AUROC race,25BP,0.596932536,0.027741197,50,W,Calibrated Equalized Odds,AUROC,Overall,Subgroup
+AUROC race,50BP,0.669276429,0.021263667,0,W,Calibrated Equalized Odds,AUROC,Overall,Subgroup
+Prevalence B,0BP,0.23219697,0.024687895,100,W,Calibrated Equalized Odds,Prevalence,B,COVID
+Prevalence B,10BP,0.285454545,0.028136954,80,W,Calibrated Equalized Odds,Prevalence,B,COVID
+Prevalence B,25BP,0.405909091,0.034360431,50,W,Calibrated Equalized Odds,Prevalence,B,COVID
+Prevalence B,50BP,0.48113952,0.076251311,0,W,Calibrated Equalized Odds,Prevalence,B,COVID
+Prevalence W,0BP,0,0,100,W,Calibrated Equalized Odds,Prevalence,W,COVID
+Prevalence W,10BP,0.050820707,0.0703365,80,W,Calibrated Equalized Odds,Prevalence,W,COVID
+Prevalence W,25BP,0.322758838,0.105204142,50,W,Calibrated Equalized Odds,Prevalence,W,COVID
+Prevalence W,50BP,0.371136364,0.03327661,0,W,Calibrated Equalized Odds,Prevalence,W,COVID
+Subgroup AUROC B,0BP,0.56010101,0.026021317,100,W,Calibrated Equalized Odds,AUROC,B,COVID
+Subgroup AUROC B,10BP,0.594987948,0.024658554,80,W,Calibrated Equalized Odds,AUROC,B,COVID
+Subgroup AUROC B,25BP,0.631957071,0.023505345,50,W,Calibrated Equalized Odds,AUROC,B,COVID
+Subgroup AUROC B,50BP,0.652809917,0.020765916,0,W,Calibrated Equalized Odds,AUROC,B,COVID
+Subgroup AUROC W,0BP,0.5,0,100,W,Calibrated Equalized Odds,AUROC,W,COVID
+Subgroup AUROC W,10BP,0.502120351,0.012027825,80,W,Calibrated Equalized Odds,AUROC,W,COVID
+Subgroup AUROC W,25BP,0.608135044,0.030896624,50,W,Calibrated Equalized Odds,AUROC,W,COVID
+Subgroup AUROC W,50BP,0.736144972,0.020793656,0,W,Calibrated Equalized Odds,AUROC,W,COVID
+Prevalence B,0BP,0.479848485,0.0462204,100,W,Reject Option Classification,Prevalence,B,COVID
+Prevalence B,10BP,0.484848485,0.041777716,80,W,Reject Option Classification,Prevalence,B,COVID
+Prevalence B,25BP,0.503939394,0.040112933,50,W,Reject Option Classification,Prevalence,B,COVID
+Prevalence B,50BP,0.525606061,0.038056402,0,W,Reject Option Classification,Prevalence,B,COVID
+Prevalence W,0BP,0.503484848,0.0381684,100,W,Reject Option Classification,Prevalence,W,COVID
+Prevalence W,10BP,0.447651515,0.040642104,80,W,Reject Option Classification,Prevalence,W,COVID
+Prevalence W,25BP,0.421969697,0.04591257,50,W,Reject Option Classification,Prevalence,W,COVID
+Prevalence W,50BP,0.438712121,0.038086865,0,W,Reject Option Classification,Prevalence,W,COVID
+AUROC covid,0BP,,,100,W,Reweighing,AUROC,Overall,COVID
+AUROC covid,10BP,0.671149133,0.021755575,80,W,Reweighing,AUROC,Overall,COVID
+AUROC covid,25BP,0.689395087,0.014517492,50,W,Reweighing,AUROC,Overall,COVID
+AUROC covid,50BP,0.703200327,0.012638771,0,W,Reweighing,AUROC,Overall,COVID
+AUROC sex,0BP,,,100,W,Reweighing,AUROC,Overall,Subgroup
+AUROC sex,10BP,0.592728277,0.062933448,80,W,Reweighing,AUROC,Overall,Subgroup
+AUROC sex,25BP,0.630100436,0.031093625,50,W,Reweighing,AUROC,Overall,Subgroup
+AUROC sex,50BP,0.681784177,0.017840151,0,W,Reweighing,AUROC,Overall,Subgroup
+Prevalence B,0BP,,,100,W,Reweighing,Prevalence,B,COVID
+Prevalence B,10BP,0.551294192,0.076547492,80,W,Reweighing,Prevalence,B,COVID
+Prevalence B,25BP,0.559895833,0.050278889,50,W,Reweighing,Prevalence,B,COVID
+Prevalence B,50BP,0.623027146,0.04365205,0,W,Reweighing,Prevalence,B,COVID
+Prevalence W,0BP,,,100,W,Reweighing,Prevalence,W,COVID
+Prevalence W,10BP,0.419823232,0.036232864,80,W,Reweighing,Prevalence,W,COVID
+Prevalence W,25BP,0.383680556,0.046682565,50,W,Reweighing,Prevalence,W,COVID
+Prevalence W,50BP,0.373895202,0.033423604,0,W,Reweighing,Prevalence,W,COVID
+Subgroup AUROC B,0BP,,,100,W,Reweighing,AUROC,B,COVID
+Subgroup AUROC B,10BP,0.651339532,0.024432668,80,W,Reweighing,AUROC,B,COVID
+Subgroup AUROC B,25BP,0.664034665,0.019854619,50,W,Reweighing,AUROC,B,COVID
+Subgroup AUROC B,50BP,0.685955005,0.016383354,0,W,Reweighing,AUROC,B,COVID
+Subgroup AUROC W,0BP,,,100,W,Reweighing,AUROC,W,COVID
+Subgroup AUROC W,10BP,0.698631772,0.032201019,80,W,Reweighing,AUROC,W,COVID
+Subgroup AUROC W,25BP,0.723196166,0.021558892,50,W,Reweighing,AUROC,W,COVID
+Subgroup AUROC W,50BP,0.739503558,0.0215337,0,W,Reweighing,AUROC,W,COVID
+AUROC covid,100BP,0.65745753,0.00768897,100,B,Image Cropping,AUROC,Overall,COVID
+AUROC covid,50BP,0.666070937,0.007139377,0,B,Image Cropping,AUROC,Overall,COVID
+AUROC covid,75BP,0.666770116,0.006216322,50,B,Image Cropping,AUROC,Overall,COVID
+AUROC covid,90BP,0.662647067,0.006608222,80,B,Image Cropping,AUROC,Overall,COVID
+AUROC sex,100BP,0.795347366,0.016442533,100,B,Image Cropping,AUROC,Overall,Subgroup
+AUROC sex,50BP,0.646887483,0.012553941,0,B,Image Cropping,AUROC,Overall,Subgroup
+AUROC sex,75BP,0.75588513,0.012349666,50,B,Image Cropping,AUROC,Overall,Subgroup
+AUROC sex,90BP,0.78192077,0.015080128,80,B,Image Cropping,AUROC,Overall,Subgroup
+Prevalence B,100BP,0.810227273,0.010160416,100,B,Image Cropping,Prevalence,B,COVID
+Prevalence B,50BP,0.664772727,0.038838228,0,B,Image Cropping,Prevalence,B,COVID
+Prevalence B,75BP,0.799621212,0.001672682,50,B,Image Cropping,Prevalence,B,COVID
+Prevalence B,90BP,0.808787879,0.011336457,80,B,Image Cropping,Prevalence,B,COVID
+Prevalence W,100BP,0.316439394,0.024986509,100,B,Image Cropping,Prevalence,W,COVID
+Prevalence W,50BP,0.440984848,0.015373376,0,B,Image Cropping,Prevalence,W,COVID
+Prevalence W,75BP,0.365530303,0.022984654,50,B,Image Cropping,Prevalence,W,COVID
+Prevalence W,90BP,0.335909091,0.024481539,80,B,Image Cropping,Prevalence,W,COVID
+Subgroup AUROC B,100BP,0.633794192,0.010404791,100,B,Image Cropping,AUROC,B,COVID
+Subgroup AUROC B,50BP,0.637200413,0.022270325,0,B,Image Cropping,AUROC,B,COVID
+Subgroup AUROC B,75BP,0.641958792,0.012166594,50,B,Image Cropping,AUROC,B,COVID
+Subgroup AUROC B,90BP,0.638828627,0.011337154,80,B,Image Cropping,AUROC,B,COVID
+Subgroup AUROC W,100BP,0.719649334,0.016329662,100,B,Image Cropping,AUROC,W,COVID
+Subgroup AUROC W,50BP,0.703006772,0.017896504,0,B,Image Cropping,AUROC,W,COVID
+Subgroup AUROC W,75BP,0.719573003,0.015925099,50,B,Image Cropping,AUROC,W,COVID
+Subgroup AUROC W,90BP,0.721590909,0.015566238,80,B,Image Cropping,AUROC,W,COVID
+Overall AUROC (COVID),100BP,0.665576791,0.012740224,100,B,No Mitigation,AUROC,Overall,COVID
+Overall AUROC (COVID),50BP,0.700989153,0.011562291,0,B,No Mitigation,AUROC,Overall,COVID
+Overall AUROC (COVID),75BP,0.68971964,0.011235585,50,B,No Mitigation,AUROC,Overall,COVID
+Overall AUROC (COVID),90BP,0.678759326,0.012636045,80,B,No Mitigation,AUROC,Overall,COVID
+Overall AUROC (Race),100BP,0.842772469,0.011148864,100,B,No Mitigation,AUROC,Overall,Subgroup
+Overall AUROC (Race),50BP,0.679952365,0.019287836,0,B,No Mitigation,AUROC,Overall,Subgroup
+Overall AUROC (Race),75BP,0.790715106,0.013992651,50,B,No Mitigation,AUROC,Overall,Subgroup
+Overall AUROC (Race),90BP,0.820910669,0.013388321,80,B,No Mitigation,AUROC,Overall,Subgroup
+Prevalence B,100BP,0.838636364,0.015921111,100,B,No Mitigation,Prevalence,B,COVID
+Prevalence B,50BP,0.616439394,0.045628874,0,B,No Mitigation,Prevalence,B,COVID
+Prevalence B,75BP,0.804015152,0.026807328,50,B,No Mitigation,Prevalence,B,COVID
+Prevalence B,90BP,0.827954545,0.017138843,80,B,No Mitigation,Prevalence,B,COVID
+Prevalence W,100BP,0.275909091,0.018506091,100,B,No Mitigation,Prevalence,W,COVID
+Prevalence W,50BP,0.371136364,0.03327661,0,B,No Mitigation,Prevalence,W,COVID
+Prevalence W,75BP,0.326742424,0.029473535,50,B,No Mitigation,Prevalence,W,COVID
+Prevalence W,90BP,0.300606061,0.023531895,80,B,No Mitigation,Prevalence,W,COVID
+Subgroup AUROC (B),100BP,0.66867826,0.021799704,100,B,No Mitigation,AUROC,B,COVID
+Subgroup AUROC (B),50BP,0.684764118,0.015409907,0,B,No Mitigation,AUROC,B,COVID
+Subgroup AUROC (B),75BP,0.689063935,0.016727086,50,B,No Mitigation,AUROC,B,COVID
+Subgroup AUROC (B),90BP,0.684015152,0.021494109,80,B,No Mitigation,AUROC,B,COVID
+Subgroup AUROC (W),100BP,0.739522498,0.020955351,100,B,No Mitigation,AUROC,W,COVID
+Subgroup AUROC (W),50BP,0.736316001,0.021110816,0,B,No Mitigation,AUROC,W,COVID
+Subgroup AUROC (W),75BP,0.749845041,0.0209676,50,B,No Mitigation,AUROC,W,COVID
+Subgroup AUROC (W),90BP,0.745789715,0.020373299,80,B,No Mitigation,AUROC,W,COVID
+AUROC covid,100BP,0.651512999,0.015993113,100,B,Calibrated Equalized Odds,AUROC,Overall,COVID
+AUROC covid,50BP,0.690077049,0.016354261,0,B,Calibrated Equalized Odds,AUROC,Overall,COVID
+AUROC covid,75BP,0.672733586,0.017782317,50,B,Calibrated Equalized Odds,AUROC,Overall,COVID
+AUROC covid,90BP,0.66123515,0.013146818,80,B,Calibrated Equalized Odds,AUROC,Overall,COVID
+AUROC race,100BP,0.776226469,0.01139551,100,B,Calibrated Equalized Odds,AUROC,Overall,Subgroup
+AUROC race,50BP,0.669276429,0.021263667,0,B,Calibrated Equalized Odds,AUROC,Overall,Subgroup
+AUROC race,75BP,0.743883867,0.014258395,50,B,Calibrated Equalized Odds,AUROC,Overall,Subgroup
+AUROC race,90BP,0.761972997,0.013504273,80,B,Calibrated Equalized Odds,AUROC,Overall,Subgroup
+Prevalence B,100BP,0.363399621,0.081657712,100,B,Calibrated Equalized Odds,Prevalence,B,COVID
+Prevalence B,50BP,0.48113952,0.076251311,0,B,Calibrated Equalized Odds,Prevalence,B,COVID
+Prevalence B,75BP,0.483270202,0.096891429,50,B,Calibrated Equalized Odds,Prevalence,B,COVID
+Prevalence B,90BP,0.429371843,0.081625785,80,B,Calibrated Equalized Odds,Prevalence,B,COVID
+Prevalence W,100BP,0.275909091,0.018506091,100,B,Calibrated Equalized Odds,Prevalence,W,COVID
+Prevalence W,50BP,0.371136364,0.03327661,0,B,Calibrated Equalized Odds,Prevalence,W,COVID
+Prevalence W,75BP,0.326742424,0.029473535,50,B,Calibrated Equalized Odds,Prevalence,W,COVID
+Prevalence W,90BP,0.300606061,0.023531895,80,B,Calibrated Equalized Odds,Prevalence,W,COVID
+Subgroup AUROC B,100BP,0.578768365,0.027334318,100,B,Calibrated Equalized Odds,AUROC,B,COVID
+Subgroup AUROC B,50BP,0.652809917,0.020765916,0,B,Calibrated Equalized Odds,AUROC,B,COVID
+Subgroup AUROC B,75BP,0.610926882,0.029229418,50,B,Calibrated Equalized Odds,AUROC,B,COVID
+Subgroup AUROC B,90BP,0.591668675,0.024129514,80,B,Calibrated Equalized Odds,AUROC,B,COVID
+Subgroup AUROC W,100BP,0.739522498,0.020955351,100,B,Calibrated Equalized Odds,AUROC,W,COVID
+Subgroup AUROC W,50BP,0.736144972,0.020793656,0,B,Calibrated Equalized Odds,AUROC,W,COVID
+Subgroup AUROC W,75BP,0.749845041,0.0209676,50,B,Calibrated Equalized Odds,AUROC,W,COVID
+Subgroup AUROC W,90BP,0.745789715,0.020373299,80,B,Calibrated Equalized Odds,AUROC,W,COVID
+Prevalence B,100BP,0.568106061,0.044616512,100,B,Reject Option Classification,Prevalence,B,COVID
+Prevalence B,50BP,0.525606061,0.038056402,0,B,Reject Option Classification,Prevalence,B,COVID
+Prevalence B,75BP,0.570151515,0.059562512,50,B,Reject Option Classification,Prevalence,B,COVID
+Prevalence B,90BP,0.581666667,0.049097495,80,B,Reject Option Classification,Prevalence,B,COVID
+Prevalence W,100BP,0.488484848,0.028821294,100,B,Reject Option Classification,Prevalence,W,COVID
+Prevalence W,50BP,0.438712121,0.038086865,0,B,Reject Option Classification,Prevalence,W,COVID
+Prevalence W,75BP,0.47719697,0.034877465,50,B,Reject Option Classification,Prevalence,W,COVID
+Prevalence W,90BP,0.481287879,0.031721459,80,B,Reject Option Classification,Prevalence,W,COVID
+AUROC covid,100BP,,,100,B,Reweighing,AUROC,Overall,COVID
+AUROC covid,50BP,0.703200327,0.012638771,0,B,Reweighing,AUROC,Overall,COVID
+AUROC covid,75BP,0.694395518,0.015035115,50,B,Reweighing,AUROC,Overall,COVID
+AUROC covid,90BP,0.6840394,0.015875647,80,B,Reweighing,AUROC,Overall,COVID
+AUROC sex,100BP,,,100,B,Reweighing,AUROC,Overall,Subgroup
+AUROC sex,50BP,0.681784177,0.017840151,0,B,Reweighing,AUROC,Overall,Subgroup
+AUROC sex,75BP,0.705461576,0.018382822,50,B,Reweighing,AUROC,Overall,Subgroup
+AUROC sex,90BP,0.7528026,0.018639536,80,B,Reweighing,AUROC,Overall,Subgroup
+Prevalence B,100BP,,,100,B,Reweighing,Prevalence,B,COVID
+Prevalence B,50BP,0.623027146,0.04365205,0,B,Reweighing,Prevalence,B,COVID
+Prevalence B,75BP,0.664930556,0.036253813,50,B,Reweighing,Prevalence,B,COVID
+Prevalence B,90BP,0.735006313,0.032484788,80,B,Reweighing,Prevalence,B,COVID
+Prevalence W,100BP,,,100,B,Reweighing,Prevalence,W,COVID
+Prevalence W,50BP,0.373895202,0.033423604,0,B,Reweighing,Prevalence,W,COVID
+Prevalence W,75BP,0.357402146,0.033323826,50,B,Reweighing,Prevalence,W,COVID
+Prevalence W,90BP,0.340830177,0.033826309,80,B,Reweighing,Prevalence,W,COVID
+Subgroup AUROC B,100BP,,,100,B,Reweighing,AUROC,B,COVID
+Subgroup AUROC B,50BP,0.685955005,0.016383354,0,B,Reweighing,AUROC,B,COVID
+Subgroup AUROC B,75BP,0.680119376,0.019134666,50,B,Reweighing,AUROC,B,COVID
+Subgroup AUROC B,90BP,0.674234389,0.025728206,80,B,Reweighing,AUROC,B,COVID
+Subgroup AUROC W,100BP,,,100,B,Reweighing,AUROC,W,COVID
+Subgroup AUROC W,50BP,0.739503558,0.0215337,0,B,Reweighing,AUROC,W,COVID
+Subgroup AUROC W,75BP,0.733725321,0.024300096,50,B,Reweighing,AUROC,W,COVID
+Subgroup AUROC W,90BP,0.733288567,0.021866287,80,B,Reweighing,AUROC,W,COVID

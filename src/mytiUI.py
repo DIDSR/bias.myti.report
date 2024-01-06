@@ -169,8 +169,8 @@ class InitialPage(Page):
         self.lbl_none.resize(250, 100)
         self.lbl_none.setWordWrap(True) 
         self.settings_layout.addWidget(self.lbl_none, 7, 0, 1, 2)
-        self.lbl_blank = QLabel('', self)
-        self.settings_layout.addWidget(self.lbl_blank, 8, 0, 1, 2)
+        #self.lbl_blank = QLabel('', self)
+        #self.settings_layout.addWidget(self.lbl_blank, 8, 0, 1, 2)
         self.settings_layout.setRowStretch(8, 100)
          
               
@@ -184,12 +184,12 @@ class InitialPage(Page):
         dialog = QFileDialog()
         fname = dialog.getOpenFileName(None, "Import CSV", "", "CSV data files (*.csv)")
         self.edit_up_load_file.setText(fname[0])
-        self.csv_path = fname[0]
+        self.parent.csv_path = fname[0]
         
     def approach_type(self):
         text = str(self.combo_exp_type.currentText())
-        global exp_type
-        self.exp_type = text 
+        #global exp_type
+        self.parent.exp_type = text 
         
         for exp in self.exp_descriptions:
           if exp == text:
@@ -201,7 +201,7 @@ class InitialPage(Page):
     def study_update(self):
         rb = self.sender()
         if rb.isChecked():
-            self.study_type = rb.text()
+            self.parent.study_type = rb.text()
         
        
 
@@ -228,11 +228,24 @@ class SecondPage(Page):
         
         column_list = self.get_columns()
         self.selection_defaults = {
-          "Subgroup label:":"Subgroup",
-          "Metric for plot:":"Sensitivity",
-          "Prevalence 1:" : "Prevalence F",
-          "Prevalence 2:": "Prevalence M",
+          "Positive Associated Subgroup":"Positive-associated",
+          "Subgroup":"subgroup",
+          "Metric Type":"metric",
+          "Metric Mean Value":"Mean",
+          "Metric standard deviation":"Std",
           }
+        if self.parent.exp_type == 'Quantitative Misrepresentation':
+          self.selection_defaults.update({"Training Prevalence Difference":"Training Prevalence Difference"})
+        else:
+          self.selection_defaults.update({"Frozen Layers":"Frozen Layers"})
+
+        if self.parent.study_type == 'Compare Bias Mitigation Methods':
+          self.selection_defaults.update({"Mitigation Method":"mitigation"})
+        elif self.parent.study_type == 'Study Finite Sample Size Effect':
+          self.selection_defaults.update({"Training Data Size":"data size"})
+
+
+
         self.selection_labels = {}
         self.selection_boxes = {}
         for i, (selection, default) in enumerate(self.selection_defaults.items()):
@@ -273,7 +286,7 @@ class FinalPage(Page):
         
     def run_background(self):
         self.parent.pages["Page 2"].check_boxes()
-        result_plotting(*list(self.parent.variables.values()), self.parent.csv_path)
+        result_plotting(self.parent.variables, self.parent.csv_path, self.parent.exp_type, self.parent.study_type)
         
     def UIComponents(self):
         clearLayout(self.layout)
@@ -288,7 +301,7 @@ class FinalPage(Page):
         self.layout.addWidget(self.lbl_option, 1,0,1,1)
  
         # # adding example image
-        self.example_images = ['/gpfs_projects/alexis.burgon/OUT/2022_CXR/Bias_manipulation_manuscript/image_of_the_semester_plots/radial_F_positive-associated_AUROC.png', '/gpfs_projects/alexis.burgon/OUT/2022_CXR/Bias_manipulation_manuscript/image_of_the_semester_plots/radial_F_positive-associated_Prevalence.png']
+        self.example_images = ['../example/example_0.png', '../example/example_1.png']
         self.example_descriptions = ['../example/tmp/description_1.txt','../example/tmp/description_2.txt']
         self.tile_view = QWidget()
         self.tile_layout = QVBoxLayout()
