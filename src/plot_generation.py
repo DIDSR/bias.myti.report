@@ -9,6 +9,7 @@ import math
 import os
 
 from plot_formatting import *
+from radial_plot_example import *
 
   
 class RadialPlot():
@@ -70,7 +71,8 @@ class RadialPlot():
         # Draw the section dividers
         for sd in [s for s in section_dividers] + [xmax]:
           self.ax.plot([sd,sd], [rmin, rmax+self.total_r*0.05], lw=2, color='k')[0].set_clip_on(False)
-        #self.sections["No Mitigation"].highlight()
+        if "No Mitigation" in section_names:
+            self.sections["No Mitigation"].highlight()
           
     def plot(self, section_col='mitigation', **plot_kwargs):
         for nm, section in self.sections.items():
@@ -228,9 +230,10 @@ def calculate_CI(df, mean_col='mean', std_col='std', confidence_level=0.95, samp
 
 
 def result_plotting(variables, csv_path, exp_type, study_type):
+    create_example_plot('../example/', approach='direct')
     data = pd.read_csv(csv_path)  
     
-    plot_kwargs = dict(style_col=variables.get('Positive Associated Subgroup'), mean_col=variables.get('Metric Mean Value'), color_dict=COLORS, style_dict=STYLES, interpolate=True)  
+    plot_kwargs = dict(style_col=variables.get('Positive-associated Subgroup'), mean_col=variables.get('Metric Mean Value'), color_dict=COLORS, style_dict=STYLES, interpolate=True)  
     if study_type == 'Compare Bias Mitigation Methods':
         s_col = variables.get('Mitigation Method')
         section_name = data[s_col].unique()
@@ -249,9 +252,9 @@ def result_plotting(variables, csv_path, exp_type, study_type):
     else:
         raise NotImplementedError()
     plot_kwargs["x_col"] = x_col 
-    data = calculate_CI(data, mean_col=variables.get('Metric Mean Value'), std_col=variables.get('Metric standard deviation'))
+    data = calculate_CI(data, mean_col=variables.get('Metric Mean Value'), std_col=variables.get('Metric Standard Deviation'))
 
-    m_col = variables.get('Metric Type')
+    m_col = variables.get('Metric Name')
     for i, m in enumerate(data[m_col].unique()):
         temp_data = data[(data[m_col] == m)].copy()
 

@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
 from PyQt6.QtGui import * 
 from PyQt6.QtGui import QPixmap
+from PyQt6.QtSvgWidgets import *
 import sys 
 import shutil
 from pathlib import Path
@@ -96,7 +97,7 @@ class InitialPage(Page):
         self.layout.addWidget(self.upload_box)
         
         self.layout.addSpacing(3)
-        
+
         # # experiment setting part
         self.exp_box = QWidget()
         self.exp_layout = QHBoxLayout()
@@ -106,18 +107,26 @@ class InitialPage(Page):
         self.settings_box.setLayout(self.settings_layout)
         
         self.description_box = QWidget()
-        self.desc_layout = QVBoxLayout()
+        self.desc_layout = QGridLayout()
         self.description_box.setLayout(self.desc_layout)
-        
-        self.exp_layout.addWidget(self.settings_box)
+         
         self.exp_layout.addWidget(self.description_box)
+        self.exp_layout.addWidget(self.settings_box)
         self.exp_layout.setStretch(1,10)
         # #
         # # Experiment explanation 
-        
+        # # amplification type indicating label
+        self.lbl_exp_type = QLabel('Select Amplification Type', self)  
+        self.desc_layout.addWidget(self.lbl_exp_type, 0, 0, 1, 1)  
+        # # direct or indirect selection menu  
+        self.combo_exp_type = QComboBox(self)      
+        self.combo_exp_type.addItem('-Please Select-')
+        self.combo_exp_type.addItems(list(self.parent.experiments.keys()))
+        self.desc_layout.addWidget(self.combo_exp_type, 0, 1, 1, 1, alignment=Qt.AlignmentFlag.AlignLeft)
+        self.combo_exp_type.currentTextChanged.connect(self.approach_type)
         self.exp_descriptions = {}
         self.exp_layouts = {}
-        for exp, desc in self.parent.experiments.items():
+        for i, (exp, desc) in enumerate(self.parent.experiments.items()):
           self.exp_descriptions[exp] = QWidget()
           self.exp_layouts[exp] = QVBoxLayout()
           self.exp_descriptions[exp].setLayout(self.exp_layouts[exp])
@@ -128,50 +137,43 @@ class InitialPage(Page):
           dlabel.resize(300, 250)
           self.exp_layouts[exp].addWidget(dlabel)
           self.exp_descriptions[exp].setObjectName("not_selected")
-          self.desc_layout.addWidget(self.exp_descriptions[exp])
-        self.desc_layout.addStretch(10)
+          self.desc_layout.addWidget(self.exp_descriptions[exp], i+1, 0, 1, 2)
+        self.desc_layout.setRowStretch(3, 10)
+        self.desc_layout.setColumnStretch(1, 2)
         
-        # # amplification type indicating label
-        self.lbl_exp_type = QLabel('Select Amplification Type', self)  
-        self.settings_layout.addWidget(self.lbl_exp_type, 0,0,1,1)  
-        # # direct or indirect selection menu  
-        self.combo_exp_type = QComboBox(self)      
-        self.combo_exp_type.addItem('-Please Select-')
-        self.combo_exp_type.addItems(list(self.parent.experiments.keys()))
-        self.settings_layout.addWidget(self.combo_exp_type, 0, 1, 1, 1)
-        self.combo_exp_type.currentTextChanged.connect(self.approach_type)
-        # # study typr selection menu
+        
+        # # study type selection menu
         self.lbl_stdy_type = QLabel('Select Study Type', self)  
-        self.settings_layout.addWidget(self.lbl_stdy_type, 1, 0, 1, 1)   
+        self.settings_layout.addWidget(self.lbl_stdy_type, 0, 0, 1, 1)   
         self.rb_sample_size = QRadioButton('Study Finite Sample Size Effect', self)            
-        self.settings_layout.addWidget(self.rb_sample_size, 2, 0, 1, 2)  
+        self.settings_layout.addWidget(self.rb_sample_size, 1, 0, 1, 2)  
         self.rb_sample_size.toggled.connect(self.study_update) 
         sample_size_info = 'If finite sample size is selected, results using different training dataset size will be computed and visualized.'
         self.lbl_sample_size = QLabel(sample_size_info, self)
         self.lbl_sample_size.resize(250, 100)
-        self.settings_layout.addWidget(self.lbl_sample_size, 3, 0, 1, 2)
+        self.settings_layout.addWidget(self.lbl_sample_size, 2, 0, 1, 2)
         self.lbl_sample_size.setWordWrap(True) 
         # # mitigation method compare checkbox
         self.rb_miti_compare = QRadioButton('Compare Bias Mitigation Methods', self)  
-        self.settings_layout.addWidget(self.rb_miti_compare, 4, 0, 1, 2)      
+        self.settings_layout.addWidget(self.rb_miti_compare, 3, 0, 1, 2)      
         self.rb_miti_compare.toggled.connect(self.study_update) 
         miti_compare_info = 'If comparing bias mitigation methods is selected, results using different bias mitigation methods will be campared and visualized.'
         self.lbl_miti_compare = QLabel(miti_compare_info, self)
         self.lbl_miti_compare.resize(250, 100)
         self.lbl_miti_compare.setWordWrap(True) 
-        self.settings_layout.addWidget(self.lbl_miti_compare, 5, 0, 1, 2)
+        self.settings_layout.addWidget(self.lbl_miti_compare, 4, 0, 1, 2)
         self.rb_none = QRadioButton('None', self)
         self.rb_none.setChecked(True)
         self.rb_none.toggled.connect(self.study_update)
-        self.settings_layout.addWidget(self.rb_none, 6, 0, 1, 2)
+        self.settings_layout.addWidget(self.rb_none, 5, 0, 1, 2)
         none_info = 'If none is selected, only results from bias amplification will be visualized.'
         self.lbl_none = QLabel(none_info, self)
         self.lbl_none.resize(250, 100)
         self.lbl_none.setWordWrap(True) 
-        self.settings_layout.addWidget(self.lbl_none, 7, 0, 1, 2)
+        self.settings_layout.addWidget(self.lbl_none, 6, 0, 1, 2)
         #self.lbl_blank = QLabel('', self)
         #self.settings_layout.addWidget(self.lbl_blank, 8, 0, 1, 2)
-        self.settings_layout.setRowStretch(8, 100)
+        self.settings_layout.setRowStretch(7, 100)
          
               
         
@@ -180,11 +182,21 @@ class InitialPage(Page):
         self.layout.addWidget(self.exp_box)
         self.layout.addSpacing(1)
 
+        self.description_box.setHidden(True)
+        self.retain = QSizePolicy()
+        self.retain.setRetainSizeWhenHidden(True)
+        self.description_box.setSizePolicy(self.retain)
+        self.settings_box.setHidden(True)
+        self.settings_box.setSizePolicy(self.retain)
+
+
     def upload_csv(self):
         dialog = QFileDialog()
         fname = dialog.getOpenFileName(None, "Import CSV", "", "CSV data files (*.csv)")
         self.edit_up_load_file.setText(fname[0])
         self.parent.csv_path = fname[0]
+        self.description_box.setHidden(False)
+
         
     def approach_type(self):
         text = str(self.combo_exp_type.currentText())
@@ -197,6 +209,8 @@ class InitialPage(Page):
           else:
             self.exp_descriptions[exp].setObjectName("not_selected")
           self.exp_descriptions[exp].setStyleSheet(styleSheet)
+        self.settings_box.setHidden(False)
+        
     
     def study_update(self):
         rb = self.sender()
@@ -228,11 +242,11 @@ class SecondPage(Page):
         
         column_list = self.get_columns()
         self.selection_defaults = {
-          "Positive Associated Subgroup":"Positive-associated",
-          "Subgroup":"subgroup",
-          "Metric Type":"metric",
+          "Positive-associated Subgroup":"Positive-associated",
+          "Subgroup":"Subgroup",
+          "Metric Name":"Metric",
           "Metric Mean Value":"Mean",
-          "Metric standard deviation":"Std",
+          "Metric Standard Deviation":"Std",
           }
         if self.parent.exp_type == 'Quantitative Misrepresentation':
           self.selection_defaults.update({"Training Prevalence Difference":"Training Prevalence Difference"})
@@ -240,22 +254,33 @@ class SecondPage(Page):
           self.selection_defaults.update({"Frozen Layers":"Frozen Layers"})
 
         if self.parent.study_type == 'Compare Bias Mitigation Methods':
-          self.selection_defaults.update({"Mitigation Method":"mitigation"})
+          self.selection_defaults.update({"Mitigation Method":"Mitigation"})
         elif self.parent.study_type == 'Study Finite Sample Size Effect':
-          self.selection_defaults.update({"Training Data Size":"data size"})
+          self.selection_defaults.update({"Training Data Size":"Data Size"})
 
 
-
+        pixmapi = QStyle.StandardPixmap.SP_MessageBoxInformation
+        icon = self.style().standardIcon(pixmapi)
         self.selection_labels = {}
+        self.information_icon = {}
         self.selection_boxes = {}
         for i, (selection, default) in enumerate(self.selection_defaults.items()):
           self.selection_labels[selection] = QLabel(selection, self)
           self.layout.addWidget(self.selection_labels[selection], i+2, 0, 1, 1)
+          self.information_icon[selection] = QLabel(self)
+          self.information_icon[selection].setPixmap(icon.pixmap(QSize(20, 20)))
+          self.information_icon[selection].mousePressEvent = lambda x: self.add_info(selection)
+          self.layout.addWidget(self.information_icon[selection], i+2, 1, 1, 1, alignment=Qt.AlignmentFlag.AlignLeft)
           self.selection_boxes[selection] = QComboBox(self)
           self.selection_boxes[selection].addItems([default] + column_list)
-          self.layout.addWidget(self.selection_boxes[selection], i+2, 1, 1, 2)
-          
-        self.layout.setRowStretch(i+3, 10)
+          self.layout.addWidget(self.selection_boxes[selection], i+2, 2, 1, 2)
+
+        #for key, button in self.information_icon.items():
+        #  button.mousePressEvent = lambda x: self.add_info(key)
+
+        self.addition_info = QLabel()
+        self.layout.addWidget(self.addition_info, i+3, 0, 1, 4)
+        self.layout.setRowStretch(i+4, 10)
         self.layout.setColumnStretch(2, 10)
 
     def get_columns(self):
@@ -273,6 +298,23 @@ class SecondPage(Page):
         return False
       else:
         return True
+
+    def add_info(self, variable):
+      self.selection_infos = {
+          "Positive-associated Subgroup":"The column which indicates the subgroup associated with a more frequent positive outcome label",
+          "Subgroup":"The column which indicates subgroup information (e.g., male or female).",
+          "Metric Name":"The column which indicates the name of the measured metric.",
+          "Metric Mean Value":"The column which includes the measured mean value.",
+          "Metric Standard Deviation":"The column which includes the standard deviation of the measurements.",
+          "Training Prevalence Difference":"The column which indicates the diease prevalence difference between subgroups during Quantitative Misrepresentation.",
+          "Frozen Layers":"The column which includes number of frozen layers during Inductive Transfer Learning.",
+          "Mitigation Method":"The column which indicates the type of implemented bias mitigation methods.",
+          "Training Data Size":"The column which indicates the value of training data size for finite sample size study.",
+          }
+      info_text = self.selection_infos.get(variable)
+      self.addition_info.setText(info_text)
+
+
         
 class FinalPage(Page):
 
@@ -299,6 +341,11 @@ class FinalPage(Page):
         self.lbl_option = QLabel('Plot Options', self)
         self.lbl_option.setObjectName("heading")
         self.layout.addWidget(self.lbl_option, 1,0,1,1)
+        self.guide_plot = QPushButton('Guidance Plot', self)      
+        self.guide_plot.setToolTip('Show the <b>Guidance Plot</b> to understand the figure')
+        self.guide_plot.resize(self.guide_plot.sizeHint())
+        self.guide_plot.clicked.connect(self.guidance_plot)
+        self.layout.addWidget(self.guide_plot, 1,1,1,1, alignment=Qt.AlignmentFlag.AlignLeft)
  
         # # adding example image
         self.example_images = ['../example/example_0.png', '../example/example_1.png']
@@ -323,19 +370,22 @@ class FinalPage(Page):
         self.selected_view = QWidget()
         self.selected_layout = QVBoxLayout()
         self.selected_view.setLayout(self.selected_layout)
-        self.layout.addWidget(self.selected_view, 2, 1, 1, 2, alignment=Qt.AlignmentFlag.AlignTop)
+        self.layout.addWidget(self.selected_view, 2, 2, 2, 1, alignment=Qt.AlignmentFlag.AlignTop)
+        self.layout.setColumnStretch(2, 5)
+        #self.layout.setRowStretch(2, 5)
+
         
         # # title for displaying plot
         self.lbl_plot = QLabel('Selected Plot', self)
         self.lbl_plot.setObjectName("heading")
-        self.layout.addWidget(self.lbl_plot,1,1,1,1)
+        self.layout.addWidget(self.lbl_plot,1,2,1,1)
         # # position for selected plot
-        self.lbl_selected_plot = QLabel(self)
-        self.lbl_selected_plot.resize(360,270)
+        self.lbl_selected_plot = QLabel('Please click plots on the left to select one for display.', self)
+        self.lbl_selected_plot.resize(600,800)
         self.selected_layout.addWidget(self.lbl_selected_plot)
         # # description for the plot
         self.lbl_selected_dscp = QLabel(self)
-        self.lbl_selected_dscp.resize(360,200)
+        self.lbl_selected_dscp.resize(200,100)
         self.lbl_selected_dscp.setWordWrap(True) 
         self.selected_layout.addWidget(self.lbl_selected_dscp)
         self.selected_layout.addSpacing(1)
@@ -343,12 +393,12 @@ class FinalPage(Page):
         self.lbl_references = QLabel("For additional reading: \n Y. Zhang, A. Burgon, N. Petrick, B. Sahiner, G. Pennello, R. K. Samala*, “Evaluation of AI bias mitigation algorithms by systematically promoting sources of bias”, RSNA Program Book (2023).\nA. Burgon, Y. Zhang, B. Sahiner, N. Petrick, K. H. Cha, R. K. Samala*, “Manipulation of sources of bias in AI device development”, Proc. of SPIE (2024).")
         self.lbl_references.setObjectName("references")
         self.lbl_references.setWordWrap(True)
-        self.layout.addWidget(self.lbl_references, 3, 1, 1, 2, alignment=Qt.AlignmentFlag.AlignBottom)
+        self.layout.addWidget(self.lbl_references, 4, 2, 1, 2, alignment=Qt.AlignmentFlag.AlignBottom)
         # # button to save figure
         self.btn_save_fig = QPushButton('Save Report', self)
         self.btn_save_fig.resize(self.btn_save_fig.sizeHint())
         self.btn_save_fig.clicked.connect(self.save_fig)
-        self.layout.addWidget(self.btn_save_fig, 0, 2, 1, 1)
+        self.layout.addWidget(self.btn_save_fig, 0, 3, 1, 1)
         
         self.layout.setRowStretch(3, 10)
 
@@ -367,6 +417,10 @@ class FinalPage(Page):
         self.lbl_selected_dscp.setText(info)
         self.current_plot = figure_number+1
     
+    def guidance_plot(self):
+        self.svg_plot = QSvgWidget('../example/radial_example.svg')
+        self.svg_plot.show()
+
     def quit_page(self):
         shutil.rmtree('../example/tmp/')
         widget.close()

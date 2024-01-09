@@ -21,7 +21,7 @@ def to_cartesian(r, theta, theta_type = 'degrees'):
     y = r * math.sin(theta)
     return x, y
        
-def create_example_plot(save_loc, approach='direct', figsize=(8,6), fmt='png', annotation_degrees=45, n_sections=5, center_hole_portion=0.2, rlim=(0,1), pad_degrees=5, pad_width=True):
+def create_example_plot(save_loc, approach='direct', figsize=(8,6), fmt='svg', annotation_degrees=45, n_sections=5, center_hole_portion=0.2, rlim=(0,1), pad_degrees=5, pad_width=True):
     fig, ax = plt.subplots(figsize=figsize)
     
     theta_text = "Degree of\nbias amplification"
@@ -135,6 +135,6 @@ def make_zoomed_in(ax, xlim, ylim, section_inc, center_hole, n_rticks=5, thetati
     return ((xlim[0], ylim[1]), (xlim[1], ylim[0]))
     
 if __name__ == "__main__":
-    save_loc = "/home/alexis.burgon/temp/bias_mit__example_figues/"
+    save_loc = "/home/yuhang.zhang/figures/"
     for app in ['direct']:
         create_example_plot(save_loc, approach=app)
