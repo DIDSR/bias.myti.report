@@ -14,6 +14,14 @@ import os
 
 from plot_generation import *
 
+class ClickLabel(QLabel):
+    clicked = pyqtSignal()
+
+    def mousePressEvent(self, event):
+        self.clicked.emit()
+        QLabel.mousePressEvent(self, event)
+
+
 class Page(QWidget):
   def __init__(self, parent, page_number):
     super().__init__()
@@ -267,9 +275,10 @@ class SecondPage(Page):
         for i, (selection, default) in enumerate(self.selection_defaults.items()):
           self.selection_labels[selection] = QLabel(selection, self)
           self.layout.addWidget(self.selection_labels[selection], i+2, 0, 1, 1)
-          self.information_icon[selection] = QLabel(self)
+          self.information_icon[selection] = ClickLabel(self)
           self.information_icon[selection].setPixmap(icon.pixmap(QSize(20, 20)))
-          self.information_icon[selection].mousePressEvent = lambda x: self.add_info(selection)
+          self.information_icon[selection].setObjectName(f"{selection}")
+          self.information_icon[selection].clicked.connect(self.add_info)
           self.layout.addWidget(self.information_icon[selection], i+2, 1, 1, 1, alignment=Qt.AlignmentFlag.AlignLeft)
           self.selection_boxes[selection] = QComboBox(self)
           self.selection_boxes[selection].addItems([default] + column_list)
@@ -292,14 +301,26 @@ class SecondPage(Page):
         self.parent.variables[k] = str(self.selection_boxes[k].currentText())
         
     def check_conditions(self):
-      if type(self.parent.csv_path) != str or not os.path.exists(self.parent.csv_path):
+      if type(self.parent.csv_path) != str or not os.path.exists(self.parent.csv_path): 
+        msg = QMessageBox(self) 
+        msg.setIcon(QMessageBox.Icon.Warning)  
+        msg.setText("Warning: csv file not found!")  
+        msg.setWindowTitle("Warning MessageBox") 
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok) 
+        msg.exec()
         return False
       elif not self.parent.exp_type in self.parent.experiments:
+        msg = QMessageBox(self) 
+        msg.setIcon(QMessageBox.Icon.Warning)  
+        msg.setText("Warning: please select amplification type!")  
+        msg.setWindowTitle("Warning MessageBox") 
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok) 
+        msg.exec()
         return False
       else:
         return True
 
-    def add_info(self, variable):
+    def add_info(self):
       self.selection_infos = {
           "Positive-associated Subgroup":"The column which indicates the subgroup associated with a more frequent positive outcome label",
           "Subgroup":"The column which indicates subgroup information (e.g., male or female).",
@@ -311,6 +332,8 @@ class SecondPage(Page):
           "Mitigation Method":"The column which indicates the type of implemented bias mitigation methods.",
           "Training Data Size":"The column which indicates the value of training data size for finite sample size study.",
           }
+      sending_info = self.sender()
+      variable = str(sending_info.objectName())
       info_text = self.selection_infos.get(variable)
       self.addition_info.setText(info_text)
 
@@ -329,6 +352,21 @@ class FinalPage(Page):
     def run_background(self):
         self.parent.pages["Page 2"].check_boxes()
         result_plotting(self.parent.variables, self.parent.csv_path, self.parent.exp_type, self.parent.study_type)
+
+    def check_conditions(self):
+      data = pd.read_csv(self.parent.csv_path)
+      cols = list(data.columns)
+      variables = list(self.parent.variables.values())
+      if all(item in cols for item in variables):
+        return True
+      else:
+        msg = QMessageBox(self) 
+        msg.setIcon(QMessageBox.Icon.Warning)  
+        msg.setText("Warning: some variables do not exist in the csv file!")  
+        msg.setWindowTitle("Warning MessageBox") 
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok) 
+        retval = msg.exec()
+        return False
         
     def UIComponents(self):
         clearLayout(self.layout)
