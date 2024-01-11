@@ -12,9 +12,10 @@ import shutil
 from pathlib import Path
 import os
 
-from manuscript_plotting import *
+from plot_generation import *
 
 class ClickLabel(QLabel):
+    """class to create clickable QLabel object"""
     clicked = pyqtSignal()
 
     def mousePressEvent(self, event):
@@ -23,6 +24,7 @@ class ClickLabel(QLabel):
 
 
 class Page(QWidget):
+  """"""
   def __init__(self, parent, page_number):
     super().__init__()
     self.parent = parent
@@ -58,7 +60,7 @@ def clearLayout(layout):
       child.widget().deleteLater()
       
 class InitialPage(Page):
-
+    """Class for the first page (user input) of the tool."""
     def __init__(self, parent):
         super().__init__(parent=parent, page_number=1)
         # Set layout
@@ -66,6 +68,7 @@ class InitialPage(Page):
         self.setLayout(self.layout)
 
     def UIComponents(self):
+        """Widgets for the page."""
         # Set layout
         clearLayout(self.layout)
         
@@ -180,14 +183,11 @@ class InitialPage(Page):
         self.lbl_none.setWordWrap(True) 
         self.settings_layout.addWidget(self.lbl_none, 6, 0, 1, 2)
         self.settings_layout.setRowStretch(7, 100)
-         
-              
-        
-        
+  
         self.exp_box.setLayout(self.exp_layout)
         self.layout.addWidget(self.exp_box)
         self.layout.addSpacing(1)
-
+        # # set exp and study selection hidden initially
         self.description_box.setHidden(True)
         self.retain = QSizePolicy()
         self.retain.setRetainSizeWhenHidden(True)
@@ -197,6 +197,7 @@ class InitialPage(Page):
 
 
     def upload_csv(self):
+        """Get the csv file from user input, and display amplification type selection"""
         dialog = QFileDialog()
         fname = dialog.getOpenFileName(None, "Import CSV", "", "CSV data files (*.csv)")
         self.edit_up_load_file.setText(fname[0])
@@ -205,8 +206,8 @@ class InitialPage(Page):
 
         
     def approach_type(self):
+        """Update amplification type selected by user"""
         text = str(self.combo_exp_type.currentText())
-        #global exp_type
         self.parent.exp_type = text 
         
         for exp in self.exp_descriptions:
@@ -219,6 +220,7 @@ class InitialPage(Page):
         
     
     def study_update(self):
+        """Update study type selected by user"""
         rb = self.sender()
         if rb.isChecked():
             self.parent.study_type = rb.text()
@@ -226,7 +228,7 @@ class InitialPage(Page):
        
 
 class SecondPage(Page):
-
+    """Class to build the second page (variable selection)."""
     def __init__(self, parent):
         super().__init__(parent=parent, page_number=2)
         self.layout = QGridLayout()
@@ -235,6 +237,7 @@ class SecondPage(Page):
         self.UIComponents()
         
     def UIComponents(self):
+        """Widgets for the page"""
         clearLayout(self.layout)
         # # program title
         self.lbl_title = QLabel('bias.myti.Report', self)
@@ -288,14 +291,18 @@ class SecondPage(Page):
         self.layout.setColumnStretch(2, 10)
 
     def get_columns(self):
+        """Get list of columns from the input csv file"""
         data = pd.read_csv(self.parent.csv_path)
         return list(data.columns)
         
     def check_boxes(self):
+      """Update selected variables"""
       for k in self.selection_defaults.keys():
         self.parent.variables[k] = str(self.selection_boxes[k].currentText())
         
     def check_conditions(self):
+      """Sanity check to decide if the second page can be appropriately loaded"""
+      # # check if the csv file is valid
       if type(self.parent.csv_path) != str or not os.path.exists(self.parent.csv_path): 
         msg = QMessageBox(self) 
         msg.setIcon(QMessageBox.Icon.Warning)  
@@ -304,6 +311,7 @@ class SecondPage(Page):
         msg.setStandardButtons(QMessageBox.StandardButton.Ok) 
         msg.exec()
         return False
+      # # check if amplification type is selected
       elif not self.parent.exp_type in self.parent.experiments:
         msg = QMessageBox(self) 
         msg.setIcon(QMessageBox.Icon.Warning)  
@@ -316,6 +324,7 @@ class SecondPage(Page):
         return True
 
     def add_info(self):
+      """Update additional information for the variable clicked by user"""
       self.selection_infos = {
           "Positive-associated Subgroup":"The column which indicates the subgroup associated with a more frequent positive outcome label",
           "Subgroup":"The column which indicates subgroup information (e.g., male or female).",
@@ -335,7 +344,7 @@ class SecondPage(Page):
 
         
 class FinalPage(Page):
-
+    """Class to build the third page (report display)."""
     def __init__(self, parent, page_number=3):
         super().__init__(parent = parent, page_number=page_number)
         self.setWindowTitle('Myti Results')
@@ -345,13 +354,16 @@ class FinalPage(Page):
         self.UIComponents()
         
     def run_background(self):
+        """Generate figures and descriptions"""
         self.parent.pages["Page 2"].check_boxes()
-        result_plotting(self.parent.variables, self.parent.csv_path, self.parent.exp_type, self.parent.study_type)
+        self.info_list = result_plotting(self.parent.variables, self.parent.csv_path, self.parent.exp_type, self.parent.study_type)
 
     def check_conditions(self):
+      """Sanity check if the third page can be appropriately loaded"""
       data = pd.read_csv(self.parent.csv_path)
       cols = list(data.columns)
       variables = list(self.parent.variables.values())
+      # # check if selected variables existed in the csv file
       if all(item in cols for item in variables):
         return True
       else:
@@ -364,6 +376,7 @@ class FinalPage(Page):
         return False
         
     def UIComponents(self):
+        """Widgets for the page"""
         clearLayout(self.layout)
         # # program title
         self.lbl_title = QLabel('bias.myti.Report', self)
@@ -377,7 +390,6 @@ class FinalPage(Page):
  
         # # adding example image
         self.example_images = ['../example/example_0.png', '../example/example_1.png']
-        self.example_descriptions = ['../example/tmp/description_0.txt','../example/tmp/description_1.txt']
         self.tile_view = QWidget()
         self.tile_layout = QVBoxLayout()
         self.tile_view.setLayout(self.tile_layout)
@@ -388,6 +400,7 @@ class FinalPage(Page):
           self.tile_figures.append(QLabel(self))
           self.tile_figures[-1].setPixmap(QPixmap(ex).scaled(200,150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
           #self.tile_figures[-1].setScaledContents(True)
+          self.tile_figures[-1].setObjectName("not_selected")
           self.tile_layout.addWidget(self.tile_figures[-1])
         # event binding # TODO: set in a loop
         self.tile_figures[0].mousePressEvent = lambda x: self.fig_select(figure_number=0)  
@@ -432,6 +445,7 @@ class FinalPage(Page):
         self.layout.setRowStretch(3, 10)
 
     def fig_select(self, figure_number, event=None):
+        """Update the selected figure by user"""
         for i, w in enumerate(self.tile_figures):
           if i == figure_number:
             w.setObjectName("selected")
@@ -440,25 +454,22 @@ class FinalPage(Page):
           w.setStyleSheet(styleSheet)
         
         # Set the large image and descriptiong
-        self.lbl_selected_plot.setPixmap(QPixmap(self.example_images[figure_number]).scaled(480,360, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-        info = open(self.example_descriptions[figure_number]).read()
-        #info = "The figure shows the AUROC before and after bias mitigation across differences in disease prevalence between the subgroups in the training set."
+        self.lbl_selected_plot.setPixmap(QPixmap(self.example_images[figure_number]).scaled(440,330, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        info = self.info_list[figure_number]
         self.lbl_selected_dscp.setText(info)
-        self.current_plot = figure_number+1
-    
-    def guidance_plot(self):
-        self.svg_plot = QSvgWidget('../example/radial_example.svg')
-        self.svg_plot.show()
+        self.current_plot = figure_number
 
     def quit_page(self):
         shutil.rmtree('../example/tmp/')
         widget.close()
     
     def save_fig(self):
-        name = QFileDialog.getSaveFileName(self, 'Save File',"PNG (*.png)")
-        shutil.copy(f'../example/tmp/fig_text_{self.current_plot}.png', name[0])
+        """Save the figure and description"""
+        name = QFileDialog.getSaveFileName(self, 'Save File', 'saved_report.png', "Images (*.png *.jpg);;PDF files (*.pdf)")
+        save_report(self.info_list[self.current_plot], self.example_images[self.current_plot], name[0])
 
 class MainWindow(QMainWindow):
+    """Class for the main window including pages, logo, navigation bars."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setWindowTitle("bias.myti.Report")
@@ -487,6 +498,7 @@ class MainWindow(QMainWindow):
         self.change_page(1)
     
     def load_GUI(self):
+        """Widgets for the main window"""
         # Set up overall layout
         self.main_layout = QGridLayout()
         self.main_widget = QWidget()
@@ -515,6 +527,7 @@ class MainWindow(QMainWindow):
     
     
     def set_pages(self):
+        """Set up three pages"""
         self.pages = {}
         self.page_layouts = {}
         self.page_classes = {"Page 1":InitialPage, "Page 2":SecondPage, "Page 3": FinalPage}
@@ -527,6 +540,7 @@ class MainWindow(QMainWindow):
         self.sidebar_buttons["Page 3"].clicked.connect(lambda x: self.change_page(3))
     
     def change_page(self, page_number:int, *args, **kwargs):
+        """Naviagte between three pages"""
         if not self.pages[f"Page {page_number}"].check_conditions():
           return
         self.tab_widget.setCurrentIndex(page_number-1)
@@ -550,6 +564,7 @@ class MainWindow(QMainWindow):
         self.change_page(self.current_page - 1)
     
     def make_sidebar(self):
+        """Add side bars"""
         self.sidebar_buttons = {}
         self.sidebar_layout = QVBoxLayout()
         
@@ -583,6 +598,7 @@ class MainWindow(QMainWindow):
         self.sidebar.setLayout(self.sidebar_layout)
     
     def make_navbar(self):
+        """Add naviagtion buttons"""
         self.nav_layout = QHBoxLayout()
         
         self.OSEL_label = QLabel("OSEL")

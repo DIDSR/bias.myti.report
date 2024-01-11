@@ -48,7 +48,7 @@ def color_style_sampler(fig):
         ax.plot([0,1], [i+0.05, i+0.05], c=c, ls = "--")
     return gs, {}
     
-def mitigation_comparison(fig, data, x_col, hue_col, ylim=(0,1), figsize=(8,6), y_label=None, x_label=None, style_col=None, style_dict={}, color_dict={}, mean_col='Mean', lower_CI_col="lower_CI", upper_CI_col="upper_CI", compare_title=None):
+def mitigation_comparison(fig, data, x_col, hue_col, ylim=(0,1), y_label=None, x_label=None, style_col=None, style_dict={}, color_dict={}, mean_col='Mean', lower_CI_col="lower_CI", upper_CI_col="upper_CI", compare_title=None):
     gs = fig.add_gridspec(2,3)
     data = data.sort_values(x_col)
     axes = []
@@ -152,7 +152,7 @@ FUNCTION_DICT = {"sampler": color_style_sampler, "compare":mitigation_comparison
 
 if __name__ == "__main__":
     print("Generating manuscript plots")
-    save_loc = "/gpfs_projects/alexis.burgon/OUT/2022_CXR/Bias_manipulation_manuscript/final_manuscript_plots/"
+    save_loc = "/home/yuhang.zhang/figures/"
     fmt = "png"
     
     plot_kwargs = dict(style_col='Positive-associated', mean_col='Mean', color_dict=COLORS, style_dict=STYLES)
@@ -216,6 +216,13 @@ if __name__ == "__main__":
                 
     print("Done")
 
+def calculate_CI(df, mean_col='mean', std_col='std', confidence_level=0.95, sample_size=25):
+    z_stats = {0.90:1.64, 0.95:1.96, 0.99:2.57}
+    z = z_stats[confidence_level]
+    df['lower_CI'] = df['Mean'] - z*(df['Std'] / (sample_size**(0.5)) )
+    df['upper_CI'] = df['Mean'] + z*(df['Std'] / (sample_size**(0.5)) )
+    return df
+
 def result_plotting(variables, csv_path, exp_type, study_type):
     data = pd.read_csv(csv_path)  
     
@@ -239,6 +246,7 @@ def result_plotting(variables, csv_path, exp_type, study_type):
     data = calculate_CI(data, mean_col=variables.get('Metric Mean Value'), std_col=variables.get('Metric Standard Deviation'))
 
     m_col = variables.get('Metric Name')
+    info_list = []
     for i, m in enumerate(data[m_col].unique()):
         temp_data = data[(data[m_col] == m)].copy()
         if m == 'AUROC':
@@ -246,10 +254,37 @@ def result_plotting(variables, csv_path, exp_type, study_type):
         elif m == 'Prevalence':
           kwargs = dict(ylim=(0,1), y_label="Predicted\nPrevalence (%)")
         kwargs['compare_title'] = 'Population'
-        plot_wrapper("compare", data=temp_data.copy(), x_label=degree_name, hue_col='Subgroup', **kwargs, **plot_kwargs)
-        plt.savefig(os.path.join('../example/', f"example_{i}.png"), bbox_inches='tight')
-        info = f"Comparison of {m} value for each subgroup across bias mitigation methods when bias has been amplified by {exp_type} with different degrees. For these experiments, the positive-associated subgroup refers to the subgroup with the higher disease prevalence in the training set."
-        with open(f"../example/tmp/description_{i}.txt", "w") as f:
-          f.write(info)
+        fig = plot_wrapper("compare", data=temp_data.copy(), x_label=degree_name, hue_col='Subgroup', **kwargs, **plot_kwargs)
+        fig.savefig(os.path.join('../example/', f"example_{i}.png"), bbox_inches='tight')
         plt.close("all")
+        info = f"Comparison of {m} value for each subgroup across bias mitigation methods\nwhen bias has been amplified by {exp_type} with different degrees.\nFor these experiments, the positive-associated subgroup\nrefers to the subgroup with the higher disease prevalence in the training set."
+        info_list.append(info)
+    return info_list
+    
+
+def save_report(info, img_path, save_path):
+    fig = plt.figure(figsize = (text_width, text_width))
+    gs = fig.add_gridspec(4,1)
+    ax1 = fig.add_subplot(gs[:-1,:])
+    images = plt.imread(img_path)
+    ax1.axis("off")
+    ax1.imshow(images)
+    ax2 = fig.add_subplot(gs[-1,:])
+    ax2.axis("off")
+    ax2.set_title(None)
+    ax2.set_ylim(0,1)
+    ax2.set_xlim(0,1)      
+    ax2.text(0.02, 0.65, info)
+    logo = plt.imread('UI_assets/fda_logo.jpg')
+    fig.figimage(logo, 1700, 10)
+    fig.savefig(save_path, bbox_inches='tight')
+
+    
+
+
+
+
+
+
+
     
