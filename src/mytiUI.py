@@ -12,7 +12,7 @@ import shutil
 from pathlib import Path
 import os
 
-from plot_generation import *
+from manuscript_plotting import *
 
 class ClickLabel(QLabel):
     clicked = pyqtSignal()
@@ -179,8 +179,6 @@ class InitialPage(Page):
         self.lbl_none.resize(250, 100)
         self.lbl_none.setWordWrap(True) 
         self.settings_layout.addWidget(self.lbl_none, 6, 0, 1, 2)
-        #self.lbl_blank = QLabel('', self)
-        #self.settings_layout.addWidget(self.lbl_blank, 8, 0, 1, 2)
         self.settings_layout.setRowStretch(7, 100)
          
               
@@ -284,9 +282,6 @@ class SecondPage(Page):
           self.selection_boxes[selection].addItems([default] + column_list)
           self.layout.addWidget(self.selection_boxes[selection], i+2, 2, 1, 2)
 
-        #for key, button in self.information_icon.items():
-        #  button.mousePressEvent = lambda x: self.add_info(key)
-
         self.addition_info = QLabel()
         self.layout.addWidget(self.addition_info, i+3, 0, 1, 4)
         self.layout.setRowStretch(i+4, 10)
@@ -365,7 +360,7 @@ class FinalPage(Page):
         msg.setText("Warning: some variables do not exist in the csv file!")  
         msg.setWindowTitle("Warning MessageBox") 
         msg.setStandardButtons(QMessageBox.StandardButton.Ok) 
-        retval = msg.exec()
+        msg.exec()
         return False
         
     def UIComponents(self):
@@ -379,15 +374,10 @@ class FinalPage(Page):
         self.lbl_option = QLabel('Plot Options', self)
         self.lbl_option.setObjectName("heading")
         self.layout.addWidget(self.lbl_option, 1,0,1,1)
-        self.guide_plot = QPushButton('Guidance Plot', self)      
-        self.guide_plot.setToolTip('Show the <b>Guidance Plot</b> to understand the figure')
-        self.guide_plot.resize(self.guide_plot.sizeHint())
-        self.guide_plot.clicked.connect(self.guidance_plot)
-        self.layout.addWidget(self.guide_plot, 1,1,1,1, alignment=Qt.AlignmentFlag.AlignLeft)
  
         # # adding example image
         self.example_images = ['../example/example_0.png', '../example/example_1.png']
-        self.example_descriptions = ['../example/tmp/description_1.txt','../example/tmp/description_2.txt']
+        self.example_descriptions = ['../example/tmp/description_0.txt','../example/tmp/description_1.txt']
         self.tile_view = QWidget()
         self.tile_layout = QVBoxLayout()
         self.tile_view.setLayout(self.tile_layout)
@@ -397,46 +387,47 @@ class FinalPage(Page):
         for ex in self.example_images: 
           self.tile_figures.append(QLabel(self))
           self.tile_figures[-1].setPixmap(QPixmap(ex).scaled(200,150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+          #self.tile_figures[-1].setScaledContents(True)
           self.tile_layout.addWidget(self.tile_figures[-1])
-          
         # event binding # TODO: set in a loop
         self.tile_figures[0].mousePressEvent = lambda x: self.fig_select(figure_number=0)  
         self.tile_figures[1].mousePressEvent = lambda x: self.fig_select(figure_number=1) 
         #self.tile_figures[2].mousePressEvent = lambda x: self.fig_select(figure_number=2) 
-                
+        self.tile_layout.addSpacing(70)        
         # Selected Plot
         self.selected_view = QWidget()
         self.selected_layout = QVBoxLayout()
         self.selected_view.setLayout(self.selected_layout)
-        self.layout.addWidget(self.selected_view, 2, 2, 2, 1, alignment=Qt.AlignmentFlag.AlignTop)
-        self.layout.setColumnStretch(2, 5)
-        #self.layout.setRowStretch(2, 5)
+        self.layout.addWidget(self.selected_view, 2, 1, 2, 2, alignment=Qt.AlignmentFlag.AlignTop)
+        self.layout.setColumnStretch(1, 5)
+        self.selected_layout.setContentsMargins(0, 0, 0, 0)
 
         
         # # title for displaying plot
         self.lbl_plot = QLabel('Selected Plot', self)
         self.lbl_plot.setObjectName("heading")
-        self.layout.addWidget(self.lbl_plot,1,2,1,1)
+        self.layout.addWidget(self.lbl_plot,1,1,1,1)
         # # position for selected plot
-        self.lbl_selected_plot = QLabel('Please click plots on the left to select one for display.', self)
-        self.lbl_selected_plot.resize(600,800)
-        self.selected_layout.addWidget(self.lbl_selected_plot)
+        self.lbl_selected_plot = QLabel('Please click one of the plots on the left to display here.', self)
+        #self.lbl_selected_plot.resize(400,300)
+        self.selected_layout.addWidget(self.lbl_selected_plot, alignment=Qt.AlignmentFlag.AlignHCenter)
+        self.selected_layout.setStretch(0,5)
         # # description for the plot
         self.lbl_selected_dscp = QLabel(self)
-        self.lbl_selected_dscp.resize(200,100)
+        self.lbl_selected_dscp.resize(400,100)
         self.lbl_selected_dscp.setWordWrap(True) 
         self.selected_layout.addWidget(self.lbl_selected_dscp)
-        self.selected_layout.addSpacing(1)
+        #self.selected_layout.addSpacing(1)
         # references
         self.lbl_references = QLabel("For additional reading: \n Y. Zhang, A. Burgon, N. Petrick, B. Sahiner, G. Pennello, R. K. Samala*, “Evaluation of AI bias mitigation algorithms by systematically promoting sources of bias”, RSNA Program Book (2023).\nA. Burgon, Y. Zhang, B. Sahiner, N. Petrick, K. H. Cha, R. K. Samala*, “Manipulation of sources of bias in AI device development”, Proc. of SPIE (2024).")
         self.lbl_references.setObjectName("references")
         self.lbl_references.setWordWrap(True)
-        self.layout.addWidget(self.lbl_references, 4, 2, 1, 2, alignment=Qt.AlignmentFlag.AlignBottom)
+        self.layout.addWidget(self.lbl_references, 4, 0, 1, 3, alignment=Qt.AlignmentFlag.AlignBottom)
         # # button to save figure
         self.btn_save_fig = QPushButton('Save Report', self)
         self.btn_save_fig.resize(self.btn_save_fig.sizeHint())
         self.btn_save_fig.clicked.connect(self.save_fig)
-        self.layout.addWidget(self.btn_save_fig, 0, 3, 1, 1)
+        self.layout.addWidget(self.btn_save_fig, 0, 2, 1, 1)
         
         self.layout.setRowStretch(3, 10)
 
@@ -449,9 +440,9 @@ class FinalPage(Page):
           w.setStyleSheet(styleSheet)
         
         # Set the large image and descriptiong
-        self.lbl_selected_plot.setPixmap(QPixmap(self.example_images[figure_number]).scaled(360,270, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-        #info = open(self.example_descriptions[figure_number]).read()
-        info = "The figure shows the AUROC before and after bias mitigation across differences in disease prevalence between the subgroups in the training set."
+        self.lbl_selected_plot.setPixmap(QPixmap(self.example_images[figure_number]).scaled(480,360, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        info = open(self.example_descriptions[figure_number]).read()
+        #info = "The figure shows the AUROC before and after bias mitigation across differences in disease prevalence between the subgroups in the training set."
         self.lbl_selected_dscp.setText(info)
         self.current_plot = figure_number+1
     

@@ -20,8 +20,8 @@ AXIS_COLOR = "#6e6e6e"
 # Matplotlib Rc parameters (importing this file will apply them)
 rcParams['axes.labelweight'] = 'bold'
 rcParams['axes.titleweight'] = 'bold'
-rcParams['axes.labelsize'] = 12
-rcParams['axes.titlesize'] = 12
+rcParams['axes.labelsize'] = 8
+rcParams['axes.titlesize'] = 10
 rcParams['font.size'] = 8
 rcParams['font.weight'] = 'bold'
 rcParams['grid.alpha'] = 0.5
@@ -83,7 +83,7 @@ def mitigation_comparison(fig, data, x_col, hue_col, ylim=(0,1), figsize=(8,6), 
           style_legend = ax.legend(handles=style_lines, title="Positive-Associated", bbox_to_anchor=(0.5,0.5), loc='upper center')
           fig.add_artist(hue_legend)
       else:
-        temp_data = data[data['mitigation'] == m.split(") ")[-1].replace("\nBased","").replace("\n"," ")].copy()
+        temp_data = data[data['Mitigation'] == m.split(") ")[-1].replace("\nBased","").replace("\n"," ")].copy()
         if len(temp_data) == 0:
           ax.text((ax.get_xlim()[1] - ax.get_xlim()[0])/2 + ax.get_xlim()[0], (ax.get_ylim()[1] - ax.get_ylim()[0])/2 + ax.get_ylim()[0], "N/A", va='center', ha='center', bbox=dict(facecolor='white', edgecolor='white'), fontsize=16)
           continue
@@ -111,7 +111,7 @@ def no_mitigation_plot(fig, data, x_col, hue_col, ylim=(0,1), figsize=(8,6), y_l
     gs = fig.add_gridspec(1,1)
     ax = fig.add_subplot(gs[0,0])
     ax.set_ylim(ylim)
-    data = data[data['mitigation'] == "No Mitigation"].sort_values(x_col).copy()
+    data = data[data['Mitigation'] == "No Mitigation"].sort_values(x_col).copy()
     ax.set_title(title)
     ax.set_ylabel(y_label)
     ax.set_xlabel(x_label)
@@ -215,4 +215,41 @@ if __name__ == "__main__":
                 plt.close("all")
                 
     print("Done")
+
+def result_plotting(variables, csv_path, exp_type, study_type):
+    data = pd.read_csv(csv_path)  
+    
+    plot_kwargs = dict(style_col=variables.get('Positive-associated Subgroup'), mean_col=variables.get('Metric Mean Value'), color_dict=COLORS, style_dict=STYLES)  
+    #if study_type == 'Compare Bias Mitigation Methods':
+    #    s_col = variables.get('Mitigation Method')
+    #    section_name = data[s_col].unique()
+    #elif study_type == 'Study Finite Sample Size Effect':
+    #    s_col = variables.get('Training Data Size')
+    #    section_name = data[s_col].unique()
+
+    if exp_type == 'Quantitative Misrepresentation':        
+        x_col = variables.get('Training Prevalence Difference')
+        degree_name = "Training Prevalence Difference (%)"
+    elif exp_type == 'Inductive Transfer Learning':
+        x_col = variables.get('Frozen Layers')
+        degree_name = "Frozen Layers"
+    else:
+        raise NotImplementedError()
+    plot_kwargs["x_col"] = x_col 
+    data = calculate_CI(data, mean_col=variables.get('Metric Mean Value'), std_col=variables.get('Metric Standard Deviation'))
+
+    m_col = variables.get('Metric Name')
+    for i, m in enumerate(data[m_col].unique()):
+        temp_data = data[(data[m_col] == m)].copy()
+        if m == 'AUROC':
+          kwargs = dict(ylim=(0.5,0.9), y_label=m)
+        elif m == 'Prevalence':
+          kwargs = dict(ylim=(0,1), y_label="Predicted\nPrevalence (%)")
+        kwargs['compare_title'] = 'Population'
+        plot_wrapper("compare", data=temp_data.copy(), x_label=degree_name, hue_col='Subgroup', **kwargs, **plot_kwargs)
+        plt.savefig(os.path.join('../example/', f"example_{i}.png"), bbox_inches='tight')
+        info = f"Comparison of {m} value for each subgroup across bias mitigation methods when bias has been amplified by {exp_type} with different degrees. For these experiments, the positive-associated subgroup refers to the subgroup with the higher disease prevalence in the training set."
+        with open(f"../example/tmp/description_{i}.txt", "w") as f:
+          f.write(info)
+        plt.close("all")
     

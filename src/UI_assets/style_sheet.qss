@@ -44,6 +44,11 @@ QWidget#selected {
   
 }
 
+QWidget#not_selected {
+  border: 2px solid #DCDCDC;
+  
+}
+
 QLabel#heading {
   font: bold 16px;
 }
@@ -54,7 +59,7 @@ QLabel#title {
 }
 
 QLabel#references {
-  font: italic 10px;
+  font: italic 9px;
   color: gray;
 }
 
