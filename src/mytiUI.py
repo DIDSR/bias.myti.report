@@ -286,8 +286,11 @@ class SecondPage(Page):
           self.layout.addWidget(self.selection_boxes[selection], i+2, 2, 1, 2)
 
         self.addition_info = QLabel()
+        self.addition_info.setObjectName("not_selected")
+        self.addition_info.setWordWrap(True)
         self.layout.addWidget(self.addition_info, i+3, 0, 1, 4)
-        self.layout.setRowStretch(i+4, 10)
+        self.layout.setRowStretch(i+3, 2)      
+        #self.layout.setRowStretch(i+4, 2)
         self.layout.setColumnStretch(2, 10)
 
     def get_columns(self):
@@ -339,7 +342,9 @@ class SecondPage(Page):
       sending_info = self.sender()
       variable = str(sending_info.objectName())
       info_text = self.selection_infos.get(variable)
-      self.addition_info.setText(info_text)
+      self.addition_info.setText(f"{variable}:\n\n\n{info_text}")
+      self.addition_info.setObjectName("selected")
+      self.addition_info.setStyleSheet(styleSheet)
 
 
         
