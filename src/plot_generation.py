@@ -179,8 +179,9 @@ def result_plotting(variables, csv_path, exp_type, study_type):
     data = calculate_CI(data, mean_col=variables.get('Metric Mean Value'), std_col=variables.get('Metric Standard Deviation'))
 
     m_col = variables.get('Metric Name')
+    m_list = list(data[m_col].unique())
     info_list = []
-    for i, m in enumerate(data[m_col].unique()):
+    for i, m in enumerate(m_list):
         temp_data = data[(data[m_col] == m)].copy()
         if m == 'AUROC':
           kwargs = dict(ylim=(0.5,0.9), y_label=m)
@@ -192,7 +193,7 @@ def result_plotting(variables, csv_path, exp_type, study_type):
         plt.close("all")
         info = f"Comparison of {m} value for each subgroup across bias mitigation methods\nwhen bias has been amplified by {exp_type} with different degrees.\nFor these experiments, the positive-associated subgroup\nrefers to the subgroup with the higher disease prevalence in the training set."
         info_list.append(info)
-    return info_list
+    return m_list, info_list
     
 
 def save_report(info, img_path, save_path):

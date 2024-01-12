@@ -141,7 +141,7 @@ class InitialPage(Page):
           self.exp_descriptions[exp] = QWidget()
           self.exp_layouts[exp] = QVBoxLayout()
           self.exp_descriptions[exp].setLayout(self.exp_layouts[exp])
-          label = QLabel(exp)
+          label = QLabel(f"<b>{exp}</b>")
           self.exp_layouts[exp].addWidget(label)
           dlabel = QLabel(desc)
           dlabel.setWordWrap(True)
@@ -342,7 +342,7 @@ class SecondPage(Page):
       sending_info = self.sender()
       variable = str(sending_info.objectName())
       info_text = self.selection_infos.get(variable)
-      self.addition_info.setText(f"{variable}:\n\n\n{info_text}")
+      self.addition_info.setText(f"<b>{variable}:</b><br><br><br>{info_text}")
       self.addition_info.setObjectName("selected")
       self.addition_info.setStyleSheet(styleSheet)
 
@@ -356,12 +356,13 @@ class FinalPage(Page):
         self.current_plot = 0
         self.layout = QGridLayout()
         self.setLayout(self.layout)
+        self.m_list = ['', '']
         self.UIComponents()
         
     def run_background(self):
         """Generate figures and descriptions"""
         self.parent.pages["Page 2"].check_boxes()
-        self.info_list = result_plotting(self.parent.variables, self.parent.csv_path, self.parent.exp_type, self.parent.study_type)
+        self.m_list, self.info_list = result_plotting(self.parent.variables, self.parent.csv_path, self.parent.exp_type, self.parent.study_type)
 
     def check_conditions(self):
       """Sanity check if the third page can be appropriately loaded"""
@@ -387,6 +388,8 @@ class FinalPage(Page):
         self.lbl_title = QLabel('bias.myti.Report', self)
         self.lbl_title.setObjectName('title')
         self.layout.addWidget(self.lbl_title, 0,0,1,2)
+        self.layout.setSpacing(0)
+        self.layout.setContentsMargins(0, 0, 0, 0)
         
         # # title for plot selection
         self.lbl_option = QLabel('Plot Options', self)
@@ -399,9 +402,12 @@ class FinalPage(Page):
         self.tile_layout = QVBoxLayout()
         self.tile_view.setLayout(self.tile_layout)
         self.tile_figures = []
+        self.tile_title = []
         self.layout.addWidget(self.tile_view,2,0,2,1)
         
-        for ex in self.example_images: 
+        for i, ex in enumerate(self.example_images): 
+          self.tile_title.append(QLabel(self.m_list[i], self))
+          self.tile_layout.addWidget(self.tile_title[-1], alignment=Qt.AlignmentFlag.AlignLeft)
           self.tile_figures.append(QLabel(self))
           self.tile_figures[-1].setPixmap(QPixmap(ex).scaled(200,150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
           #self.tile_figures[-1].setScaledContents(True)
@@ -410,15 +416,19 @@ class FinalPage(Page):
         # event binding # TODO: set in a loop
         self.tile_figures[0].mousePressEvent = lambda x: self.fig_select(figure_number=0)  
         self.tile_figures[1].mousePressEvent = lambda x: self.fig_select(figure_number=1) 
-        #self.tile_figures[2].mousePressEvent = lambda x: self.fig_select(figure_number=2) 
-        self.tile_layout.addSpacing(70)        
+        #self.tile_figures[2].mousePressEvent = lambda x: self.fig_select(figure_number=2)
+        self.tile_layout.setStretch(1,2)
+        self.tile_layout.setStretch(3,2)
+        self.tile_layout.setSpacing(0)
+        self.tile_layout.addStretch(1)        
         # Selected Plot
         self.selected_view = QWidget()
         self.selected_layout = QVBoxLayout()
         self.selected_view.setLayout(self.selected_layout)
-        self.layout.addWidget(self.selected_view, 2, 1, 2, 2, alignment=Qt.AlignmentFlag.AlignTop)
+        self.layout.addWidget(self.selected_view, 2, 1, 2, 1, alignment=Qt.AlignmentFlag.AlignTop)
         self.layout.setColumnStretch(1, 5)
         self.selected_layout.setContentsMargins(0, 0, 0, 0)
+        self.tile_layout.setContentsMargins(0, 0, 0, 0)
 
         
         # # title for displaying plot
@@ -429,23 +439,30 @@ class FinalPage(Page):
         self.lbl_selected_plot = QLabel('Please click one of the plots on the left to display here.', self)
         #self.lbl_selected_plot.resize(400,300)
         self.selected_layout.addWidget(self.lbl_selected_plot, alignment=Qt.AlignmentFlag.AlignHCenter)
-        self.selected_layout.setStretch(0,5)
+        self.selected_layout.setStretch(0,6)
         # # description for the plot
         self.lbl_selected_dscp = QLabel(self)
         self.lbl_selected_dscp.resize(400,100)
         self.lbl_selected_dscp.setWordWrap(True) 
         self.selected_layout.addWidget(self.lbl_selected_dscp)
+        self.selected_layout.setSpacing(0)
+        #self.selected_layout.addStretch(1)
         #self.selected_layout.addSpacing(1)
         # references
-        self.lbl_references = QLabel("For additional reading: \n Y. Zhang, A. Burgon, N. Petrick, B. Sahiner, G. Pennello, R. K. Samala*, “Evaluation of AI bias mitigation algorithms by systematically promoting sources of bias”, RSNA Program Book (2023).\nA. Burgon, Y. Zhang, B. Sahiner, N. Petrick, K. H. Cha, R. K. Samala*, “Manipulation of sources of bias in AI device development”, Proc. of SPIE (2024).")
+        link_1 = ''
+        link_2 = 'https://spie.org/medical-imaging/presentation/Manipulation-of-sources-of-bias-in-AI-device-development/12927-52#_=_'
+        references = "For additional reading:  <br>Y. Zhang, A. Burgon, N. Petrick, B. Sahiner, G. Pennello, R. K. Samala*, “Evaluation of AI bias mitigation algorithms by systematically promoting sources of bias”, RSNA Program Book (2023).<a href=\"{link_1}\">Link</a>".format(link_1=link_2) + \
+        "<br>A. Burgon, Y. Zhang, B. Sahiner, N. Petrick, K. H. Cha, R. K. Samala*, “Manipulation of sources of bias in AI device development”, Proc. of SPIE (2024). <a href=\"{link_2}\">Link</a>".format(link_2=link_2)
+        self.lbl_references = QLabel(references)
         self.lbl_references.setObjectName("references")
+        self.lbl_references.setOpenExternalLinks(True)
         self.lbl_references.setWordWrap(True)
-        self.layout.addWidget(self.lbl_references, 4, 0, 1, 3, alignment=Qt.AlignmentFlag.AlignBottom)
+        self.layout.addWidget(self.lbl_references, 4, 0, 1, 2, alignment=Qt.AlignmentFlag.AlignBottom)
         # # button to save figure
         self.btn_save_fig = QPushButton('Save Report', self)
         self.btn_save_fig.resize(self.btn_save_fig.sizeHint())
         self.btn_save_fig.clicked.connect(self.save_fig)
-        self.layout.addWidget(self.btn_save_fig, 0, 2, 1, 1)
+        self.layout.addWidget(self.btn_save_fig, 0, 1, 1, 1, alignment=Qt.AlignmentFlag.AlignRight)
         
         self.layout.setRowStretch(3, 10)
 
@@ -459,7 +476,7 @@ class FinalPage(Page):
           w.setStyleSheet(styleSheet)
         
         # Set the large image and descriptiong
-        self.lbl_selected_plot.setPixmap(QPixmap(self.example_images[figure_number]).scaled(440,330, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        self.lbl_selected_plot.setPixmap(QPixmap(self.example_images[figure_number]).scaled(520,390, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         info = self.info_list[figure_number]
         self.lbl_selected_dscp.setText(info)
         self.current_plot = figure_number
@@ -597,6 +614,18 @@ class MainWindow(QMainWindow):
         self.sidebar_layout.addStretch(10)
         self.sidebar_layout.setSpacing(0)
         self.sidebar_layout.setContentsMargins(0,0,0,0)
+
+        self.about = QWidget()
+        self.am_layout = QVBoxLayout()
+        self.about.setLayout(self.am_layout)
+        self.about.setObjectName("sidebar")
+        icon = self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxQuestion)
+        self.about_button = QPushButton('About',self)
+        self.about_button.setIcon(icon)
+        self.about_button.clicked.connect(self.about_info)
+        self.about_button.setToolTip("Show additional information about the tool")
+        self.am_layout.addWidget(self.about_button)
+        self.sidebar_layout.addWidget(self.about)
         
         self.sidebar = QWidget()
         self.sidebar.setObjectName("sidebar")
@@ -640,6 +669,37 @@ class MainWindow(QMainWindow):
           self.next_button.hide()
         else:
           self.next_button.show()
+
+    def about_info(self):
+        self.w = AboutWindow()
+        self.w.show()
+
+class AboutWindow(QMainWindow):                         
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("bias.myti.Report")
+        self.setGeometry(100, 100, 400, 300)
+        self.load_GUI()
+
+    def load_GUI(self):
+        self.main_layout = QVBoxLayout()
+        self.main_widget = QWidget()
+        self.main_widget.setLayout(self.main_layout)
+        self.setCentralWidget(self.main_widget)
+
+        self.title = QLabel('bias.myti.Report', self)
+        self.title.setObjectName("title")
+        self.main_layout.addWidget(self.title)
+        link_github = 'https://github.com/DIDSR/myti.report/tree/main'
+        infos = "GitHub Page: <a href=\"{0}\">{1}</a>".format(link_github, link_github) + \
+        "<br>Version: 1.0"
+        self.info = QLabel(infos, self)
+        self.main_layout.addWidget(self.info)
+        self.fda_logo = QLabel()
+        self.fda_logo.setObjectName("fda_logo")
+        self.fda_logo.setPixmap(QPixmap("UI_assets/fda_logo.jpg").scaled(100,100, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        self.main_layout.addWidget(self.fda_logo, alignment=Qt.AlignmentFlag.AlignRight)
+
   
 if __name__ == '__main__':
     app = QApplication(sys.argv)
