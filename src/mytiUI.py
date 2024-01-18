@@ -288,9 +288,9 @@ class SecondPage(Page):
         self.addition_info = QLabel()
         self.addition_info.setObjectName("not_selected")
         self.addition_info.setWordWrap(True)
-        self.layout.addWidget(self.addition_info, i+3, 0, 1, 4)
-        self.layout.setRowStretch(i+3, 2)      
-        #self.layout.setRowStretch(i+4, 2)
+        self.layout.addWidget(self.addition_info, i+3, 0, 1, 3)
+        #self.layout.setRowStretch(i+3, 2)      
+        self.layout.setRowStretch(i+4, 2)
         self.layout.setColumnStretch(2, 10)
 
     def get_columns(self):
@@ -449,9 +449,9 @@ class FinalPage(Page):
         #self.selected_layout.addStretch(1)
         #self.selected_layout.addSpacing(1)
         # references
-        link_1 = ''
-        link_2 = 'https://spie.org/medical-imaging/presentation/Manipulation-of-sources-of-bias-in-AI-device-development/12927-52#_=_'
-        references = "For additional reading:  <br>Y. Zhang, A. Burgon, N. Petrick, B. Sahiner, G. Pennello, R. K. Samala*, “Evaluation of AI bias mitigation algorithms by systematically promoting sources of bias”, RSNA Program Book (2023).<a href=\"{link_1}\">Link</a>".format(link_1=link_2) + \
+        link_1 = 'https://github.com/DIDSR/myti.report/tree/main'
+        link_2 = 'https://github.com/DIDSR/myti.report/tree/main'
+        references = "For additional reading:  <br>Y. Zhang, A. Burgon, N. Petrick, B. Sahiner, G. Pennello, R. K. Samala*, “Evaluation of AI bias mitigation algorithms by systematically promoting sources of bias”, RSNA Program Book (2023).<a href=\"{link_1}\">Link</a>".format(link_1=link_1) + \
         "<br>A. Burgon, Y. Zhang, B. Sahiner, N. Petrick, K. H. Cha, R. K. Samala*, “Manipulation of sources of bias in AI device development”, Proc. of SPIE (2024). <a href=\"{link_2}\">Link</a>".format(link_2=link_2)
         self.lbl_references = QLabel(references)
         self.lbl_references.setObjectName("references")
@@ -459,10 +459,14 @@ class FinalPage(Page):
         self.lbl_references.setWordWrap(True)
         self.layout.addWidget(self.lbl_references, 4, 0, 1, 2, alignment=Qt.AlignmentFlag.AlignBottom)
         # # button to save figure
+        self.save_button = QWidget()
+        self.save_layout = QVBoxLayout()
+        self.save_button.setLayout(self.save_layout)
+        self.layout.addWidget(self.save_button, 0, 1, 1, 1)
         self.btn_save_fig = QPushButton('Save Report', self)
         self.btn_save_fig.resize(self.btn_save_fig.sizeHint())
         self.btn_save_fig.clicked.connect(self.save_fig)
-        self.layout.addWidget(self.btn_save_fig, 0, 1, 1, 1, alignment=Qt.AlignmentFlag.AlignRight)
+        self.save_layout.addWidget(self.btn_save_fig, alignment=Qt.AlignmentFlag.AlignRight)
         
         self.layout.setRowStretch(3, 10)
 
@@ -678,27 +682,31 @@ class AboutWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("bias.myti.Report")
-        self.setGeometry(100, 100, 400, 300)
+        self.setGeometry(100, 100, 500, 400)
         self.load_GUI()
 
     def load_GUI(self):
-        self.main_layout = QVBoxLayout()
+        self.main_layout = QGridLayout()
         self.main_widget = QWidget()
         self.main_widget.setLayout(self.main_layout)
         self.setCentralWidget(self.main_widget)
 
         self.title = QLabel('bias.myti.Report', self)
         self.title.setObjectName("title")
-        self.main_layout.addWidget(self.title)
+        self.main_layout.addWidget(self.title, 0, 0, 1, 1)
         link_github = 'https://github.com/DIDSR/myti.report/tree/main'
-        infos = "GitHub Page: <a href=\"{0}\">{1}</a>".format(link_github, link_github) + \
-        "<br>Version: 1.0"
+        infos = "A visualization tool to facilitate the comparison of user-implemented bias mitigation methods for AI models." + \
+        "<br><br>GitHub Page: <a href=\"{0}\">{1}</a>".format(link_github, link_github) + \
+        "<br>Version: 1.0" + \
+        "<br><br>From:<br><br>Office of Science and Engineering Laboratories<br>Center for Devices and Radiological Health<br>U.S. Food and Drug Administration<br>10903 New Hampshire Ave, Silver Spring, MD 20993"
         self.info = QLabel(infos, self)
-        self.main_layout.addWidget(self.info)
+        self.info.setWordWrap(True)
+        self.main_layout.addWidget(self.info, 1, 0, 1, 2)
         self.fda_logo = QLabel()
         self.fda_logo.setObjectName("fda_logo")
-        self.fda_logo.setPixmap(QPixmap("UI_assets/fda_logo.jpg").scaled(100,100, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-        self.main_layout.addWidget(self.fda_logo, alignment=Qt.AlignmentFlag.AlignRight)
+        self.fda_logo.setPixmap(QPixmap("UI_assets/fda_logo.jpg").scaled(60,60, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        self.main_layout.addWidget(self.fda_logo, 0, 1, 1, 1, alignment=Qt.AlignmentFlag.AlignRight)
+        self.main_layout.setRowStretch(1, 5)
 
   
 if __name__ == '__main__':
