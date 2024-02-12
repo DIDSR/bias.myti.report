@@ -425,7 +425,7 @@ class FinalPage(Page):
         self.selected_view = QWidget()
         self.selected_layout = QVBoxLayout()
         self.selected_view.setLayout(self.selected_layout)
-        self.layout.addWidget(self.selected_view, 2, 1, 2, 1, alignment=Qt.AlignmentFlag.AlignTop)
+        self.layout.addWidget(self.selected_view, 2, 1, 2, 2, alignment=Qt.AlignmentFlag.AlignTop)
         self.layout.setColumnStretch(1, 5)
         self.selected_layout.setContentsMargins(0, 0, 0, 0)
         self.tile_layout.setContentsMargins(0, 0, 0, 0)
@@ -439,10 +439,10 @@ class FinalPage(Page):
         self.lbl_selected_plot = QLabel('Please click one of the plots on the left to display here.', self)
         #self.lbl_selected_plot.resize(400,300)
         self.selected_layout.addWidget(self.lbl_selected_plot, alignment=Qt.AlignmentFlag.AlignHCenter)
-        self.selected_layout.setStretch(0,6)
+        self.selected_layout.setStretch(0,10)
         # # description for the plot
         self.lbl_selected_dscp = QLabel(self)
-        self.lbl_selected_dscp.resize(400,100)
+        #self.lbl_selected_dscp.resize(400,100)
         self.lbl_selected_dscp.setWordWrap(True) 
         self.selected_layout.addWidget(self.lbl_selected_dscp)
         self.selected_layout.setSpacing(0)
@@ -457,12 +457,12 @@ class FinalPage(Page):
         self.lbl_references.setObjectName("references")
         self.lbl_references.setOpenExternalLinks(True)
         self.lbl_references.setWordWrap(True)
-        self.layout.addWidget(self.lbl_references, 4, 0, 1, 2, alignment=Qt.AlignmentFlag.AlignBottom)
+        self.layout.addWidget(self.lbl_references, 4, 0, 1, 3, alignment=Qt.AlignmentFlag.AlignBottom)
         # # button to save figure
         self.save_button = QWidget()
         self.save_layout = QVBoxLayout()
         self.save_button.setLayout(self.save_layout)
-        self.layout.addWidget(self.save_button, 0, 1, 1, 1)
+        self.layout.addWidget(self.save_button, 0, 2, 1, 1)
         self.btn_save_fig = QPushButton('Save Report', self)
         self.btn_save_fig.resize(self.btn_save_fig.sizeHint())
         self.btn_save_fig.clicked.connect(self.save_fig)
@@ -480,8 +480,8 @@ class FinalPage(Page):
           w.setStyleSheet(styleSheet)
         
         # Set the large image and descriptiong
-        self.lbl_selected_plot.setPixmap(QPixmap(self.example_images[figure_number]).scaled(520,390, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-        info = self.info_list[figure_number]
+        self.lbl_selected_plot.setPixmap(QPixmap(self.example_images[figure_number]).scaled(500,375, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        info = self.info_list[figure_number].replace("\n", "")
         self.lbl_selected_dscp.setText(info)
         self.current_plot = figure_number
 
