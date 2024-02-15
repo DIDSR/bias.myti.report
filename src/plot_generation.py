@@ -17,6 +17,7 @@ SUBGROUP_NAME_MAPPING = {"F":"Female", "M":"Male","B":"Black", "W":"White"} # fo
 CI_ALPHA = 0.3
 AXIS_COLOR = "#6e6e6e"
 NUM_SUB_COL = 3 # number of plots in a row in the figure
+FIGURE_RATIO = 0.75
 
 # Matplotlib Rc parameters (importing this file will apply them)
 rcParams['axes.labelweight'] = 'bold'
@@ -71,15 +72,21 @@ def figure_plotting(
         list that has all the sub-sections for plotting (including legends section)
     
     """
-    row_num = ceil(len(plot_section) / NUM_SUB_COL) #calculate reguired number of rows
+    # # calculate number of rows and columns for subplots
+    if len(plot_section) < NUM_SUB_COL:
+        col_num = len(plot_section)
+        row_num = 1
+    else:
+        col_num = NUM_SUB_COL
+        row_num = ceil(len(plot_section) /col_num) #calculate reguired number of rows
     # # create figure with sub-sections
-    fig = plt.figure(figsize = (text_width, text_width*0.75))
-    gs = fig.add_gridspec(row_num,NUM_SUB_COL)
+    fig = plt.figure(figsize = (text_width, text_width*FIGURE_RATIO))
+    gs = fig.add_gridspec(row_num, col_num)
     data = data.sort_values(x_col)
     axes = []
     for r in range(row_num):
-      for c in range(NUM_SUB_COL):
-        if (r * NUM_SUB_COL + c + 1) <= len(plot_section):
+      for c in range(col_num):
+        if (r * col_num + c + 1) <= len(plot_section):
             axes.append(fig.add_subplot(gs[r,c]))
             axes[-1].set_ylim(ylim)
             axes[-1].set_xticks(data[x_col].unique().tolist())
@@ -199,10 +206,14 @@ def bias_report_generation(variables, csv_path, exp_type, study_type):
         s_col = variables.get('Training Data Size')
         section_name = data[s_col].unique().tolist()
         section_name.sort()
+    elif study_type == 'None':
+        data['Section Name'] = 'Bias amplification'
+        s_col = 'Section Name'
+        section_name = data[s_col].unique().tolist()
     else:
         raise NotImplementedError()
     # # add a separate section to plot legends
-    section_name.insert(0, "legends")
+    section_name.append("legends")
     plot_kwargs['s_col'] = s_col
     plot_kwargs['plot_section'] = section_name
     # # get bias amplification type
