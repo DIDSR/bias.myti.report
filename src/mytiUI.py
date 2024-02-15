@@ -1,5 +1,7 @@
 """
-Main design script for RST related to bias project
+Main design script for myti.report
+An RST to facilitate visualization of model bias,
+comparison of user implemented bias mitigation methods
 """
 import pandas as pd
 from PyQt6.QtWidgets import * 
@@ -24,7 +26,7 @@ class ClickLabel(QLabel):
 
 
 class Page(QWidget):
-  """"""
+  """Parent class for all the pages"""
   def __init__(self, parent, page_number):
     super().__init__()
     self.parent = parent
@@ -60,7 +62,11 @@ def clearLayout(layout):
       child.widget().deleteLater()
       
 class InitialPage(Page):
-    """Class for the first page (user input) of the tool."""
+    """
+    Class for the first page (user input) of the tool.
+    This page allows users to upload .csv data file,
+    specify bias amplification type and study type.
+    """
     def __init__(self, parent):
         super().__init__(parent=parent, page_number=1)
         # Set layout
@@ -74,12 +80,10 @@ class InitialPage(Page):
         
         # # program title
         self.title_box = QWidget()
-        self.title_box.setObjectName("box")
-        
+        self.title_box.setObjectName("box")        
         self.lbl_title = QLabel('bias.myti.Report', self.title_box)
         self.lbl_title.setObjectName("title")
         self.layout.addWidget(self.lbl_title)
-        #self.lbl_title.setFont(QFont('Arial', 20))
         self.lbl_subtitle = QLabel('A tool to facilitate the comparison of user-implemented bias mitigation methods for AI models', self)
         self.lbl_subtitle.setObjectName("subtitle")
         self.layout.addWidget(self.lbl_subtitle)
@@ -87,7 +91,6 @@ class InitialPage(Page):
         # # csv file upload part
         self.upload_box = QWidget()
         self.upload_layout = QHBoxLayout()
-        # #
         # # file indicating label
         self.lbl_up_load_file = QLabel('Uploaded Input File', self)
         self.upload_layout.addWidget(self.lbl_up_load_file)
@@ -102,11 +105,9 @@ class InitialPage(Page):
         self.btn_up_load_file.setToolTip('Select <b>CSV File</b> from folder')
         self.btn_up_load_file.resize(self.btn_up_load_file.sizeHint())
         self.upload_layout.addWidget(self.btn_up_load_file)
-        self.btn_up_load_file.clicked.connect(self.upload_csv)
-        
+        self.btn_up_load_file.clicked.connect(self.upload_csv)        
         self.upload_box.setLayout(self.upload_layout)
-        self.layout.addWidget(self.upload_box)
-        
+        self.layout.addWidget(self.upload_box)        
         self.layout.addSpacing(3)
 
         # # experiment setting part
@@ -123,13 +124,11 @@ class InitialPage(Page):
          
         self.exp_layout.addWidget(self.description_box)
         self.exp_layout.addWidget(self.settings_box)
-        self.exp_layout.setStretch(1,10)
-        # #
-        # # Experiment explanation 
+        self.exp_layout.setStretch(1,10) 
         # # amplification type indicating label
         self.lbl_exp_type = QLabel('Select Amplification Type', self)  
         self.desc_layout.addWidget(self.lbl_exp_type, 0, 0, 1, 1)  
-        # # direct or indirect selection menu  
+        # # amplification type selection menu  
         self.combo_exp_type = QComboBox(self)      
         self.combo_exp_type.addItem('-Please Select-')
         self.combo_exp_type.addItems(list(self.parent.experiments.keys()))
@@ -150,36 +149,34 @@ class InitialPage(Page):
           self.exp_descriptions[exp].setObjectName("not_selected")
           self.desc_layout.addWidget(self.exp_descriptions[exp], i+1, 0, 1, 2)
         self.desc_layout.setRowStretch(3, 10)
-        self.desc_layout.setColumnStretch(1, 2)
-        
+        self.desc_layout.setColumnStretch(1, 2)        
         
         # # study type selection menu
         self.lbl_stdy_type = QLabel('Select Study Type', self)  
-        self.settings_layout.addWidget(self.lbl_stdy_type, 0, 0, 1, 1)   
-        self.rb_sample_size = QRadioButton('Study Finite Sample Size Effect', self)            
-        self.settings_layout.addWidget(self.rb_sample_size, 1, 0, 1, 2)  
-        self.rb_sample_size.toggled.connect(self.study_update) 
-        sample_size_info = 'If finite sample size is selected, results using different training dataset size will be computed and visualized.'
-        self.lbl_sample_size = QLabel(sample_size_info, self)
-        self.lbl_sample_size.resize(250, 100)
-        self.settings_layout.addWidget(self.lbl_sample_size, 2, 0, 1, 2)
-        self.lbl_sample_size.setWordWrap(True) 
-        # # mitigation method compare checkbox
-        self.rb_miti_compare = QRadioButton('Compare Bias Mitigation Methods', self)  
-        self.settings_layout.addWidget(self.rb_miti_compare, 3, 0, 1, 2)      
+        self.settings_layout.addWidget(self.lbl_stdy_type, 0, 0, 1, 1)           
+        # # mitigation method compare box and description
+        self.rb_miti_compare = QRadioButton('Compare Bias Mitigation Methods', self)
+        self.rb_miti_compare.setChecked(True)  
+        self.settings_layout.addWidget(self.rb_miti_compare, 1, 0, 1, 2)      
         self.rb_miti_compare.toggled.connect(self.study_update) 
         miti_compare_info = 'If comparing bias mitigation methods is selected, results using different bias mitigation methods will be campared and visualized.'
         self.lbl_miti_compare = QLabel(miti_compare_info, self)
-        self.lbl_miti_compare.resize(250, 100)
         self.lbl_miti_compare.setWordWrap(True) 
-        self.settings_layout.addWidget(self.lbl_miti_compare, 4, 0, 1, 2)
-        self.rb_none = QRadioButton('None', self)
-        self.rb_none.setChecked(True)
+        self.settings_layout.addWidget(self.lbl_miti_compare, 2, 0, 1, 2)
+        # # finite sample size box and description
+        self.rb_sample_size = QRadioButton('Study Finite Sample Size Effect', self)            
+        self.settings_layout.addWidget(self.rb_sample_size, 3, 0, 1, 2)  
+        self.rb_sample_size.toggled.connect(self.study_update) 
+        sample_size_info = 'If finite sample size is selected, results using different training dataset size will be computed and visualized.'
+        self.lbl_sample_size = QLabel(sample_size_info, self)
+        self.settings_layout.addWidget(self.lbl_sample_size, 4, 0, 1, 2)
+        self.lbl_sample_size.setWordWrap(True) 
+        # # none box and description
+        self.rb_none = QRadioButton('None', self)        
         self.rb_none.toggled.connect(self.study_update)
         self.settings_layout.addWidget(self.rb_none, 5, 0, 1, 2)
         none_info = 'If none is selected, only results from bias amplification will be visualized.'
         self.lbl_none = QLabel(none_info, self)
-        self.lbl_none.resize(250, 100)
         self.lbl_none.setWordWrap(True) 
         self.settings_layout.addWidget(self.lbl_none, 6, 0, 1, 2)
         self.settings_layout.setRowStretch(7, 100)
@@ -202,20 +199,22 @@ class InitialPage(Page):
         fname = dialog.getOpenFileName(None, "Import CSV", "", "CSV data files (*.csv)")
         self.edit_up_load_file.setText(fname[0])
         self.parent.csv_path = fname[0]
+        # # show bias amplification type selection
         self.description_box.setHidden(False)
 
         
     def approach_type(self):
-        """Update amplification type selected by user"""
+        """Update bias amplification type selected by user"""
         text = str(self.combo_exp_type.currentText())
-        self.parent.exp_type = text 
-        
+        self.parent.exp_type = text         
+        # # show selected type
         for exp in self.exp_descriptions:
           if exp == text:
             self.exp_descriptions[exp].setObjectName("selected")
           else:
             self.exp_descriptions[exp].setObjectName("not_selected")
           self.exp_descriptions[exp].setStyleSheet(styleSheet)
+        # # show study type selection part at next step
         self.settings_box.setHidden(False)
         
     
@@ -228,7 +227,11 @@ class InitialPage(Page):
        
 
 class SecondPage(Page):
-    """Class to build the second page (variable selection)."""
+    """
+    Class to build the second page (variable selection).
+    This page allows user to select columns corresponding to variables required for bias report.
+    Additional information is provided for the user for better clarification.
+    """
     def __init__(self, parent):
         super().__init__(parent=parent, page_number=2)
         self.layout = QGridLayout()
@@ -237,18 +240,18 @@ class SecondPage(Page):
         self.UIComponents()
         
     def UIComponents(self):
-        """Widgets for the page"""
+        """Widgets for the second page"""
         clearLayout(self.layout)
         # # program title
         self.lbl_title = QLabel('bias.myti.Report', self)
         self.lbl_title.setObjectName("title")
         self.layout.addWidget(self.lbl_title,0,0,1,2)
        
-        # # Title Label
+        # # variable selection title
         self.lbl_heading = QLabel('Indicate Columns', self)
         self.lbl_heading.setObjectName("heading")
         self.layout.addWidget(self.lbl_heading,1,0,1,2)
-        
+        # # variables
         column_list = self.get_columns()
         self.selection_defaults = {
           "Positive-associated Subgroup":"Positive-associated",
@@ -257,39 +260,39 @@ class SecondPage(Page):
           "Metric Mean Value":"Mean",
           "Metric Standard Deviation":"Std",
           }
+        # # add variable by bias amplification type
         if self.parent.exp_type == 'Quantitative Misrepresentation':
           self.selection_defaults.update({"Training Prevalence Difference":"Training Prevalence Difference"})
         else:
           self.selection_defaults.update({"Frozen Layers":"Frozen Layers"})
-
+        # # add variable by study type
         if self.parent.study_type == 'Compare Bias Mitigation Methods':
           self.selection_defaults.update({"Mitigation Method":"Mitigation"})
         elif self.parent.study_type == 'Study Finite Sample Size Effect':
           self.selection_defaults.update({"Training Data Size":"Data Size"})
 
-
-        pixmapi = QStyle.StandardPixmap.SP_MessageBoxInformation
+        # # adding variable selection part
+        pixmapi = QStyle.StandardPixmap.SP_MessageBoxInformation # icon for additional information
         icon = self.style().standardIcon(pixmapi)
         self.selection_labels = {}
         self.information_icon = {}
         self.selection_boxes = {}
         for i, (selection, default) in enumerate(self.selection_defaults.items()):
-          self.selection_labels[selection] = QLabel(selection, self)
+          self.selection_labels[selection] = QLabel(selection, self) # variable name
           self.layout.addWidget(self.selection_labels[selection], i+2, 0, 1, 1)
           self.information_icon[selection] = ClickLabel(self)
           self.information_icon[selection].setPixmap(icon.pixmap(QSize(20, 20)))
           self.information_icon[selection].setObjectName(f"{selection}")
-          self.information_icon[selection].clicked.connect(self.add_info)
+          self.information_icon[selection].clicked.connect(self.add_info) # click to show additional infomation
           self.layout.addWidget(self.information_icon[selection], i+2, 1, 1, 1, alignment=Qt.AlignmentFlag.AlignLeft)
-          self.selection_boxes[selection] = QComboBox(self)
+          self.selection_boxes[selection] = QComboBox(self) # column name selection box
           self.selection_boxes[selection].addItems([default] + column_list)
           self.layout.addWidget(self.selection_boxes[selection], i+2, 2, 1, 2)
-
+        # # adding additional information section
         self.addition_info = QLabel()
         self.addition_info.setObjectName("not_selected")
         self.addition_info.setWordWrap(True)
-        self.layout.addWidget(self.addition_info, i+3, 0, 1, 3)
-        #self.layout.setRowStretch(i+3, 2)      
+        self.layout.addWidget(self.addition_info, i+3, 0, 1, 3)     
         self.layout.setRowStretch(i+4, 2)
         self.layout.setColumnStretch(2, 10)
 
@@ -328,6 +331,7 @@ class SecondPage(Page):
 
     def add_info(self):
       """Update additional information for the variable clicked by user"""
+      # # detailed information
       self.selection_infos = {
           "Positive-associated Subgroup":"The column which indicates the subgroup associated with a more frequent positive outcome label",
           "Subgroup":"The column which indicates subgroup information (e.g., male or female).",
@@ -339,6 +343,7 @@ class SecondPage(Page):
           "Mitigation Method":"The column which indicates the type of implemented bias mitigation methods.",
           "Training Data Size":"The column which indicates the value of training data size for finite sample size study.",
           }
+      # # get click sender and display corresponding information
       sending_info = self.sender()
       variable = str(sending_info.objectName())
       info_text = self.selection_infos.get(variable)
@@ -349,37 +354,41 @@ class SecondPage(Page):
 
         
 class FinalPage(Page):
-    """Class to build the third page (report display)."""
+    """
+    Class to build the third page (report display).
+    This page show bias results with figures and corrsponding text description.
+    It allows user to save report in .png or .pdf format.
+    """
     def __init__(self, parent, page_number=3):
         super().__init__(parent = parent, page_number=page_number)
         self.setWindowTitle('Myti Results')
         self.current_plot = 0
         self.layout = QGridLayout()
         self.setLayout(self.layout)
-        self.m_list = ['', '']
+        self.m_list =['Prevalence', 'AUROC'] # initialize metric list
         self.UIComponents()
         
     def run_background(self):
         """Generate figures and descriptions"""
         self.parent.pages["Page 2"].check_boxes()
-        self.m_list, self.info_list = result_plotting(self.parent.variables, self.parent.csv_path, self.parent.exp_type, self.parent.study_type)
+        self.m_list, self.info_list = bias_report_generation(self.parent.variables, self.parent.csv_path, self.parent.exp_type, self.parent.study_type)
 
     def check_conditions(self):
-      """Sanity check if the third page can be appropriately loaded"""
-      data = pd.read_csv(self.parent.csv_path)
-      cols = list(data.columns)
-      variables = list(self.parent.variables.values())
-      # # check if selected variables existed in the csv file
-      if all(item in cols for item in variables):
-        return True
-      else:
-        msg = QMessageBox(self) 
-        msg.setIcon(QMessageBox.Icon.Warning)  
-        msg.setText("Warning: some variables do not exist in the csv file!")  
-        msg.setWindowTitle("Warning MessageBox") 
-        msg.setStandardButtons(QMessageBox.StandardButton.Ok) 
-        msg.exec()
-        return False
+        """Sanity check if the third page can be appropriately loaded"""
+        data = pd.read_csv(self.parent.csv_path)
+        cols = list(data.columns)
+        variables = list(self.parent.variables.values())
+        # # check if selected variables existed in the csv file
+        if all(item in cols for item in variables):
+          return True
+        else:
+          msg = QMessageBox(self) 
+          msg.setIcon(QMessageBox.Icon.Warning)  
+          msg.setText("Warning: some variables do not exist in the csv file!")  
+          msg.setWindowTitle("Warning MessageBox") 
+          msg.setStandardButtons(QMessageBox.StandardButton.Ok) 
+          msg.exec()
+          return False
         
     def UIComponents(self):
         """Widgets for the page"""
@@ -396,27 +405,23 @@ class FinalPage(Page):
         self.lbl_option.setObjectName("heading")
         self.layout.addWidget(self.lbl_option, 1,0,1,1)
  
-        # # adding example image
-        self.example_images = ['../example/example_0.png', '../example/example_1.png']
+        # # adding example images and title with metric name
+        self.example_images = []
         self.tile_view = QWidget()
         self.tile_layout = QVBoxLayout()
         self.tile_view.setLayout(self.tile_layout)
         self.tile_figures = []
         self.tile_title = []
         self.layout.addWidget(self.tile_view,2,0,2,1)
-        
-        for i, ex in enumerate(self.example_images): 
+        for i, m in enumerate(self.m_list):
+          self.example_images.append(f'../example/figure_{m}.png')
           self.tile_title.append(QLabel(self.m_list[i], self))
           self.tile_layout.addWidget(self.tile_title[-1], alignment=Qt.AlignmentFlag.AlignLeft)
-          self.tile_figures.append(QLabel(self))
-          self.tile_figures[-1].setPixmap(QPixmap(ex).scaled(200,150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-          #self.tile_figures[-1].setScaledContents(True)
+          self.tile_figures.append(ClickLabel(self))
+          self.tile_figures[-1].setPixmap(QPixmap(self.example_images[-1]).scaled(200,150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
           self.tile_figures[-1].setObjectName("not_selected")
+          self.tile_figures[-1].clicked.connect(lambda x=i: self.fig_select(x))
           self.tile_layout.addWidget(self.tile_figures[-1])
-        # event binding # TODO: set in a loop
-        self.tile_figures[0].mousePressEvent = lambda x: self.fig_select(figure_number=0)  
-        self.tile_figures[1].mousePressEvent = lambda x: self.fig_select(figure_number=1) 
-        #self.tile_figures[2].mousePressEvent = lambda x: self.fig_select(figure_number=2)
         self.tile_layout.setStretch(1,2)
         self.tile_layout.setStretch(3,2)
         self.tile_layout.setSpacing(0)
@@ -428,27 +433,21 @@ class FinalPage(Page):
         self.layout.addWidget(self.selected_view, 2, 1, 2, 2, alignment=Qt.AlignmentFlag.AlignTop)
         self.layout.setColumnStretch(1, 5)
         self.selected_layout.setContentsMargins(0, 0, 0, 0)
-        self.tile_layout.setContentsMargins(0, 0, 0, 0)
-
-        
+        self.tile_layout.setContentsMargins(0, 0, 0, 0)        
         # # title for displaying plot
         self.lbl_plot = QLabel('Selected Plot', self)
         self.lbl_plot.setObjectName("heading")
         self.layout.addWidget(self.lbl_plot,1,1,1,1)
         # # position for selected plot
         self.lbl_selected_plot = QLabel('Please click one of the plots on the left to display here.', self)
-        #self.lbl_selected_plot.resize(400,300)
         self.selected_layout.addWidget(self.lbl_selected_plot, alignment=Qt.AlignmentFlag.AlignHCenter)
         self.selected_layout.setStretch(0,10)
         # # description for the plot
         self.lbl_selected_dscp = QLabel(self)
-        #self.lbl_selected_dscp.resize(400,100)
         self.lbl_selected_dscp.setWordWrap(True) 
         self.selected_layout.addWidget(self.lbl_selected_dscp)
         self.selected_layout.setSpacing(0)
-        #self.selected_layout.addStretch(1)
-        #self.selected_layout.addSpacing(1)
-        # references
+        # # references TODO: add correct links
         link_1 = 'https://github.com/DIDSR/myti.report/tree/main'
         link_2 = 'https://github.com/DIDSR/myti.report/tree/main'
         references = "For additional reading:  <br>Y. Zhang, A. Burgon, N. Petrick, B. Sahiner, G. Pennello, R. K. Samala*, “Evaluation of AI bias mitigation algorithms by systematically promoting sources of bias”, RSNA Program Book (2023).<a href=\"{link_1}\">Link</a>".format(link_1=link_1) + \
@@ -466,11 +465,10 @@ class FinalPage(Page):
         self.btn_save_fig = QPushButton('Save Report', self)
         self.btn_save_fig.resize(self.btn_save_fig.sizeHint())
         self.btn_save_fig.clicked.connect(self.save_fig)
-        self.save_layout.addWidget(self.btn_save_fig, alignment=Qt.AlignmentFlag.AlignRight)
-        
+        self.save_layout.addWidget(self.btn_save_fig, alignment=Qt.AlignmentFlag.AlignRight)        
         self.layout.setRowStretch(3, 10)
 
-    def fig_select(self, figure_number, event=None):
+    def fig_select(self, figure_number):
         """Update the selected figure by user"""
         for i, w in enumerate(self.tile_figures):
           if i == figure_number:
@@ -479,15 +477,11 @@ class FinalPage(Page):
             w.setObjectName("not_selected")
           w.setStyleSheet(styleSheet)
         
-        # Set the large image and descriptiong
+        # # Set the large image and descriptiong
         self.lbl_selected_plot.setPixmap(QPixmap(self.example_images[figure_number]).scaled(500,375, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         info = self.info_list[figure_number].replace("\n", "")
         self.lbl_selected_dscp.setText(info)
         self.current_plot = figure_number
-
-    def quit_page(self):
-        shutil.rmtree('../example/tmp/')
-        widget.close()
     
     def save_fig(self):
         """Save the figure and description"""
@@ -495,7 +489,7 @@ class FinalPage(Page):
         save_report(self.info_list[self.current_plot], self.example_images[self.current_plot], name[0])
 
 class MainWindow(QMainWindow):
-    """Class for the main window including pages, logo, navigation bars."""
+    """Class for the main window including main pages, logo, side menus, navigation bars."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setWindowTitle("bias.myti.Report")
@@ -520,7 +514,7 @@ class MainWindow(QMainWindow):
         # Load
         self.load_GUI()
         self.show()
-        
+        # show first page
         self.change_page(1)
     
     def load_GUI(self):
@@ -567,14 +561,15 @@ class MainWindow(QMainWindow):
     
     def change_page(self, page_number:int, *args, **kwargs):
         """Naviagte between three pages"""
+        # # check if condition is satisfied to change page
         if not self.pages[f"Page {page_number}"].check_conditions():
           return
+        # # change page
         self.tab_widget.setCurrentIndex(page_number-1)
-        self.pages[f"Page {page_number}"].load()
-        
+        self.pages[f"Page {page_number}"].load()        
         self.current_page = page_number
         self.update_navbar()
-        
+        # # change side bar status accordingly
         for id, w in self.sidebar_buttons.items():
           if id == f"Page {page_number}":
             w.setObjectName("active")
@@ -584,26 +579,27 @@ class MainWindow(QMainWindow):
           w.setStyleSheet(styleSheet)
       
     def next_page(self):
+        """naviagte to the next page"""
         self.change_page(self.current_page + 1)
     
     def prev_page(self):
+        """navigate to the previous page"""
         self.change_page(self.current_page - 1)
     
     def make_sidebar(self):
-        """Add side bars"""
+        """Set up side menu bars"""
         self.sidebar_buttons = {}
         self.sidebar_layout = QVBoxLayout()
-        
+        # # add fda logo
         self.sidebar_layout.addStretch(1)
         self.fda_logo = QLabel()
         self.fda_logo.setObjectName("fda_logo")
         self.fda_logo.setPixmap(QPixmap("UI_assets/fda_logo_full.jpg").scaled(200,150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         self.sidebar_layout.addWidget(self.fda_logo)
         self.sidebar_layout.addStretch(1)
-        
+        # # add side bar icons
         page_icons = ["UI_assets/file-line-icon.svg", "UI_assets/sliders-icon.svg", "UI_assets/graph-icon.svg"]
-        page_names = ["Input", "Variables", "Report"]
-        
+        page_names = ["Input", "Variables", "Report"]        
         for i, icon_path in enumerate(page_icons):
           p = i + 1
           self.sidebar_buttons[f"Page {p}"] = QPushButton(page_names[i], self)
@@ -618,7 +614,7 @@ class MainWindow(QMainWindow):
         self.sidebar_layout.addStretch(10)
         self.sidebar_layout.setSpacing(0)
         self.sidebar_layout.setContentsMargins(0,0,0,0)
-
+        # # add about me button
         self.about = QWidget()
         self.am_layout = QVBoxLayout()
         self.about.setLayout(self.am_layout)
@@ -664,6 +660,7 @@ class MainWindow(QMainWindow):
         self.update_navbar()
     
     def update_navbar(self):
+        """adjust page navigation buttons for each page"""
         if self.current_page == 1:
           self.prev_button.hide()
         else:
@@ -675,10 +672,16 @@ class MainWindow(QMainWindow):
           self.next_button.show()
 
     def about_info(self):
+        """show about me window"""
         self.w = AboutWindow()
         self.w.show()
 
-class AboutWindow(QMainWindow):                         
+class AboutWindow(QMainWindow):     
+    """
+    Class for about me window.
+    Include gitHub link, version number
+    and other necessary infomation
+    """                    
     def __init__(self):
         super().__init__()
         self.setWindowTitle("bias.myti.Report")
@@ -686,14 +689,16 @@ class AboutWindow(QMainWindow):
         self.load_GUI()
 
     def load_GUI(self):
+        """widget components for the window"""
         self.main_layout = QGridLayout()
         self.main_widget = QWidget()
         self.main_widget.setLayout(self.main_layout)
         self.setCentralWidget(self.main_widget)
-
+        # # title
         self.title = QLabel('bias.myti.Report', self)
         self.title.setObjectName("title")
         self.main_layout.addWidget(self.title, 0, 0, 1, 1)
+        # # github link, version, department
         link_github = 'https://github.com/DIDSR/myti.report/tree/main'
         infos = "A visualization tool to facilitate the comparison of user-implemented bias mitigation methods for AI models." + \
         "<br><br>GitHub Page: <a href=\"{0}\">{1}</a>".format(link_github, link_github) + \
@@ -702,6 +707,7 @@ class AboutWindow(QMainWindow):
         self.info = QLabel(infos, self)
         self.info.setWordWrap(True)
         self.main_layout.addWidget(self.info, 1, 0, 1, 2)
+        # # fda logo
         self.fda_logo = QLabel()
         self.fda_logo.setObjectName("fda_logo")
         self.fda_logo.setPixmap(QPixmap("UI_assets/fda_logo.jpg").scaled(60,60, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
