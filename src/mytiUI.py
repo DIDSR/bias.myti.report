@@ -157,8 +157,7 @@ class InitialPage(Page):
         self.lbl_stdy_type = QLabel('Select Study Type', self)  
         self.settings_layout.addWidget(self.lbl_stdy_type, 0, 0, 1, 1)           
         # # mitigation method compare box and description
-        self.rb_miti_compare = QRadioButton('Compare Bias Mitigation Methods', self)
-        self.rb_miti_compare.setChecked(True)  
+        self.rb_miti_compare = QRadioButton('Compare Bias Mitigation Methods', self)          
         self.settings_layout.addWidget(self.rb_miti_compare, 1, 0, 1, 2)      
         self.rb_miti_compare.toggled.connect(self.study_update) 
         miti_compare_info = 'If comparing bias mitigation methods is selected, results using different bias mitigation methods will be campared and visualized.'
@@ -176,6 +175,7 @@ class InitialPage(Page):
         # # none box and description
         self.rb_none = QRadioButton('None', self)        
         self.rb_none.toggled.connect(self.study_update)
+        self.rb_none.setChecked(True)
         self.settings_layout.addWidget(self.rb_none, 5, 0, 1, 2)
         none_info = 'If none is selected, only results from bias amplification will be visualized.'
         self.lbl_none = QLabel(none_info, self)
@@ -289,6 +289,7 @@ class SecondPage(Page):
           self.layout.addWidget(self.information_icon[selection], i+2, 1, 1, 1, alignment=Qt.AlignmentFlag.AlignLeft)
           self.selection_boxes[selection] = QComboBox(self) # column name selection box
           self.selection_boxes[selection].addItems([default] + column_list)
+          self.selection_boxes[selection].currentTextChanged.connect(self.check_boxes)
           self.layout.addWidget(self.selection_boxes[selection], i+2, 2, 1, 2)
         # # adding additional information section
         self.addition_info = QLabel()
@@ -297,6 +298,8 @@ class SecondPage(Page):
         self.layout.addWidget(self.addition_info, i+3, 0, 1, 3)     
         self.layout.setRowStretch(i+4, 2)
         self.layout.setColumnStretch(2, 10)
+        
+        self.check_boxes()
 
     def get_columns(self):
         """Get list of columns from the input csv file"""
@@ -307,6 +310,9 @@ class SecondPage(Page):
       """Update selected variables"""
       for k in self.selection_defaults.keys():
         self.parent.variables[k] = str(self.selection_boxes[k].currentText())
+      for key in list(self.parent.variables.keys()):
+        if key not in self.selection_defaults.keys():
+           del self.parent.variables[key]
         
     def check_conditions(self):
       """Sanity check to decide if the second page can be appropriately loaded"""
