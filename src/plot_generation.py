@@ -208,6 +208,7 @@ def bias_report_generation(variables, csv_path, exp_type, study_type):
         section_name = data[s_col].unique().tolist()
         section_name.sort()
     elif study_type == 'None':
+        study_type = 'baseline'
         data['Section Name'] = 'Bias amplification'
         s_col = 'Section Name'
         section_name = data[s_col].unique().tolist()
