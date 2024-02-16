@@ -149,6 +149,7 @@ def figure_plotting(
 def calculate_CI(df, mean_col='Mean', std_col='Std', confidence_level=0.95, sample_size=25):
     """
     Function to calculate confidence interval according to standard deviation, confidence level and sample size.
+    
     Arguments
     =========
     df

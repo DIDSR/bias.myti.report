@@ -14,13 +14,14 @@ import shutil
 from pathlib import Path
 import os
 
-from plot_generation import *
+from .plot_generation import *
 
 class ClickLabel(QLabel):
     """class to create clickable QLabel object"""
     clicked = pyqtSignal()
 
     def mousePressEvent(self, event):
+        """define the mouse click event for the QLabel"""
         self.clicked.emit()
         QLabel.mousePressEvent(self, event)
 
