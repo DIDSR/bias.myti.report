@@ -3,7 +3,7 @@ from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 import pandas as pd
-from datetime import date
+from datetime import date, datetime
 from math import ceil
 import os
 
@@ -35,8 +35,8 @@ rcParams['axes.labelcolor'] = AXIS_COLOR
 rcParams['axes.edgecolor'] = AXIS_COLOR
  
 def figure_plotting(
-    data, x_col, s_col, hue_col, ylim=(0,1), y_label=None, x_label=None, style_col=None, style_dict={}, color_dict={}, 
-    mean_col='Mean', lower_CI_col="lower_CI", upper_CI_col="upper_CI", plot_section=[]):  
+    data, x_col, s_col, hue_col, study_type, ylim=(0,1), y_label=None, x_label=None, style_col=None, 
+    style_dict={}, color_dict={}, mean_col='Mean', lower_CI_col="lower_CI", upper_CI_col="upper_CI", plot_section=[]):  
     """
     Function to generate subplots with input plot sections and parameters.
 
@@ -72,78 +72,117 @@ def figure_plotting(
         list that has all the sub-sections for plotting (including legends section)
     
     """
-    # # calculate number of rows and columns for subplots
-    if len(plot_section) < NUM_SUB_COL:
-        col_num = len(plot_section)
-        row_num = 1
-    else:
-        col_num = NUM_SUB_COL
-        row_num = ceil(len(plot_section) /col_num) #calculate reguired number of rows
-    # # create figure with sub-sections
     fig = plt.figure(figsize = (text_width, text_width*FIGURE_RATIO))
-    gs = fig.add_gridspec(row_num, col_num)
-    data = data.sort_values(x_col)
-    axes = []
-    for r in range(row_num):
-      for c in range(col_num):
-        if (r * col_num + c + 1) <= len(plot_section):
-            axes.append(fig.add_subplot(gs[r,c]))
-            axes[-1].set_ylim(ylim)
-            axes[-1].set_xticks(data[x_col].unique().tolist())
-            if x_label:
-              axes[-1].set_xlabel(x_label)
-            if c == 0:
-              axes[-1].set_ylabel(y_label)
-            else:
-              axes[-1].set_yticklabels([])
-    # # generate plots in each sub-sections
-    for i, m in enumerate(plot_section):
-      ax = axes[i]
-      ax.set_title(m)
-      # # plot legends in an individual sub-section
-      if m == "legends":
-        ax.axis("off")
-        ax.set_title(None)
-        ax.set_ylim(0,1)
-        ax.set_xlim(0,1)
-        name_map = SUBGROUP_NAME_MAPPING
-        for h in data[hue_col].unique().tolist():
-            if h not in name_map:
-                name_map[h] = h
-        hue_lines = [Patch(facecolor=color_dict[h], label=name_map[h]) for h in data[hue_col].unique().tolist()]
-        hue_legend = ax.legend(handles=hue_lines, bbox_to_anchor=(0.5,0.5), loc='lower center', title=hue_col)
-        if style_col:
-          style_lines = [Line2D([0], [0], ls=style_dict[s], color='k', label=name_map[s]) for s in data[style_col].unique().tolist()]
-          style_legend = ax.legend(handles=style_lines, title="Positive-Associated", bbox_to_anchor=(0.5,0.5), loc='upper center')
-          fig.add_artist(hue_legend)
-      # # generate plots from the input data
-      else:
-        temp_data = data[data[s_col] == m].copy()
-        if len(temp_data) == 0: # blank plot if no available data
-          ax.text((ax.get_xlim()[1] - ax.get_xlim()[0])/2 + ax.get_xlim()[0], (ax.get_ylim()[1] - ax.get_ylim()[0])/2 + ax.get_ylim()[0], "N/A", va='center', ha='center', bbox=dict(facecolor='white', edgecolor='white'), fontsize=16)
-          continue
+    # # plot for baseline type study
+    if study_type == 'None':
+        gs = fig.add_gridspec(1,1)
+        ax = fig.add_subplot(gs[0,0])
+        ax.set_ylim(ylim)
+        data = data[data[s_col] == plot_section[0]].sort_values(x_col).copy()
+        ax.set_title(plot_section[0])
+        ax.set_ylabel(y_label)
+        ax.set_xlabel(x_label)
         if style_col is not None:
           gb = [hue_col, style_col]
         else:
           gb = [hue_col]
-        for gp, df in temp_data.groupby(gb):
+        for gp, df in data.groupby(gb):
           hue = gp[0]
           if style_col:
             style = gp[-1]
           else:
-            style = 'Default'
-          # plot line and confidence interval
+            style = 'Default'          
           ax.fill_between(df[x_col], df[lower_CI_col], df[upper_CI_col], color=color_dict[hue], alpha=CI_ALPHA)
           ax.plot(df[x_col], df[mean_col], c=color_dict[hue], ls=style_dict[style])
         ax.set_xticks(data[x_col].unique().tolist())
         # set the "0" to "B" (for baseline)
         labels = ax.get_xticks().tolist()
         labels[0] = "B"
-        ax.set_xticklabels(labels)    
+        ax.set_xticklabels(labels)
+        
+        name_map = SUBGROUP_NAME_MAPPING
+        for h in data[hue_col].unique().tolist():
+            if h not in name_map:
+                name_map[h] = h
+        hue_lines = [Patch(facecolor=color_dict[h], label=name_map[h]) for h in data[hue_col].unique().tolist()]
+        hue_legend = ax.legend(handles=hue_lines,  title=hue_col, loc='upper left')
+        if style_col:
+          style_lines = [Line2D([0], [0], ls=style_dict[s], color='k', label=name_map[s]) for s in data[style_col].unique().tolist()]
+          style_legend = ax.legend(handles=style_lines, title="Positive-Associated", loc='upper right')
+          fig.add_artist(hue_legend)
+    
+    else:
+        # # calculate the number of rows needed
+        col_num = NUM_SUB_COL
+        row_num = ceil(len(plot_section) /col_num)
+        # # create figure with sub-sections        
+        gs = fig.add_gridspec(row_num, col_num)
+        data = data.sort_values(x_col)
+        axes = []
+        for r in range(row_num):
+          for c in range(col_num):
+            if (r * col_num + c + 1) <= len(plot_section):
+                axes.append(fig.add_subplot(gs[r,c]))
+                axes[-1].set_ylim(ylim)
+                axes[-1].set_xticks(data[x_col].unique().tolist())
+                if x_label:
+                  axes[-1].set_xlabel(x_label)
+                if c == 0:
+                  axes[-1].set_ylabel(y_label)
+                else:
+                  axes[-1].set_yticklabels([])
+        # # generate plots in each sub-sections
+        for i, m in enumerate(plot_section):
+          ax = axes[i]
+          if study_type == "Study Finite Sample Size Effect":
+              ax.set_title(f"{m} training set size")
+          else:
+              ax.set_title(m)
+          # # plot legends in an individual sub-section
+          if m == "legends":
+            ax.axis("off")
+            ax.set_title(None)
+            ax.set_ylim(0,1)
+            ax.set_xlim(0,1)
+            name_map = SUBGROUP_NAME_MAPPING
+            for h in data[hue_col].unique().tolist():
+                if h not in name_map:
+                    name_map[h] = h
+            hue_lines = [Patch(facecolor=color_dict[h], label=name_map[h]) for h in data[hue_col].unique().tolist()]
+            hue_legend = ax.legend(handles=hue_lines, bbox_to_anchor=(0.5,0.5), loc='lower center', title=hue_col)
+            if style_col:
+              style_lines = [Line2D([0], [0], ls=style_dict[s], color='k', label=name_map[s]) for s in data[style_col].unique().tolist()]
+              style_legend = ax.legend(handles=style_lines, title="Positive-Associated", bbox_to_anchor=(0.5,0.5), loc='upper center')
+              fig.add_artist(hue_legend)
+          # # generate plots from the input data
+          else:
+            temp_data = data[data[s_col] == m].copy()
+            if len(temp_data) == 0: # blank plot if no available data
+              ax.text((ax.get_xlim()[1] - ax.get_xlim()[0])/2 + ax.get_xlim()[0], (ax.get_ylim()[1] - ax.get_ylim()[0])/2 + ax.get_ylim()[0], "N/A", va='center', ha='center', bbox=dict(facecolor='white', edgecolor='white'), fontsize=16)
+              continue
+            if style_col is not None:
+              gb = [hue_col, style_col]
+            else:
+              gb = [hue_col]
+            for gp, df in temp_data.groupby(gb):
+              hue = gp[0]
+              if style_col:
+                style = gp[-1]
+              else:
+                style = 'Default'
+              # plot line and confidence interval
+              ax.fill_between(df[x_col], df[lower_CI_col], df[upper_CI_col], color=color_dict[hue], alpha=CI_ALPHA)
+              ax.plot(df[x_col], df[mean_col], c=color_dict[hue], ls=style_dict[style])
+            ax.set_xticks(data[x_col].unique().tolist())
+            # set the "0" to "B" (for baseline)
+            labels = ax.get_xticks().tolist()
+            labels[0] = "B"
+            ax.set_xticklabels(labels)    
     # # save the figure
     gs.tight_layout(fig, w_pad=0.1, h_pad=0.75)
     fig.savefig(os.path.join('../example/', f"figure_{y_label}.png"), bbox_inches='tight')
-    plt.close("all")
+    plt.close("all")    
+
     
 
 def calculate_CI(df, mean_col='Mean', std_col='Std', confidence_level=0.95, sample_size=25):
@@ -203,19 +242,19 @@ def bias_report_generation(variables, csv_path, exp_type, study_type):
     if study_type == 'Compare Bias Mitigation Methods':
         s_col = variables.get('Mitigation Method')
         section_name = data[s_col].unique().tolist()
+        section_name.append("legends")
     elif study_type == 'Study Finite Sample Size Effect':
         s_col = variables.get('Training Data Size')
         section_name = data[s_col].unique().tolist()
-        section_name.sort()
+        section_name.append("legends")
     elif study_type == 'None':
-        study_type = 'baseline'
         data['Section Name'] = 'Bias amplification'
         s_col = 'Section Name'
         section_name = data[s_col].unique().tolist()
     else:
         raise NotImplementedError()
-    # # add a separate section to plot legends
-    section_name.append("legends")
+    # # add a separate section to plot legends    
+    plot_kwargs['study_type'] = study_type
     plot_kwargs['s_col'] = s_col
     plot_kwargs['plot_section'] = section_name
     # # get bias amplification type
@@ -241,18 +280,22 @@ def bias_report_generation(variables, csv_path, exp_type, study_type):
         # # plotting
         figure_plotting(data=temp_data.copy(), y_label=m, **plot_kwargs)        
         # # generate corresponding report description
-        info = f"The report shows the results of {study_type.lower()} experiment \nwhen bias is amplified by {exp_type.lower()}.\n"
-        if study_type == "Compare Bias Mitigation Methods":
-            info = info + f"Subplots in the above figure are comparing bias mitigation methods with baseline.\n"
-        elif study_type == "Study Finite Sample Size Effect":
-            info = info + f"Subplots in the figure are comparing different training dataset size.\n"
-        info = info + f"The y-axis shows the {m} value of prediction results on test set.\n"
+        # according to study type
+        if study_type == "None":
+            info = f"The report presents the subgroup {m} when model bias has been amplified by {exp_type.lower()}."
+        elif study_type == "Compare Bias Mitigation Methods":
+            info = f"The report compares the subgroup {m} between different bias mitigation methods when bias is amplified by {exp_type.lower()}." + \
+            "Each subplot in the figure represents one implemented mitigation method."
+        else:            
+            info = f"The report compares the subgroup {m} between different training set size when bias is amplified by {exp_type.lower()}." + \
+            "Subplots in the figure represent various sample size used for model training."
+        # according to amplification type
         if exp_type == "Quantitative Misrepresentation":
-            info = info + "The x-axis indicates the subgroup disease prevelance difference in the training set.\n" + \
-            "The positive-associated subgroup refers to the subgroup with the higher disease prevalence\n in the training set."
-        elif exp_type == "Inductive Transfer Learning":
-            info = info + "The x-axis indicates the number of layers being frozen during the final model fine-tune.\n" + \
-            "The positive-associated subgroup refers to the subgroup associated with the same model output\n during extra transfer learning step."
+            info = info + "For these experiments, the positive-associated subgroup refers to the subgroup with the higher disease prevalence in the training set." + \
+            "The x-axis indicates the subgroup disease prevelance difference in the training set, while B indicates the baseline model."
+        else:
+            info = info + "For these experiments, the positive-associated subgroup refers to the subgroup associated with the same model output during extra transfer learning step." + \
+            "The x-axis indicates the number of layers being frozen during the final model fine-tune step, while B indicates the baseline model."                    
         info_list.append(info)
     return m_list, info_list
     
@@ -285,8 +328,9 @@ def save_report(info, img_path, save_path):
     ax2.set_title(None)
     ax2.set_ylim(0,1)
     ax2.set_xlim(0,1)
-    info = info + "\n\nReport generated by: myti.report v1.0" + f"\nDate: {date.today()}"
-    ax2.text(0.02, 0.25, info)
+    curr_time = datetime.now().strftime('%H:%M:%S')
+    info = info + "\n\nReport generated by: myti.report v1.0" + f"\nDate: {date.today()}" + f"\nTime: {curr_time}"
+    ax2.text(0.02, 0.25, info, wrap=True)
     logo = plt.imread('UI_assets/fda_logo.jpg')
     fig.figimage(logo, 1700, 10)
     fig.savefig(save_path, bbox_inches='tight')

@@ -98,7 +98,7 @@ class InitialPage(Page):
         self.upload_layout.addWidget(self.lbl_up_load_file)
         
         # # edit box for file directory   
-        self.edit_up_load_file = QLineEdit('../example/example.csv', self) 
+        self.edit_up_load_file = QLineEdit(self.parent.csv_path, self) 
         self.edit_up_load_file.resize(350,25)
         self.upload_layout.addWidget(self.edit_up_load_file)
 
@@ -175,7 +175,6 @@ class InitialPage(Page):
         # # none box and description
         self.rb_none = QRadioButton('None', self)        
         self.rb_none.toggled.connect(self.study_update)
-        self.rb_none.setChecked(True)
         self.settings_layout.addWidget(self.rb_none, 5, 0, 1, 2)
         none_info = 'If none is selected, only results from bias amplification will be visualized.'
         self.lbl_none = QLabel(none_info, self)
@@ -186,13 +185,16 @@ class InitialPage(Page):
         self.exp_box.setLayout(self.exp_layout)
         self.layout.addWidget(self.exp_box)
         self.layout.addSpacing(1)
-        # # set exp and study selection hidden initially
-        self.description_box.setHidden(True)
+        # # set exp and study selection hidden initially        
         self.retain = QSizePolicy()
         self.retain.setRetainSizeWhenHidden(True)
         self.description_box.setSizePolicy(self.retain)
-        self.settings_box.setHidden(True)
+        
         self.settings_box.setSizePolicy(self.retain)
+        if not self.parent.exp_type:
+            self.description_box.setHidden(True)
+        if not self.parent.study_type:
+            self.settings_box.setHidden(True)        
 
 
     def upload_csv(self):
@@ -254,7 +256,6 @@ class SecondPage(Page):
         self.lbl_heading.setObjectName("heading")
         self.layout.addWidget(self.lbl_heading,1,0,1,2)
         # # variables
-        column_list = self.get_columns()
         self.selection_defaults = {
           "Positive-associated Subgroup":"Positive-associated",
           "Subgroup":"Subgroup",
@@ -288,9 +289,14 @@ class SecondPage(Page):
           self.information_icon[selection].clicked.connect(self.add_info) # click to show additional infomation
           self.layout.addWidget(self.information_icon[selection], i+2, 1, 1, 1, alignment=Qt.AlignmentFlag.AlignLeft)
           self.selection_boxes[selection] = QComboBox(self) # column name selection box
-          self.selection_boxes[selection].addItems([default] + column_list)
+          self.selection_boxes[selection].addItem(default)
+          
           self.selection_boxes[selection].currentTextChanged.connect(self.check_boxes)
           self.layout.addWidget(self.selection_boxes[selection], i+2, 2, 1, 2)
+        if self.parent.csv_path != "--Please select CSV File from folder--":
+            column_list = self.get_columns()
+            for selection, default in self.selection_defaults.items(): 
+                self.selection_boxes[selection].addItems(column_list)
         # # adding additional information section
         self.addition_info = QLabel()
         self.addition_info.setObjectName("not_selected")
@@ -390,9 +396,10 @@ class FinalPage(Page):
         if all(item in cols for item in variables):
           return True
         else:
+          missing_var = ', '.join(list(set(variables).difference(cols)))
           msg = QMessageBox(self) 
           msg.setIcon(QMessageBox.Icon.Warning)  
-          msg.setText("Warning: some variables do not exist in the csv file!")  
+          msg.setText(f"Warning: variable <b>{missing_var}</b> do not exist in the csv file!")  
           msg.setWindowTitle("Warning MessageBox") 
           msg.setStandardButtons(QMessageBox.StandardButton.Ok) 
           msg.exec()
@@ -416,8 +423,13 @@ class FinalPage(Page):
         # # adding example images and title with metric name
         self.example_images = []
         self.tile_view = QWidget()
+        self.tile_scroll = QScrollArea()
         self.tile_layout = QVBoxLayout()
         self.tile_view.setLayout(self.tile_layout)
+        #self.tile_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        #self.tile_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.tile_scroll.setWidgetResizable(True)
+        
         self.tile_figures = []
         self.tile_title = []
         self.layout.addWidget(self.tile_view,2,0,2,1)
@@ -433,7 +445,8 @@ class FinalPage(Page):
         self.tile_layout.setStretch(1,2)
         self.tile_layout.setStretch(3,2)
         self.tile_layout.setSpacing(0)
-        self.tile_layout.addStretch(1)        
+        self.tile_layout.addStretch(1)   
+        #self.tile_scroll.setWidget(self.tile_view)     
         # Selected Plot
         self.selected_view = QWidget()
         self.selected_layout = QVBoxLayout()
@@ -456,10 +469,8 @@ class FinalPage(Page):
         self.selected_layout.addWidget(self.lbl_selected_dscp)
         self.selected_layout.setSpacing(0)
         # # references TODO: add correct links
-        link_1 = 'https://github.com/DIDSR/myti.report/tree/main'
-        link_2 = 'https://github.com/DIDSR/myti.report/tree/main'
-        references = "For additional reading:  <br>Y. Zhang, A. Burgon, N. Petrick, B. Sahiner, G. Pennello, R. K. Samala*, “Evaluation of AI bias mitigation algorithms by systematically promoting sources of bias”, RSNA Program Book (2023).<a href=\"{link_1}\">Link</a>".format(link_1=link_1) + \
-        "<br>A. Burgon, Y. Zhang, B. Sahiner, N. Petrick, K. H. Cha, R. K. Samala*, “Manipulation of sources of bias in AI device development”, Proc. of SPIE (2024). <a href=\"{link_2}\">Link</a>".format(link_2=link_2)
+        references = "For additional reading:  <br>Y. Zhang, A. Burgon, N. Petrick, B. Sahiner, G. Pennello, R. K. Samala*, “Evaluation of AI bias mitigation algorithms by systematically promoting sources of bias”, RSNA Program Book (2023)." + \
+        "<br>A. Burgon, Y. Zhang, B. Sahiner, N. Petrick, K. H. Cha, R. K. Samala*, “Manipulation of sources of bias in AI device development”, Proc. of SPIE (2024)."
         self.lbl_references = QLabel(references)
         self.lbl_references.setObjectName("references")
         self.lbl_references.setOpenExternalLinks(True)
@@ -487,8 +498,7 @@ class FinalPage(Page):
         
         # # Set the large image and descriptiong
         self.lbl_selected_plot.setPixmap(QPixmap(self.example_images[figure_number]).scaled(500,375, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-        info = self.info_list[figure_number].replace("\n", "")
-        self.lbl_selected_dscp.setText(info)
+        self.lbl_selected_dscp.setText(self.info_list[figure_number])
         self.current_plot = figure_number
     
     def save_fig(self):
@@ -506,9 +516,9 @@ class MainWindow(QMainWindow):
         self.setGeometry(100, 100, 1200, 700) 
         
         # Set argument placeholders
-        self.csv_path = '../example/example.csv'
-        self.exp_type = 'Quantitative Misrepresentation'
-        self.study_type = 'None'
+        self.csv_path = "--Please select CSV File from folder--"
+        self.exp_type = ""
+        self.study_type = ""
         self.current_page = 1
         self.variables = {}
         
