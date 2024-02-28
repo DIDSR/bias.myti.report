@@ -11,7 +11,7 @@ import json
 equal_stratification_groups = ['M-White-Yes-CR', 'F-White-Yes-CR','M-Black-Yes-CR', 'F-Black-Yes-CR',
                                'M-White-No-CR', 'F-White-No-CR','M-Black-No-CR', 'F-Black-No-CR']
 # CONSTANTS ===============
-subtract_from_smallest_subgroup = 5
+#subtract_from_smallest_subgroup = 5
 group_dict = { 
     'sex':{'subgroups':['M','F'],"loc":['patient_info', 'sex']},
     'race':{'subgroups':['White','Black'],'loc':['patient_info', 'race']},
@@ -43,10 +43,9 @@ def bootstrapping(args):
     save_folder = os.path.join(args.save_dir, args.partition_name)
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)
-    conversion_table_files = "/gpfs_projects/ravi.samala/OUT/2022_CXR/data_summarization/20221010/20221010_open_A1_jpegs/conversion_table.json"
-    tasks = ["M" "F" 'White' 'Black' 'Yes' 'No']
+    conversion_table_files = args.conversion_file
     # 2) a) create overall dataframe (switch from json formatting to csv) ===========================================
-    conversion_tables = pd.concat([pd.read_json(fp) for fp in conversion_table_files.values()])
+    conversion_tables = pd.concat([pd.read_json(conversion_table_files)])
     input_summaries = []
     for in_summ in args.input_list:
         input_summaries.append(pd.read_json(in_summ, orient='table'))
@@ -57,9 +56,9 @@ def bootstrapping(args):
     all_df = adjust_subgroups(all_df)
     # 2) b) limit to labels in group_dict (remove others or not depending on arguments passed) ======================
     for grp in group_dict:
-        if len(df[df[grp].isin(tasks)]) == 0: # not interested in this group as an output task, don't restrict
+        if len(df[df[grp].isin(args.tasks)]) == 0: # not interested in this group as an output task, don't restrict
             continue
-        df[grp] = df[grp].replace({t:'other' for t in df[grp].unique() if t not in tasks}, regex=True)
+        df[grp] = df[grp].replace({t:'other' for t in df[grp].unique() if t not in args.tasks}, regex=True)
         df = df[df[grp] != 'other']
     bp_df = df.drop('Path', axis=1).drop_duplicates() # by-patient df for splitting/stratifying
     print("\nNumber of patients/subgroup in input summary:")
@@ -110,6 +109,8 @@ def bootstrapping(args):
     bp_summary, img_summary = get_stats(output_files)
     bp_summary.to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", 'by_patient_split_summary.csv'))
     img_summary.to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", 'by_image_split_summary.csv'))
+    print("\nBy patient summary of data partition\n")
+    print(bp_summary)
 
     # 5) save arguments and settings for future reference
     tracking_info = args.__dict__
@@ -119,7 +120,9 @@ def bootstrapping(args):
         json.dump(tracking_info, fp, indent=4)
 
 def adjust_subgroups(in_df):
-    ''' adjust subgroup information displayed in dataframe to only reflect attributes that are specified as import in equal_stratification_groups'''
+    """
+    Adjust subgroup information displayed in dataframe to only reflect attributes that are specified as import in equal_stratification_groups.
+    """
     df = in_df.copy()
     rel_subs = list(set([x for y in equal_stratification_groups for x in y.split("-")]))
     irrel_groups = [x for x in group_dict if len([z for z in group_dict[x]['subgroups'] if z in rel_subs]) == 0]
@@ -135,15 +138,25 @@ def adjust_subgroups(in_df):
     return df
 
 def adjust_comp(in_df, random_seed, split_frac=1, split_num=None):
-    '''
-        adjusts the composition of in_df to match the comp specified, if split_frac or split_num are specified,
-    generates a split of the specified size.
-    -------
-    in_df - input dataframe (by-patient)
-    random_seed - random control
-    split_frac - the fraction (decimal) of the available data to return
-    split_num - the number of patients overall to return
-    '''
+    """
+    Adjusts the composition of in_df to match the comp specified.
+    
+    Arguments
+    =========
+    in_df
+        input dataframe (by-patient)
+    random_seed
+        random control
+    split_frac
+        the fraction (decimal) of the available data to return
+    split_num
+        the number of patients overall to return
+        
+    Returns
+    =======
+    pandas.DataFrame
+        dataframe that with matched comp
+    """
     df = in_df.copy()
     subgroup_proportions = {sub:1 for sub in equal_stratification_groups}
     # joint process for both custom and equal comp type ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~
@@ -166,12 +179,18 @@ def adjust_comp(in_df, random_seed, split_frac=1, split_num=None):
     return adjusted_df
 
 def prevent_data_leakage(base_df, df_list:list):
+    """
+    Prevent duplicate patient/images in different datasets
+    """
     out_df = base_df.copy()
     for df in df_list:
         out_df = out_df[~out_df['patient_id'].isin(df['patient_id'])]
     return out_df
 
 def convert_to_csv(df, tasks):
+    """
+    Convert the partitioned datasets to save as csv files
+    """
     for grp in group_dict:
         temp_df = df[grp].str.get_dummies()
         df = pd.concat([df, temp_df], axis=1)
@@ -183,6 +202,29 @@ def convert_to_csv(df, tasks):
     return df[cols]
 
 def convert_from_summary(df, conversion_table, min_img, max_img, selection_mode, random_state):
+    """
+    Create overall dataframe from json to csv format, and sample the images per patient according to image selection inputs.
+    
+    Arguments
+    =========
+    df
+        dataframe that read from data summary json file
+    conversion_table
+        dataframe that read from data conversion json file
+    min_img
+        minimal number of images per patient
+    max_img
+        maximum number of images per patient
+    selection_mode
+        string that specify how to select images for patients
+    random_state
+        for random control
+        
+    returns
+    =======
+    pandas.DataFrame
+        dataframe that contains patient information and sampled images for each patient
+    """
     for val in group_dict.values():
         x = val['loc']
         df = df[df['images_info'].str.len() != 0].copy() # remove rows without image information
@@ -220,6 +262,9 @@ def convert_from_summary(df, conversion_table, min_img, max_img, selection_mode,
     return df
 
 def get_subgroup(row):
+    """
+    Get subgroup strings.
+    """
     subgroup = ""
     for g in group_dict:
         if len(subgroup) == 0:
@@ -229,6 +274,19 @@ def get_subgroup(row):
     return subgroup
 
 def get_stats(df_dict):
+    """
+    Generate statistical summary of partitioned data, including subgroup information.
+    
+    Arguments
+    =========
+    df_dict
+        dictionary that contains datasets as keys, and data csv files as corresponding values
+        
+    Returns
+    =======
+    pandas.DataFrame
+        generated summary that contains number of patients/images in each dataset.    
+    """
     df_list = []
     for id, split_df in df_dict.items():
         temp_df = split_df.copy()
@@ -244,6 +302,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # # partition general settings (input file, classes, split sizes, stratification)
     parser.add_argument("--input_list", action='append', required=True, default=[], help="list of input summary files")
+    parser.add_argument("--conversion_file", required=True, help="conversion files from data conversion")
+    parser.add_argument("--tasks", nargs='+', default=[], required=True)
     parser.add_argument("--test_size", type=float, required=True)
     parser.add_argument("--validation_size", type=float, required=True)
     parser.add_argument("--remaining_to_test", default=False)
@@ -252,7 +312,6 @@ if __name__ == '__main__':
     parser.add_argument("--partition_name", type=str, required=True)
     parser.add_argument("--save_dir", type=str, required=True)
     # # number of images per patient
-    parser.add_argument("--img_splits", default=[], action='append', help="the splits that the img selection settings will be applied to")
     parser.add_argument("--min_img_per_patient", default=0)
     parser.add_argument("--max_img_per_patient", default=None)
     parser.add_argument("--patient_img_selection_mode", default='random', choices=['random', 'first','last'])    

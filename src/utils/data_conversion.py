@@ -46,7 +46,8 @@ def process_convert_image_loop(img_info:list):
     cv2.imwrite(jpeg_path, adjusted_image)
 
 def process_convert_dicom_to_jpeg(args):
-    """ Convert and crop dicom files and save as jpeg files, where the name of the jpeg is patient_id_#.
+    """ 
+    Convert and crop dicom files and save as jpeg files, where the name of the jpeg is patient_id_#.
     """
     print("\nStart image cropping and convert to jpeg")
     input_file = args.input_file
