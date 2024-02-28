@@ -7,9 +7,6 @@ import os
 import sys
 from multiprocessing import Pool
 from distutils.util import strtobool
-from skimage.measure import label
-from skimage.morphology import closing, disk
-from scipy import ndimage
 import tqdm
 
 def get_dcms(file_path):
@@ -20,12 +17,6 @@ def get_dcms(file_path):
                 fp = os.path.join(p, file)
                 dcms.append(fp)
     return dcms
-
-def get_largest_region(segmentation):
-    labels = label(segmentation)
-    assert( labels.max() != 0 ) # assume at least 1 CC
-    largest_region = labels == np.argmax(np.bincount(labels.flat)[1:])+1
-    return largest_region
 
 def process_convert_image_loop(img_info:list):
     """ Read dicom files, do histogram equalization, cropping the image and save as jpeg file.

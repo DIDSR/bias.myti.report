@@ -1,33 +1,3 @@
-'''
-    Training program based on pytorch
-    All params have brief descriptions in the argparse.ArgumentParser below
-    Tensorboard can be used to track the training process
-    
-    Supported models:
-            "googlenet" 
-            "resnet18" 
-            "wide_resnet50_2" 
-            "densenet121" 
-            "resnext50_32x4d"
-    
-    How are the pre-trained models adapted to a binary output:
-        Implementation in add_classification_layer_v1 function: 
-            - add the following layers in sequence: dropout (default p=0.2), linear(1000x512), linear(512x128), linear(128x1)
-    
-    Added functionality to do custom transfer learning, freezing at different points. Each DCNN structure requires
-    custom code to work. The following are the supported models. This list will be updated as additional DCNNs are added.
-            "resnet18"
-            "densenet121"
-
-    RKS, started Aug 1, 2022. 
-    Git is used to track the versions.
-
-    Worked in the following virtual environment:
-        >> source /gpfs_projects/ravi.samala/venvs/venv_Pytorch/bin/activate
-    
-    When running the first time, pytorch will download the pretrained model
-
-'''
 import torch
 import torch.nn as nn
 import torchvision.models as models
@@ -86,35 +56,11 @@ def apply_custom_transfer_learning__resnet18(net):
     assert len(parameters) == len(fine_tune_layers)
                 
     return net
-    
-
-def apply_custom_transfer_learning__densenet121(net):
-    model_layers = [name for name,para in net.named_parameters()]
-    
-    for ii in range(125):
-            if ii == 0:
-                layers = [','.join(model_layers[:2])]          
-            elif ii <= 119 and ii > 0:
-                layers += [','.join(model_layers[(ii*3):(ii*3+2)])]
-            else:
-                layers += [','.join(model_layers[(360+(ii-120)*2):(361+(ii-120)*2)])]
-                
-    fine_tune_layers = ','.join(layers[args.upto_freeze-len(layers):]).split(',')    
-    for name, param in net.named_parameters():
-        print(name)
-        if name not in fine_tune_layers:
-            param.requires_grad = False
-        
-    parameters = list(filter(lambda p: p.requires_grad, net.parameters()))
-    print([len(parameters), len(fine_tune_layers)])
-    assert len(parameters) == len(fine_tune_layers)
-    
-    return net
 
 
 
-def add_classification_layer_v1(model, num_channels, p=0.2):
-    new_layers = nn.Sequential(nn.Dropout(p), nn.Linear(1000, 512), nn.Linear(512, 128), nn.Linear(128, num_channels))
+def add_classification_layer_v1(model, num_channels):
+    new_layers = nn.Sequential(nn.Linear(1000, num_channels))
     model = nn.Sequential(model, new_layers)
     return model
 
@@ -172,73 +118,22 @@ def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels, is_train
         else:
             name = k
         new_state_dict[name] = v
+    rst_state_dict = OrderedDict()
+    for k, v in new_state_dict.items():
+        if k.startswith('module.model.'):
+            name = k[13:]  # remove `module.`
+        else:
+            name = k
+        rst_state_dict[name] = v
     # # this is copying the weights and biases
-    model.load_state_dict(new_state_dict, strict=False)
+    model.load_state_dict(rst_state_dict, strict=False)
 
     # # modify the last layers
-    new_layers = nn.Sequential(nn.Dropout(0.2), nn.Linear(1000, 512), nn.Linear(512, 128), nn.Linear(128, num_channels))
+    new_layers = nn.Sequential(nn.Linear(1000, num_channels))
     model = nn.Sequential(model, new_layers)
 
     return model
         
-    
-def reweighing_weights_calculation(df_path, subgroups, task, output_file):
-    """ Calculate weights for reweighing bias mitigation method on training sets
-    
-    Arguments
-    =========
-    df_path
-        File path of the csv file containing training sets.
-    subgroups
-        List of subgroups to implement reweighing, should be included in the training data csv file.
-    task
-        The training task, should be included in the training data csv file.
-    output_file
-        The file path to store calculated weights for each subgroup+class combo.
-
-    Returns
-    =======
-    list
-        List of calculated weights for each samples.
-    """
-    df = pd.read_csv(df_path)
-    len_total = df.shape[0]
-    # initialize the weights
-    weights = [1] * len_total
-    # check if training file has subgroup information
-    if not all(item in df.columns.values.tolist() for item in subgroups):
-        print('Input training file does not have assigned subgroup information. Not apply reweighing')
-        return weights
-    # # calculate weights for each subgroup+class combination 
-    dp = {}
-    for i in range(2):
-        for j in range(2):
-            df_sub = df.loc[(df[subgroups[i]]==1) & (df[task]==j)]
-            # check if at least one sample in each subgroup+class combination 
-            len_sub = df_sub.shape[0]
-            if len_sub == 0:
-                print(f"{subgroups[i]}_{task}_{j} has zero samples, cannot reweighing.")
-                return weights
-            dp[f"{subgroups[i]}_{task}_{j}"] = {}
-            dp[f"{subgroups[i]}_{task}_{j}"]['Weights'] = 0.25 * len_total / len_sub
-    # # assign weights for each sample        
-    for index, row in df.iterrows():
-        if row[subgroups[0]] == 1 and row[task] == 1:
-            weights[index] = dp[f"{subgroups[0]}_{task}_{1}"]['Weights']
-        elif row[subgroups[0]] == 1 and row[task] == 0:
-            weights[index] = dp[f"{subgroups[0]}_{task}_{0}"]['Weights']
-        elif row[subgroups[1]] == 1 and row[task] == 1:
-            weights[index] = dp[f"{subgroups[1]}_{task}_{1}"]['Weights']
-        elif row[subgroups[1]] == 1 and row[task] == 0:
-            weights[index] = dp[f"{subgroups[1]}_{task}_{0}"]['Weights']
-        else:
-            print(f"Sample {index} does not have correct subgroup or label info, skip reweighing for it")
-    # # save weights
-    weights_summary = pd.DataFrame.from_dict({i: dp[i] 
-                           for i in dp.keys()},
-                       orient='index')
-    weights_summary.to_csv(output_file)
-    return weights
 
 def train(args):
     writer = SummaryWriter(log_dir=args.output_base_dir, flush_secs=1)
@@ -312,15 +207,8 @@ def train(args):
     # # Create tr and vd datasets
     train_dataset = Dataset(args.input_train_file, train_flag=True, default_out_class=args.train_task)
     valid_dataset = Dataset(args.validation_file, train_flag=False, default_out_class=args.train_task)
-    # # Create tr and vd data loaders
-    #if implement reweighing bias mitigation
-    if args.reweighing_subgroup is not None:
-        weights_output_file = os.path.join(args.output_base_dir, 'reweighing_weights.csv')
-        weights = reweighing_weights_calculation(args.input_train_file, args.reweighing_subgroup, args.train_task, weights_output_file)
-        sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, len(weights), replacement=True)
-        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, sampler=sampler, num_workers=args.threads)
-    else:    
-        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.threads)
+    # # Create tr and vd data loaders   
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.threads)
     valid_loader = DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.threads)
     num_steps_in_epoch = len(train_loader)
     # # select the optimizer
@@ -340,6 +228,7 @@ def train(args):
     # criterion = nn.BCELoss()
     criterion = nn.BCEWithLogitsLoss()
     auc_val = -1
+    auc_best = -1
     for epoch in range(args.num_epochs):
         # # train for one epoch
         avg_loss = run_train(train_loader, model, criterion, optimizer, my_lr_scheduler, writer)
@@ -356,14 +245,16 @@ def train(args):
                 'auc': auc_val,
                 'optimizer': optimizer.state_dict(),
             }, os.path.join(args.output_base_dir, 'checkpoint__' + str(epoch) + '.pth.tar'))
+            if auc_val >= auc_best:
+                model_best_auc = model
+                auc_best = auc_val
+            
     # # log the final model performance
     with open(args.log_path, 'a') as fp:
         fp.write(args.input_train_file + '\t' + args.validation_file +  '\t' +  args.output_base_dir + '\t' + str(auc_val) + '\n')
     
     # # save ONNX
     # Export the model
-    # x = torch.randn(args.batch_size, 3, 320, 320, requires_grad=True)
-    # torch_out = model(x.cuda())
     onnx_model_path = os.path.join(args.output_base_dir, 'pytorch_last_epoch_model.onnx')
     torch.onnx.export(model,                   # model being run
                     x.cuda(),                         # model input (or a tuple for multiple inputs)
@@ -377,22 +268,19 @@ def train(args):
                                     'output' : {0 : 'args.batch_size'}})
     print('Final epoch model saved to: ' + onnx_model_path)
     
-    # onnx_model = onnx.load(onnx_model_path)
-    # onnx.checker.check_model(onnx_model)
+    best_model_path = os.path.join(args.output_base_dir, 'best_auc_model.onnx')
+    torch.onnx.export(model_best_auc,                   
+                    x.cuda(),                         
+                    best_model_path,           
+                    export_params=True,        
+                    opset_version=10,          
+                    do_constant_folding=True,  
+                    input_names = ['input'],   
+                    output_names = ['output'], 
+                    dynamic_axes={'input' : {0 : 'args.batch_size'},   
+                                    'output' : {0 : 'args.batch_size'}})
+    print('Final epoch model saved to: ' + best_model_path)
 
-    # ort_session = onnxruntime.InferenceSession(onnx_model_path)
-
-    # def to_numpy(tensor):
-    #     return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
-
-    # # compute ONNX Runtime output prediction
-    # ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(x)}
-    # ort_outs = ort_session.run(None, ort_inputs)
-
-    # # compare ONNX Runtime and PyTorch results
-    # np.testing.assert_allclose(to_numpy(torch_out), ort_outs[0], rtol=1e-03, atol=1e-05)
-
-    # print("Exported model has been tested with ONNXRuntime, and the result looks good!")
 
 
 def run_train(train_loader, model, criterion, optimizer,  my_lr_scheduler, writer):
@@ -479,9 +367,7 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output_base_dir', help='output based dir', required=True)
     parser.add_argument('-d', '--dcnn', 
         help="which dcnn to use: 'googlenet', 'resnet18', 'wide_resnet50_2', 'resnext50_32x4d', 'densenet121', 'CheXpert_Resnet', 'Mimic_Resnet', 'CheXpert-Mimic_Resnet', 'CheXpert-Mimic_Densenet'", required=True)        
-    # parser.add_argument('-f', '--freeze_up_to', help="Must be a freezable layer in the structure e.g. FirstLayer", required=True)
-    # Must be one of: 'FirstLayer', 'Mixed_3b', 'Mixed_3c', 'Mixed_4b', 'Mixed_4c', 'Mixed_4d', 'Mixed_4e', 'Mixed_4f', 'Mixed_5b', 'Mixed_5c'
-    
+    parser.add_argument('-f', '--freeze_up_to')    
     parser.add_argument('--pretrained_weights', default=True, type=lambda x: bool(strtobool(x)), help="False if train from scratch.")
     parser.add_argument('-f', '--fine_tuning', default='full', help="options: 'full' or 'partial'")
     parser.add_argument('-m', '--moco', default=True, type=lambda x: bool(strtobool(x)))
@@ -489,29 +375,27 @@ if __name__ == '__main__':
         help="options: provide the layer number upto which to freeze")
     parser.add_argument('-l', '--log_path', help='log saving path', required=True)
     parser.add_argument('-p', '--optimizer', help='which optimizer to use: \'adam\' or \'sgd\'', required=True)
-    parser.add_argument('-b', '--batch_size', type=int, default=64, help='batch size.')
-    parser.add_argument('-n', '--num_epochs', type=int, default=2000, help='num. of epochs.')
-    parser.add_argument('-t', '--threads', type=int, default=4, help='num. of threads.')
-    parser.add_argument('-r', '--start_learning_rate', type=float, default=1e-4, help='starting learning rate.')
-    parser.add_argument('-s', '--step_decay', type=int, default=1000, help='Step for decay of learning rate.')
+    parser.add_argument('-b', '--batch_size', type=int, default=48, help='batch size.')
+    parser.add_argument('-n', '--num_epochs', type=int, default=15, help='num. of epochs.')
+    parser.add_argument('-t', '--threads', type=int, default=1, help='num. of threads.')
+    parser.add_argument('-r', '--start_learning_rate', type=float, default=5e-5, help='starting learning rate.')
+    parser.add_argument('-s', '--step_decay', type=int, default=3, help='Step for decay of learning rate.')
     parser.add_argument('--SGDmomentum', type=float, default=0.9, help='Momemtum param for SGD optimizer')
-    parser.add_argument('--decay_every_N_epoch', type=int, default=5, help='Drop the learning rate every N epochs')
-    parser.add_argument('--decay_multiplier', type=float, default=0.95, help='Decay multiplier')
+    parser.add_argument('--decay_every_N_epoch', type=int, default=3, help='Drop the learning rate every N epochs')
+    parser.add_argument('--decay_multiplier', type=float, default=0.2, help='Decay multiplier')
     parser.add_argument('-e', '--save_every_N_epochs', type=int, default=1, help='save checkpoint every N number of epochs')
     parser.add_argument('--bsave_valid_results_at_epochs', type=bool, default=False, 
         help='save validation results csv at every epoch, True/False')
     parser.add_argument('-g', '--gpu_id', type=int, default=0, help='GPU ID')
     parser.add_argument('-c', '--custom_checkpoint_file', 
-        default="/gpfs_projects/ravi.samala/OUT/moco/experiments/ravi.samala/r8w1n416_20220715h15_tr_mocov2_20220715-172742/checkpoint_0019.pth.tar", 
+        default="../../example/checkpoint_csl.pth.tar", 
         help='custom checkpoint file to start')
     parser.add_argument('--random_state', type=int, default=None)
     parser.add_argument('--train_task', type=str, default='Yes', help='specify training task')
-    parser.add_argument('--reweighing_subgroup', nargs='+',type=str, default=None, 
-    help='if input with subgroup names, the model will implement reweighing for bias mitigation')
     
 
     args = parser.parse_args()
-    print(args)
+    #print(args)
     
     # # create the output dirctory if not exist
     if not os.path.exists(args.output_base_dir):
