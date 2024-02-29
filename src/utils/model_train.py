@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchsummaryX import summary
 from distutils.util import strtobool
+from collections import OrderedDict
 # #
 from dat_data_load import Dataset
 import os
@@ -89,7 +90,7 @@ def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels, is_train
     device = f'cuda:{gpu_ids}'
     ckpt_dict = torch.load(ckpt_path, map_location=device)
 
-    model = models.__dict__[base_dcnn](pretrained=True)
+    model = models.__dict__[base_dcnn](weights='IMAGENET1K_V1')
     # # not sure why this check is required
     if not args.moco:
         state_dict = ckpt_dict['model_state']
@@ -136,13 +137,14 @@ def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels, is_train
         
 
 def train(args):
+    """
+    Main script for model training, including model selection, pre-trained weights loading,
+    training/validation data loading, and model fine-tuning.
+    """
     writer = SummaryWriter(log_dir=args.output_base_dir, flush_secs=1)
     # set random state, if specified
     if args.random_state is not None:
         torch.manual_seed(args.random_state)
-    # writer = SummaryWriter()
-    # # based on the selected DNN N/W, modify the last layer of the ImageNet pre-trained DNN
-    # model = models.__dict__[args.dcnn](pretrained=True)
     num_channels = 1
     custom_layer_name = []
     if args.dcnn == 'googlenet':
@@ -164,7 +166,7 @@ def train(args):
     elif args.dcnn == 'resnext50_32x4d':
         model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
         model = add_classification_layer_v1(model, num_channels)
-    elif args.dcnn == 'CheXpert_Resnet' or args.dcnn == 'Mimic_Resnet' or args.dcnn == 'CheXpert-Mimic_Resnet':
+    elif args.dcnn == 'CheXpert_Resnet':
         model = load_custom_checkpoint(args.custom_checkpoint_file, 'resnet18', args.gpu_id, num_channels)      
     elif args.dcnn == 'CheXpert-Mimic_Densenet':
         model = load_custom_checkpoint(args.custom_checkpoint_file, 'densenet121', args.gpu_id, num_channels)
@@ -178,9 +180,7 @@ def train(args):
     if args.fine_tuning == 'partial':
         if args.dcnn == 'googlenet':
             print('ERROR. Custom transfer learning not implemented for this model.')
-        elif args.dcnn == 'resnet18':
-            model = apply_custom_transfer_learning__resnet18(model)
-        elif args.dcnn == 'CheXpert_Resnet' or args.dcnn == 'Mimic_Resnet' or args.dcnn == 'CheXpert-Mimic_Resnet':        
+        elif args.dcnn == 'resnet18' or args.dcnn == 'CheXpert_Resnet':
             model = apply_custom_transfer_learning__resnet18(model)
         elif args.dcnn == 'wide_resnet50_2':
             print('ERROR. Custom transfer learning not implemented for this model.')
@@ -200,7 +200,6 @@ def train(args):
     
     # # debug code to understand how a ROI passes through the network
     x=torch.rand(16,3,320,320)
-    #print(summary(model, x))
     # # 
     torch.cuda.set_device(args.gpu_id)
     model.cuda(args.gpu_id)
@@ -238,13 +237,17 @@ def train(args):
             # # evaluate on validation set
             auc_val = run_validate(valid_loader, model, args, writer)
             print("> {:d}\t{:1.5f}\t\t{:1.5f}".format(epoch, avg_loss, auc_val))
+            if epoch == args.num_epochs-1:
+                checkpoint_file = os.path.join(args.output_base_dir, 'checkpoint__last.pth.tar')
+            else:
+                checkpoint_file = os.path.join(args.output_base_dir, 'checkpoint__' + str(epoch) + '.pth.tar')
             save_checkpoint({
                 'epoch': epoch + 1,
                 'arch': args.dcnn,
                 'state_dict': model.state_dict(),
                 'auc': auc_val,
                 'optimizer': optimizer.state_dict(),
-            }, os.path.join(args.output_base_dir, 'checkpoint__' + str(epoch) + '.pth.tar'))
+            }, checkpoint_file)
             if auc_val >= auc_best:
                 model_best_auc = model
                 auc_best = auc_val
@@ -365,9 +368,9 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--input_train_file', help='input training list file', required=True)
     parser.add_argument('-v', '--validation_file', help='input validation list file', required=True)
     parser.add_argument('-o', '--output_base_dir', help='output based dir', required=True)
-    parser.add_argument('-d', '--dcnn', 
-        help="which dcnn to use: 'googlenet', 'resnet18', 'wide_resnet50_2', 'resnext50_32x4d', 'densenet121', 'CheXpert_Resnet', 'Mimic_Resnet', 'CheXpert-Mimic_Resnet', 'CheXpert-Mimic_Densenet'", required=True)        
-    parser.add_argument('-f', '--freeze_up_to')    
+    parser.add_argument('-d', '--dcnn', default='CheXpert_Resnet',
+        help="which dcnn to use: 'googlenet', 'resnet18', 'wide_resnet50_2', 'resnext50_32x4d', 'densenet121', 'CheXpert_Resnet', 'CheXpert-Mimic_Densenet'")        
+    parser.add_argument('--freeze_up_to', help="Specify the number of layers being frozen during training.")    
     parser.add_argument('--pretrained_weights', default=True, type=lambda x: bool(strtobool(x)), help="False if train from scratch.")
     parser.add_argument('-f', '--fine_tuning', default='full', help="options: 'full' or 'partial'")
     parser.add_argument('-m', '--moco', default=True, type=lambda x: bool(strtobool(x)))
@@ -395,7 +398,7 @@ if __name__ == '__main__':
     
 
     args = parser.parse_args()
-    #print(args)
+    print("Start experiment...")
     
     # # create the output dirctory if not exist
     if not os.path.exists(args.output_base_dir):

@@ -21,28 +21,23 @@ def to_numpy(tensor):
         return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
 
 def inference_onnx(args):
-    if args.dcnn == 'CheXpert_Resnet':
-        # # 
-        torch.cuda.set_device(args.gpu_id)
-        # # # onnx checks
-        # onnx_model = onnx.load(args.weight_file)
-        # print(onnx.checker.check_model(onnx_model))
+    torch.cuda.set_device(args.gpu_id)
+    # # # onnx checks
+    # onnx_model = onnx.load(args.weight_file)
+    # print(onnx.checker.check_model(onnx_model))
 
-        # # Create dataset
-        _dataset = Dataset(args.input_list_file, train_flag=False)
-        # # Create data loader
-        _loader = DataLoader(_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.threads)
+    # # Create dataset
+    _dataset = Dataset(args.input_list_file, train_flag=False)
+    # # Create data loader
+    _loader = DataLoader(_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.threads)
 
-        print('Inferencing now ...')
-        # # get ROI-aug and ROI-aug-avg
-        auc_val, results_path = run_deploy_onnx(_loader, args)
-        with open(os.path.join(os.path.dirname(args.log_path), 'inference_log.log'), 'a') as fp:
-            fp.write("AUC\t{:1.5f}\t{}\n".format(auc_val, results_path))
-        with open(args.log_path, 'a') as fp:
-            fp.write(args.input_list_file + '\t' + args.weight_file +  '\t' +  results_path + '\t' + str(auc_val)  + '\n')
-    else:
-        print('UNKNOW DCNN model = ' + args.dcnn)
-        print('NOTHING TO DO. EXITING!')
+    print('Inferencing now ...')
+    # # get ROI-aug and ROI-aug-avg
+    auc_val, results_path = run_deploy_onnx(_loader, args)
+    with open(os.path.join(os.path.dirname(args.log_path), 'inference_log.log'), 'a') as fp:
+        fp.write("AUC\t{:1.5f}\t{}\n".format(auc_val, results_path))
+    with open(args.log_path, 'a') as fp:
+        fp.write(args.input_list_file + '\t' + args.weight_file +  '\t' +  results_path + '\t' + str(auc_val)  + '\n')
 
 
 def run_deploy_onnx(data_loader, args):
@@ -97,14 +92,13 @@ if __name__ == '__main__':
         description='Inference using onnx')
     parser.add_argument('-i', '--input_list_file', help='input list file', required=True)
     parser.add_argument('-w', '--weight_file', help='input weight file', required=True)
-    parser.add_argument('-d', '--dcnn', help="which dcnn to use: 'CheXpert_Resnet'", required=True)
     parser.add_argument('-l', '--log_path', help='log saving path', required=True)
     parser.add_argument('-b', '--batch_size', type=int, default=48, help='batch size.')
     parser.add_argument('-t', '--threads', type=int, default=1, help='num. of threads.')
     parser.add_argument('-g', '--gpu_id', type=int, default=0, help='GPU ID')
 
     args = parser.parse_args()
-    #print(args)
+    print("Start inference...")
 
     # # save the args
     with open(os.path.join(os.path.dirname(args.log_path), 'myinference_args.json'), 'w') as fp:
