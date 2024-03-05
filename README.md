@@ -1,6 +1,14 @@
 # myti.report
 A visualization tool to facilitate the comparison of user-implemented bias mitigation methods for AI models
 
+<picture>
+  <source media="(max-width: 799px)" srcset="assets/visual_abstract_vertical.png" />
+  <source media="(min-width: 800px)" srcset="assets/visual_abstract_horizontal.png" />
+  <img src="assets/visual_abstract_horizontal.png" />
+</picture>
+
+<p style="text-align: center;"> Overview of the bias amplification process  </p>
+
 # Documentation Questions
 _Note: Remove this section prior to release._
 
