@@ -39,6 +39,7 @@ def bootstrapping(args):
         args.remaining_to_test = False
     elif args.remaining_to_test == 'True':
         args.remaining_to_test = True
+    random_seed = args.random_seed
     # 1) set up save location, summary files
     save_folder = os.path.join(args.save_dir, args.partition_name)
     if not os.path.exists(save_folder):
@@ -63,6 +64,12 @@ def bootstrapping(args):
     bp_df = df.drop('Path', axis=1).drop_duplicates() # by-patient df for splitting/stratifying
     print("\nNumber of patients/subgroup in input summary:")
     print(bp_df[bp_df['subgroup'].isin(equal_stratification_groups)].groupby("subgroup")['patient_id'].count())
+    #  subsample by the given rate
+    if args.subsample_rate is not None:
+        sub_dfs = []
+        for sub in equal_stratification_groups:
+            sub_dfs.append(bp_df[bp_df['subgroup'] == sub].sample(frac=args.subsample_rate, random_state=random_seed))
+        bp_df = pd.concat(sub_dfs, axis=0)
     # 3) train/validation/test split ================================================================================
     # # process into easier format
     splits = pd.DataFrame(columns=['size', 'limit_img', 'rand_seed', 'get_remaining'],
@@ -79,7 +86,6 @@ def bootstrapping(args):
         remaining_bp_df = prevent_data_leakage(bp_df, bp_split_dfs.values())
         if s in bp_split_dfs:
             continue
-        random_seed = args.random_seed
         # get new split fraction based on what splits have already been taken
         split_fraction = splits.at[s,'size'] / splits[~splits.index.isin(bp_split_dfs)]['size'].sum()
         bp_split_dfs[s] = adjust_comp(remaining_bp_df, random_seed, split_frac=split_fraction)
@@ -307,7 +313,7 @@ if __name__ == '__main__':
     parser.add_argument("--test_size", type=float, required=True)
     parser.add_argument("--validation_size", type=float, required=True)
     parser.add_argument("--remaining_to_test", default=False)
-    parser.add_argument("--random_seed", default=0)
+    parser.add_argument("--random_seed", default=0, type=int)
     # # saving/naming
     parser.add_argument("--partition_name", type=str, required=True)
     parser.add_argument("--save_dir", type=str, required=True)
@@ -315,5 +321,6 @@ if __name__ == '__main__':
     parser.add_argument("--min_img_per_patient", default=0)
     parser.add_argument("--max_img_per_patient", default=None)
     parser.add_argument("--patient_img_selection_mode", default='random', choices=['random', 'first','last'])    
+    parser.add_argument("--subsample_rate", type=float, default=None, help="subsample rate for all the sets")
     bootstrapping(parser.parse_args())
     print("\nDONE\n")

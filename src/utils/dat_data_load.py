@@ -90,7 +90,6 @@ class Dataset(BaseDataset):
         self.train_flag = train_flag
         # # read the CSV file with header
         df = pd.read_csv(list_file)
-        print(df.columns.values.tolist())
         ids = df[default_patient_id].tolist() # # Patient IDs
         dats = df[default_path].tolist()   # # JPEGs
         labels = df[default_out_class].tolist() # # class label

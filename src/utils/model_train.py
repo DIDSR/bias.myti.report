@@ -2,8 +2,6 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
-from torchsummaryX import summary
 from distutils.util import strtobool
 from collections import OrderedDict
 # #
@@ -23,11 +21,35 @@ master_iter = 0
 
 
 def save_checkpoint(state, filename='checkpoint.pth.tar'):
+    """
+    Save the model checkpoint.
+    """
     torch.save(state, filename)
 
 
+def modify_classification_layer_v1(model, num_channels):
+    """
+    Modify the last fully connected layer to have given output size.
+    
+    Arguments
+    =========
+    model
+        pytorch model to be modified
+    num_channels
+        number of outputs for the fully connected layer
+
+    Returns
+    =======
+    model
+        modified model.
+    """
+    num_ftrs = model.fc.in_features
+    model.fc = nn.Linear(num_ftrs, num_channels)
+    return model
+    
 def apply_custom_transfer_learning__resnet18(net):
-    """ Set the ResNet18 model to freeze first certain number of layers.
+    """ 
+    Set the ResNet18 model to freeze first certain number of layers.
     """
     # # get all the layer names
     model_layers = [name for name,para in net.named_parameters()]
@@ -44,94 +66,71 @@ def apply_custom_transfer_learning__resnet18(net):
             layers = [','.join(model_layers[:idx])]          
         else:
             layers += [','.join(model_layers[idxs[ii-1]:idx])]
-    
+    layers += ["fc.weight,fc.bias"]
     # # set requires_grad to False for freezing layers
-    fine_tune_layers = ','.join(layers[args.upto_freeze-len(layers):]).split(',')    
+    fine_tune_layers = ','.join(layers[args.freeze_up_to-len(layers):]).split(',')
     for name, param in net.named_parameters():
-        print(name)
         if name not in fine_tune_layers:
+            #print(name)
             param.requires_grad = False
     
     parameters = list(filter(lambda p: p.requires_grad, net.parameters()))
-    print([len(parameters), len(fine_tune_layers)])
     assert len(parameters) == len(fine_tune_layers)
                 
     return net
 
 
-
-def add_classification_layer_v1(model, num_channels):
-    new_layers = nn.Sequential(nn.Linear(1000, num_channels))
-    model = nn.Sequential(model, new_layers)
-    return model
-
 def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels, is_training=True):
-    """ Load customized pre-trained models
+    """ 
+    Load customized pre-trained models with given weight file.
     
     Arguments
     =========
     ckpt_path
-        File path of the pre-trained model.
+        file path of the pre-trained model.
     base_dcnn
-        Name of the model architecture, e.g. resnet18, densenet121, etc.
+        name of the model architecture, e.g. resnet18, densenet121, etc.
     gpu_ids
-        Current GPU ID.
+        current GPU ID.
     num_channels
-        Number of channels.
+        number of channels.
     is_training
-        Indicate if is in training mode.
+        indicate if is in training mode.
 
     Returns
     =======
     model
-        Loaded pre-trained model.
+        loaded pre-trained model.
     
     """
     device = f'cuda:{gpu_ids}'
     ckpt_dict = torch.load(ckpt_path, map_location=device)
 
     model = models.__dict__[base_dcnn](weights='IMAGENET1K_V1')
-    # # not sure why this check is required
-    if not args.moco:
-        state_dict = ckpt_dict['model_state']
-    else:
-        state_dict = ckpt_dict['state_dict']
+    model = modify_classification_layer_v1(model, num_channels)
+    state_dict = ckpt_dict['state_dict']
     for k in list(state_dict.keys()):
         # retain only encoder_q up to before the embedding layer
         if k.startswith('module.encoder_q') and not k.startswith('module.encoder_q.fc'):
             # remove prefix
-            # state_dict[k[len("module.encoder_q."):]] = state_dict[k]
             state_dict['module.model.' + k[len("module.encoder_q."):]] = state_dict[k]
             # delete renamed or unused k
             del state_dict[k]
         elif 'encoder_k' in k or 'module.queue' in k:
             del state_dict[k]
         elif k.startswith('module.encoder_q.fc'):
-            # if 'fc.0' not in k:
-            #     state_dict['module.model.fc' + k[len("module.encoder_q.fc.2"):]] = state_dict[k]
-            # TODO: JBY these are bad
             del state_dict[k]
     # # modify key names in the state_dict to match the new model
     new_state_dict = OrderedDict()
+
     for k, v in state_dict.items():
-        if k.startswith('0.'):
-            name = k[2:]  # remove `module.`
-        else:
-            name = k
-        new_state_dict[name] = v
-    rst_state_dict = OrderedDict()
-    for k, v in new_state_dict.items():
         if k.startswith('module.model.'):
             name = k[13:]  # remove `module.`
         else:
             name = k
-        rst_state_dict[name] = v
+        new_state_dict[name] = v
     # # this is copying the weights and biases
-    model.load_state_dict(rst_state_dict, strict=False)
-
-    # # modify the last layers
-    new_layers = nn.Sequential(nn.Linear(1000, num_channels))
-    model = nn.Sequential(model, new_layers)
+    model.load_state_dict(new_state_dict, strict=False)
 
     return model
         
@@ -141,31 +140,31 @@ def train(args):
     Main script for model training, including model selection, pre-trained weights loading,
     training/validation data loading, and model fine-tuning.
     """
-    writer = SummaryWriter(log_dir=args.output_base_dir, flush_secs=1)
     # set random state, if specified
     if args.random_state is not None:
         torch.manual_seed(args.random_state)
+        torch.cuda.manual_seed_all(args.random_state)
     num_channels = 1
     custom_layer_name = []
     if args.dcnn == 'googlenet':
         model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
-        model = add_classification_layer_v1(model, num_channels)
+        model = modify_classification_layer_v1(model, num_channels)
     elif args.dcnn == 'resnet18':
         if args.pretrained_weights == True:
             model = models.__dict__[args.dcnn](weights='IMAGENET1K_V1')
         else:
             model = models.__dict__[args.dcnn]()
-        model = add_classification_layer_v1(model, num_channels)
+        model = modify_classification_layer_v1(model, num_channels)
         #custom_layer_name = resnet18_ordered_layer_names.copy()
     elif args.dcnn == 'wide_resnet50_2':
         model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
-        model = add_classification_layer_v1(model, num_channels)
+        model = modify_classification_layer_v1(model, num_channels)
     elif args.dcnn == 'densenet121':
         model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
-        model = add_classification_layer_v1(model, num_channels)
+        model = modify_classification_layer_v1(model, num_channels)
     elif args.dcnn == 'resnext50_32x4d':
         model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
-        model = add_classification_layer_v1(model, num_channels)
+        model = modify_classification_layer_v1(model, num_channels)
     elif args.dcnn == 'CheXpert_Resnet':
         model = load_custom_checkpoint(args.custom_checkpoint_file, 'resnet18', args.gpu_id, num_channels)      
     elif args.dcnn == 'CheXpert-Mimic_Densenet':
@@ -178,6 +177,7 @@ def train(args):
 
     # # custom transfer learning >>
     if args.fine_tuning == 'partial':
+        print(f"Fine tuning with first {args.freeze_up_to} layers frozen")
         if args.dcnn == 'googlenet':
             print('ERROR. Custom transfer learning not implemented for this model.')
         elif args.dcnn == 'resnet18' or args.dcnn == 'CheXpert_Resnet':
@@ -196,11 +196,9 @@ def train(args):
     else:
         print('ERROR. UNKNOWN option for fine_tuning')
         return
-    # # <<
     
-    # # debug code to understand how a ROI passes through the network
-    x=torch.rand(16,3,320,320)
     # # 
+    
     torch.cuda.set_device(args.gpu_id)
     model.cuda(args.gpu_id)
     # # Create tr and vd datasets
@@ -212,7 +210,6 @@ def train(args):
     num_steps_in_epoch = len(train_loader)
     # # select the optimizer
     if args.optimizer == 'adam':
-        # optimizer = torch.optim.Adam(model.parameters(), args.start_learning_rate, weight_decay=args.step_decay)
         optimizer = torch.optim.Adam(model.parameters(), args.start_learning_rate, betas=(0.9, 0.999), weight_decay=0.0)
     elif args.optimizer == 'sgd':
         optimizer = torch.optim.SGD(model.parameters(), lr=args.start_learning_rate, momentum=args.SGDmomentum)
@@ -221,21 +218,19 @@ def train(args):
         return
     # # learning rate scheduler
     my_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.decay_every_N_epoch, gamma=args.decay_multiplier)
-    # #
-    print('Training...')
+    # # start training
+    print(f'Training for task: {args.train_task}')
     print('EPOCH\tTR-AVG-LOSS\tVD-AUC')
-    # criterion = nn.BCELoss()
     criterion = nn.BCEWithLogitsLoss()
     auc_val = -1
-    auc_best = -1
     for epoch in range(args.num_epochs):
         # # train for one epoch
-        avg_loss = run_train(train_loader, model, criterion, optimizer, my_lr_scheduler, writer)
+        avg_loss = run_train(train_loader, model, criterion, optimizer)
         my_lr_scheduler.step()
         # # save
         if epoch % args.save_every_N_epochs == 0 or epoch == args.num_epochs-1:
             # # evaluate on validation set
-            auc_val = run_validate(valid_loader, model, args, writer)
+            auc_val = run_validate(valid_loader, model, args)
             print("> {:d}\t{:1.5f}\t\t{:1.5f}".format(epoch, avg_loss, auc_val))
             if epoch == args.num_epochs-1:
                 checkpoint_file = os.path.join(args.output_base_dir, 'checkpoint__last.pth.tar')
@@ -248,9 +243,6 @@ def train(args):
                 'auc': auc_val,
                 'optimizer': optimizer.state_dict(),
             }, checkpoint_file)
-            if auc_val >= auc_best:
-                model_best_auc = model
-                auc_best = auc_val
             
     # # log the final model performance
     with open(args.log_path, 'a') as fp:
@@ -259,8 +251,9 @@ def train(args):
     # # save ONNX
     # Export the model
     onnx_model_path = os.path.join(args.output_base_dir, 'pytorch_last_epoch_model.onnx')
+    x=torch.rand(16,3,320,320)
     torch.onnx.export(model,                   # model being run
-                    x.cuda(),                         # model input (or a tuple for multiple inputs)
+                    x.cuda(),                  # model input (or a tuple for multiple inputs)
                     onnx_model_path,           # where to save the model (can be a file or file-like object)
                     export_params=True,        # store the trained parameter weights inside the model file
                     opset_version=10,          # the ONNX version to export the model to
@@ -270,24 +263,27 @@ def train(args):
                     dynamic_axes={'input' : {0 : 'args.batch_size'},    # variable length axes
                                     'output' : {0 : 'args.batch_size'}})
     print('Final epoch model saved to: ' + onnx_model_path)
+
+
+def run_train(train_loader, model, criterion, optimizer):
+    """ 
+    Function that runs the training
     
-    best_model_path = os.path.join(args.output_base_dir, 'best_auc_model.onnx')
-    torch.onnx.export(model_best_auc,                   
-                    x.cuda(),                         
-                    best_model_path,           
-                    export_params=True,        
-                    opset_version=10,          
-                    do_constant_folding=True,  
-                    input_names = ['input'],   
-                    output_names = ['output'], 
-                    dynamic_axes={'input' : {0 : 'args.batch_size'},   
-                                    'output' : {0 : 'args.batch_size'}})
-    print('Final epoch model saved to: ' + best_model_path)
+    Arguments
+    =========
+    train_loader
+        loaded training data set
+    model
+        the model to be trained
+    criterion
+        loss function to be minimized
+    optimizer
+        training optimizer
 
-
-
-def run_train(train_loader, model, criterion, optimizer,  my_lr_scheduler, writer):
-    """ Function that runs the training
+    Returns
+    =======
+    float
+        average loss for current epoch
     """
     global master_iter
 
@@ -302,21 +298,19 @@ def run_train(train_loader, model, criterion, optimizer,  my_lr_scheduler, write
         optimizer.zero_grad()
         output = model(images.float())
         # # compute loss
-        # loss = criterion(torch.sigmoid(torch.flatten(output)), target.float())
         loss = criterion(torch.flatten(output), target.float())
-        writer.add_scalar("Loss/train", loss.item(), master_iter)
         avg_loss += loss.item()
         # # compute gradient and do SGD step
         loss.backward()
         optimizer.step()
         #my_lr_scheduler.step()
         # #
-        writer.add_scalar("LR/train", my_lr_scheduler.get_last_lr()[0], master_iter)
     return avg_loss/len(train_loader)
 
 
-def run_validate(val_loader, model, args, writer):
-    """ Function that deploys on the input data loader, calculates sample based AUC and saves the scores in a tsv file.
+def run_validate(val_loader, model, args):
+    """ 
+    Function that deploys on the input data loader, calculates sample based AUC and saves the scores in a tsv file.
     """
     global master_iter
 
@@ -358,7 +352,6 @@ def run_validate(val_loader, model, args, writer):
     auc_val = metrics.auc(fpr, tpr)
     with open(os.path.join(args.output_base_dir, 'log.log'), 'a') as fp:
         fp.write("{:d}\t{:1.5f}\n".format(master_iter, auc_val))
-    writer.add_scalar("AUC/test", auc_val, master_iter)
     return auc_val
 
 
@@ -370,16 +363,13 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output_base_dir', help='output based dir', required=True)
     parser.add_argument('-d', '--dcnn', default='CheXpert_Resnet',
         help="which dcnn to use: 'googlenet', 'resnet18', 'wide_resnet50_2', 'resnext50_32x4d', 'densenet121', 'CheXpert_Resnet', 'CheXpert-Mimic_Densenet'")        
-    parser.add_argument('--freeze_up_to', help="Specify the number of layers being frozen during training.")    
+    parser.add_argument('--freeze_up_to',  type=int, help="Specify the number of layers being frozen during training.")    
     parser.add_argument('--pretrained_weights', default=True, type=lambda x: bool(strtobool(x)), help="False if train from scratch.")
     parser.add_argument('-f', '--fine_tuning', default='full', help="options: 'full' or 'partial'")
-    parser.add_argument('-m', '--moco', default=True, type=lambda x: bool(strtobool(x)))
-    parser.add_argument('-u', '--upto_freeze', type=int, default=0, 
-        help="options: provide the layer number upto which to freeze")
     parser.add_argument('-l', '--log_path', help='log saving path', required=True)
     parser.add_argument('-p', '--optimizer', help='which optimizer to use: \'adam\' or \'sgd\'', required=True)
     parser.add_argument('-b', '--batch_size', type=int, default=48, help='batch size.')
-    parser.add_argument('-n', '--num_epochs', type=int, default=15, help='num. of epochs.')
+    parser.add_argument('-n', '--num_epochs', type=int, default=10, help='num. of epochs.')
     parser.add_argument('-t', '--threads', type=int, default=1, help='num. of threads.')
     parser.add_argument('-r', '--start_learning_rate', type=float, default=5e-5, help='starting learning rate.')
     parser.add_argument('-s', '--step_decay', type=int, default=3, help='Step for decay of learning rate.')
@@ -390,8 +380,7 @@ if __name__ == '__main__':
     parser.add_argument('--bsave_valid_results_at_epochs', type=bool, default=False, 
         help='save validation results csv at every epoch, True/False')
     parser.add_argument('-g', '--gpu_id', type=int, default=0, help='GPU ID')
-    parser.add_argument('-c', '--custom_checkpoint_file', 
-        default="../../example/checkpoint_csl.pth.tar", 
+    parser.add_argument('-c', '--custom_checkpoint_file',  
         help='custom checkpoint file to start')
     parser.add_argument('--random_state', type=int, default=None)
     parser.add_argument('--train_task', type=str, default='Yes', help='specify training task')

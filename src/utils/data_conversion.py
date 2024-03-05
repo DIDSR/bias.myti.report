@@ -49,7 +49,7 @@ def process_convert_dicom_to_jpeg(args):
     """ 
     Convert and crop dicom files and save as jpeg files, where the name of the jpeg is patient_id_#.
     """
-    print("\nStart image cropping and convert to jpeg")
+    print("\nStart image conversion to jpeg")
     input_file = args.input_file
     img_save_loc = args.save_dir
     # # create the save dirctory if not exist
