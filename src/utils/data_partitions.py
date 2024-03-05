@@ -62,8 +62,9 @@ def bootstrapping(args):
         df[grp] = df[grp].replace({t:'other' for t in df[grp].unique() if t not in args.tasks}, regex=True)
         df = df[df[grp] != 'other']
     bp_df = df.drop('Path', axis=1).drop_duplicates() # by-patient df for splitting/stratifying
+    sum_df = bp_df[bp_df['subgroup'].isin(equal_stratification_groups)].groupby("subgroup")['patient_id'].count().to_frame('count').rename_axis('subgroup').reset_index()
     print("\nNumber of patients/subgroup in input summary:")
-    print(bp_df[bp_df['subgroup'].isin(equal_stratification_groups)].groupby("subgroup")['patient_id'].count())
+    print(sum_df.to_markdown(index=False))
     #  subsample by the given rate
     if args.subsample_rate is not None:
         sub_dfs = []
@@ -116,7 +117,7 @@ def bootstrapping(args):
     bp_summary.to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", 'by_patient_split_summary.csv'))
     img_summary.to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", 'by_image_split_summary.csv'))
     print("\nBy patient summary of data partition\n")
-    print(bp_summary)
+    print(bp_summary.to_markdown())
 
     # 5) save arguments and settings for future reference
     tracking_info = args.__dict__

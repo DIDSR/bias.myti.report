@@ -144,6 +144,9 @@ def train(args):
     if args.random_state is not None:
         torch.manual_seed(args.random_state)
         torch.cuda.manual_seed_all(args.random_state)
+        np.random.seed(args.random_state)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
     num_channels = 1
     custom_layer_name = []
     if args.dcnn == 'googlenet':
