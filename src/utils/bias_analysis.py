@@ -89,7 +89,6 @@ def metric_calculation(result_df, info_pred, test_list, positive_group, prev_dif
         # Predicted prevalence
         dp['metric'] = ["Predicted Prevalence"]
         dp['value'] = len(info_sub[info_sub['score'] > 0.5]) / len(info_sub)
-        #dp['value'] = np.mean(task_pred)
         result_df = pd.concat([result_df, pd.DataFrame(dp)], ignore_index=True)
         if prev_diff == 0:
             result_df = pd.concat([result_df, pd.DataFrame({**dp, 'positive associated': [test_list[1]]})], ignore_index=True)
@@ -129,10 +128,7 @@ def analysis(args):
         test_score = pd.read_csv(os.path.join(main_dir, exp, args.testing_result_file), sep='\t')
         test_info_result = info_pred_mapping(test_info, test_score)        
         result_df = metric_calculation(result_df, test_info_result, test_list, pos_as, x_tick, args.threshold)
-        
-    #    result_df.to_csv(os.path.join(main_dir, "test_score_base_2.csv"))
-    # # plot the metric
-            
+    # # plot the metric            
     results_plotting(data=result_df, x_col="experiment", x_label=x_label, hue_col="subgroup", style_col="positive associated",
                     s_col="metric", value_col="value", exp_type=args.amplification_type, y_lim=y_lim)
     

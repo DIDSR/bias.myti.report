@@ -109,16 +109,6 @@ M,12,0.428693182,0.085213482,Calibrated Equalized Odds,predicted prevalence,M,CO
 M,14,0.411325758,0.085410047,Calibrated Equalized Odds,predicted prevalence,M,COVID
 M,15,0.414015152,0.097136441,Calibrated Equalized Odds,predicted prevalence,M,COVID
 M,0,0.409753788,0.067545529,Calibrated Equalized Odds,predicted prevalence,M,COVID
-M,1,0.661334917,0.063921362,Calibrated Equalized Odds,sensitivity,F,COVID
-M,12,0.644498926,0.069900156,Calibrated Equalized Odds,sensitivity,F,COVID
-M,14,0.640670766,0.073413339,Calibrated Equalized Odds,sensitivity,F,COVID
-M,15,0.618829578,0.086225909,Calibrated Equalized Odds,sensitivity,F,COVID
-M,0,0.678261749,0.063399197,Calibrated Equalized Odds,sensitivity,F,COVID
-M,1,0.518939394,0.091496969,Calibrated Equalized Odds,sensitivity,M,COVID
-M,12,0.51875,0.102641068,Calibrated Equalized Odds,sensitivity,M,COVID
-M,14,0.51094697,0.101739521,Calibrated Equalized Odds,sensitivity,M,COVID
-M,15,0.482575758,0.122478926,Calibrated Equalized Odds,sensitivity,M,COVID
-M,0,0.635795455,0.081874971,Calibrated Equalized Odds,sensitivity,M,COVID
 M,1,0.704026367,0.046833859,Calibrated Equalized Odds,AUROC,F,COVID
 M,12,0.684200671,0.042921811,Calibrated Equalized Odds,AUROC,F,COVID
 M,14,0.662871936,0.03933822,Calibrated Equalized Odds,AUROC,F,COVID
@@ -139,13 +129,3 @@ M,12,0.514299242,0.033518334,Reject Option Classification,predicted prevalence,M
 M,14,0.525,0.040259139,Reject Option Classification,predicted prevalence,M,COVID
 M,15,0.528787879,0.042570308,Reject Option Classification,predicted prevalence,M,COVID
 M,0,0.499621212,0.039872757,Reject Option Classification,predicted prevalence,M,COVID
-M,1,0.654734848,0.05156138,Reject Option Classification,sensitivity,F,COVID
-M,12,0.660795455,0.045362663,Reject Option Classification,sensitivity,F,COVID
-M,14,0.642613636,0.041426286,Reject Option Classification,sensitivity,F,COVID
-M,15,0.589962121,0.051496898,Reject Option Classification,sensitivity,F,COVID
-M,0,0.666856061,0.050093477,Reject Option Classification,sensitivity,F,COVID
-M,1,0.642613636,0.041023288,Reject Option Classification,sensitivity,M,COVID
-M,12,0.645454545,0.045344764,Reject Option Classification,sensitivity,M,COVID
-M,14,0.648106061,0.048241577,Reject Option Classification,sensitivity,M,COVID
-M,15,0.624431818,0.045425878,Reject Option Classification,sensitivity,M,COVID
-M,0,0.660227273,0.043538497,Reject Option Classification,sensitivity,M,COVID

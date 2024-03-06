@@ -8,9 +8,9 @@ import numpy as np
 from PIL import Image
 import datetime
 # #
-open_A1_Cases = "/gpfs_projects/ravi.samala/DATA/MIDRC3/20221010_open_A1_all_Cases.tsv"
-open_A1_Imaging_Studies = "/gpfs_projects/ravi.samala/DATA/MIDRC3/20221010_open_A1_all_Imaging_Studies.tsv"
-open_A1_Imaging_Series = "/gpfs_projects/ravi.samala/DATA/MIDRC3/20221010_open_A1_all_Imaging_Series.tsv"
+#open_A1_Cases = "/data/20221010_open_A1_all_Cases.tsv"
+#open_A1_Imaging_Studies = "/data/20221010_open_A1_all_Imaging_Studies.tsv"
+#open_A1_Imaging_Series = "/data/MIDRC3/20221010_open_A1_all_Imaging_Series.tsv"
 # consistent terminology
 race_lookup_table = {
 	'American Indian or Alaska Native':['AMERICAN INDIAN OR ALASKA NATIVE'],
@@ -90,12 +90,11 @@ def searchthis(location, searchterm):
 		for file_name in file_names:
 			fullpath = os.path.join(dir_path, file_name)
 			if searchterm in fullpath:
-				# print(fullpath)
 				lis_paths += [fullpath]
 	return lis_paths
 
 	
-def read_open_A1_20221010(in_dir, out_summ_file, repo_name):
+def read_open_A1_20221010(args):
 	'''
 	using the imaging data and the associated MIDRC tsv files downloaded on 20221010
 
@@ -115,13 +114,8 @@ def read_open_A1_20221010(in_dir, out_summ_file, repo_name):
 		'manufacturer':(0x0008,0x0070),
 		'manufacturer model name':(0x0008,0x1090)}
 	# # get patient info
-	if repo_name == 'open-A1':
-		patient_df = pd.read_csv(open_A1_Cases, sep='\t')
-		# img_study_df = pd.read_csv(open_A1_Imaging_Studies, sep='\t')
-		img_series_df = pd.read_csv(open_A1_Imaging_Series, sep='\t')
-	else:
-		print('ERROR. Unknown repo: ' + repo_name)
-		return
+	patient_df = pd.read_csv(args.case_tsv, sep='\t')
+	img_series_df = pd.read_csv(args.series_tsv, sep='\t')
 	df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images','bad_images', 'bad_images_info', 'repo'])
 	print('There are {} patients'.format(len(patient_df.index)))
 	# # iterate over the patient-id
@@ -143,12 +137,9 @@ def read_open_A1_20221010(in_dir, out_summ_file, repo_name):
 		df_patient = img_series_df.loc[img_series_df['case_ids_0'] == patient_id]
 		for study_idx, study_row in df_patient.iterrows():
 			if study_row['modality'] in modality_choices:
-				# print([patient_id, study_row['case_ids_0'], study_row['study_uid']])
 				patient_study_path = None
-				# patient_study_path1 = os.path.join(in_dir, study_row['case_ids_0'], study_row['study_uid_0'], study_row['series_uid'])
-				# patient_study_path2 = os.path.join(in_dir, study_row['study_uid_0'], study_row['series_uid'])
-				patient_study_path1 = os.path.join(in_dir, study_row['case_ids_0'], str(study_row['study_uid_0']), str(study_row['series_uid']))
-				patient_study_path2 = os.path.join(in_dir, str(study_row['study_uid_0']), str(study_row['series_uid']))
+				patient_study_path1 = os.path.join(args.input_dir, study_row['case_ids_0'], str(study_row['study_uid_0']), str(study_row['series_uid']))
+				patient_study_path2 = os.path.join(args.input_dir, str(study_row['study_uid_0']), str(study_row['series_uid']))
 				if os.path.exists(patient_study_path1):
 					patient_study_path = patient_study_path1
 				elif os.path.exists(patient_study_path2):
@@ -183,37 +174,31 @@ def read_open_A1_20221010(in_dir, out_summ_file, repo_name):
 		patient_good_info = [patient_info]
 		# add to df
 		if not patient_skip:
-			df.loc[len(df)] = [patient_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] +[imgs_bad] + [imgs_bad_info] + [repo_name]
+			df.loc[len(df)] = [patient_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] +[imgs_bad] + [imgs_bad_info] + ['open-A1']
 			num_patients_to_json += 1
-		# # # # for debug
-		# if num_patients_to_json == 10:
-		# 	print(df.head(10))
-		# 	break
-		# break
-	# #
-	# # save info
+  # # print summary info and save output files
 	print('Saving {} patients to json'.format(num_patients_to_json))
 	print('Saving {} images to json'.format(num_images_to_json))
 	print('Saving {} series to json'.format(num_series_to_json))
 	print('Missing {} images to json'.format(num_missing_images))
-	df.to_json(out_summ_file, indent=4, orient='table', index=False)
-	pre, ext = os.path.splitext(out_summ_file)
+	df.to_json(args.output_file, indent=4, orient='table', index=False)
+	pre, ext = os.path.splitext(args.output_file)
 	out_log_file = pre + '.log'
 	print('Log file saved at: ' + out_log_file)
-	print('json file saved at: ' + out_summ_file)
+	print('json file saved at: ' + args.output_file)
 	with open(out_log_file, 'w') as fp:
 		fp.write(str(datetime.datetime.now()) + '\n')
 		fp.write('Saved {} patients in json\n'.format(num_patients_to_json))
 		fp.write('Saved {} images in json\n'.format(num_images_to_json))
 		fp.write('Saved {} series in json\n'.format(num_series_to_json))
 		fp.write('Missed {} images in json\n'.format(num_missing_images))
-	# df.to_csv(out_summ_file + '.tsv', sep = '\t', index=False)
 
 
 if __name__ == "__main__":
-	parser = argparse.ArgumentParser(description='PyTorch Training')
-	parser.add_argument('-i', '--input_dir_list', type=str, help='<Required> List of input dirs', required=True)
-	parser.add_argument('-n', '--names_list', type=str, help='<Required> List of data repos name', required=True)
-	parser.add_argument('-o', '--output_list', type=str, help='<Required> List of output log files', required=True)
-	args = parser.parse_args()
-	read_open_A1_20221010(args.input_dir_list, args.output_list, args.names_list)
+  parser = argparse.ArgumentParser(description='PyTorch Training')
+  parser.add_argument('-i', '--input_dir', type=str, help='<Required> Input directory where dicom data files are saved', required=True)
+  parser.add_argument('-c', '--case_tsv', type=str, help='<Required> Input tsv file with all cases info', required=True)
+  parser.add_argument('-s', '--series_tsv', type=str, help='<Required> Input tsv file with all image series info', required=True)
+  parser.add_argument('-o', '--output_file', type=str, help='<Required> Output log file', required=True)
+  args = parser.parse_args()
+  read_open_A1_20221010(args)
