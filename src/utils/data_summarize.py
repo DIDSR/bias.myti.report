@@ -7,10 +7,9 @@ import pandas as pd
 import numpy as np
 from PIL import Image
 import datetime
+from ipywidgets import IntProgress
+from IPython.display import display
 # #
-#open_A1_Cases = "/data/20221010_open_A1_all_Cases.tsv"
-#open_A1_Imaging_Studies = "/data/20221010_open_A1_all_Imaging_Studies.tsv"
-#open_A1_Imaging_Series = "/data/MIDRC3/20221010_open_A1_all_Imaging_Series.tsv"
 # consistent terminology
 race_lookup_table = {
 	'American Indian or Alaska Native':['AMERICAN INDIAN OR ALASKA NATIVE'],
@@ -102,28 +101,29 @@ def read_open_A1_20221010(args):
 		../data/20221010_open_A1_all_Cases.tsv: get patient-level info (submitter_id, sex, age, race, COVID_status)
 		../data/20221010_open_A1_all_Imaging_Studies.tsv: for a submitter_id (case_ids_0), use the study_modality_0
 			identify the study_uid which is the subdirectory name. However, sometimes, the study_uid is the main directory
-	
-	11/02/2022: works for both open-A1 and open-R1
 	'''
 	# information to gather (pixel spacing and img size done separately)
 	img_info_dict = {
-		'modality':(0x0008,0x0060),
-		'body part examined':(0x0018,0x0015),
-		'view position':(0x0018,0x5101),
-		'study date':(0x0008,0x0020),
-		'manufacturer':(0x0008,0x0070),
-		'manufacturer model name':(0x0008,0x1090)}
+	'modality':(0x0008,0x0060),
+	'body part examined':(0x0018,0x0015),
+	'view position':(0x0018,0x5101),
+	'study date':(0x0008,0x0020),
+	'manufacturer':(0x0008,0x0070),
+	'manufacturer model name':(0x0008,0x1090)}
 	# # get patient info
 	patient_df = pd.read_csv(args.case_tsv, sep='\t')
 	img_series_df = pd.read_csv(args.series_tsv, sep='\t')
 	df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images','bad_images', 'bad_images_info', 'repo'])
 	print('There are {} patients'.format(len(patient_df.index)))
+	progress_bar = IntProgress(min=0, max=len(patient_df.index), description='Reading:')
+	display(progress_bar)  
 	# # iterate over the patient-id
 	num_patients_to_json = 0
 	num_images_to_json = 0
 	num_series_to_json = 0
 	num_missing_images = 0
 	for idx, patient_row in patient_df.iterrows():
+		progress_bar.value += 1
 		if num_patients_to_json > 0 and num_patients_to_json % 1000 == 0:
 				print('Processed {} patients with {} series and {} images so far...'.format(num_patients_to_json, num_series_to_json, num_images_to_json))
 		imgs_good = []
@@ -176,7 +176,7 @@ def read_open_A1_20221010(args):
 		if not patient_skip:
 			df.loc[len(df)] = [patient_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] +[imgs_bad] + [imgs_bad_info] + ['open-A1']
 			num_patients_to_json += 1
-  # # print summary info and save output files
+	# # print summary info and save output files
 	print('Saving {} patients to json'.format(num_patients_to_json))
 	print('Saving {} images to json'.format(num_images_to_json))
 	print('Saving {} series to json'.format(num_series_to_json))
