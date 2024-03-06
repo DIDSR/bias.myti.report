@@ -41,7 +41,7 @@ def bootstrapping(args):
         args.remaining_to_test = True
     random_seed = args.random_seed
     # 1) set up save location, summary files
-    save_folder = os.path.join(args.save_dir, args.partition_name)
+    save_folder = os.path.join(args.save_dir)
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)
     conversion_table_files = args.conversion_file
@@ -91,9 +91,6 @@ def bootstrapping(args):
         split_fraction = splits.at[s,'size'] / splits[~splits.index.isin(bp_split_dfs)]['size'].sum()
         bp_split_dfs[s] = adjust_comp(remaining_bp_df, random_seed, split_frac=split_fraction)
     # 4) convert from by-patient dataframes back to by-image dataframes =============================================  
-    if not os.path.exists(os.path.join(save_folder, f"RAND_{args.random_seed}")):
-        os.mkdir(os.path.join(save_folder, f"RAND_{args.random_seed}"))
-
     output_files = {}
     for s in splits.index:
         if splits.at[s,'get_remaining']: # this is the split that gets samples that do not belong to one of the equal_stratification_groups
@@ -104,18 +101,12 @@ def bootstrapping(args):
         else:
             output_files[s] = all_df[all_df['patient_id'].isin(bp_split_dfs[s]['patient_id'])]
         # save output files
-        if splits.at[s, 'rand_seed'] is not None:
-            if os.path.exists(os.path.join(save_folder, f"{s}.csv")):
-                print(f"Joint {s} file already exists, not overwriting")
-            else:
-                temp_df = convert_to_csv(output_files[s], args.tasks)
-                temp_df.to_csv(os.path.join(save_folder, f"{s}.csv"), index=False)
-        else:
-            temp_df = convert_to_csv(output_files[s], args.tasks)
-            temp_df.to_csv(os.path.join(save_folder,f"RAND_{args.random_seed}", f"{s}.csv"), index=False)
+        temp_df = convert_to_csv(output_files[s], args.tasks)
+        temp_df.to_csv(os.path.join(save_folder, f"{s}.csv"), index=False)
+    # # data partition summary table
     bp_summary, img_summary = get_stats(output_files)
-    bp_summary.to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", 'by_patient_split_summary.csv'))
-    img_summary.to_csv(os.path.join(save_folder, f"RAND_{args.random_seed}", 'by_image_split_summary.csv'))
+    bp_summary.to_csv(os.path.join(save_folder, 'by_patient_split_summary.csv'))
+    img_summary.to_csv(os.path.join(save_folder, 'by_image_split_summary.csv'))
     print("\nBy patient summary of data partition\n")
     print(bp_summary.to_markdown())
 
@@ -123,7 +114,7 @@ def bootstrapping(args):
     tracking_info = args.__dict__
     tracking_info['equal split subgroups'] = equal_stratification_groups
     tracking_info['Generated on'] = str(date.today())
-    with open(os.path.join(save_folder, f"RAND_{args.random_seed}", "partition_info.log"), 'w') as fp:
+    with open(os.path.join(save_folder, "partition_info.log"), 'w') as fp:
         json.dump(tracking_info, fp, indent=4)
 
 def adjust_subgroups(in_df):
@@ -316,7 +307,6 @@ if __name__ == '__main__':
     parser.add_argument("--remaining_to_test", default=False)
     parser.add_argument("--random_seed", default=0, type=int)
     # # saving/naming
-    parser.add_argument("--partition_name", type=str, required=True)
     parser.add_argument("--save_dir", type=str, required=True)
     # # number of images per patient
     parser.add_argument("--min_img_per_patient", default=0)

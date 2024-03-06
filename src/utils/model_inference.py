@@ -32,8 +32,6 @@ def inference_onnx(args):
     test_dataset = Dataset(args.input_list_file, train_flag=False)
     # # Create data loader
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.threads)
-
-    print('Inferencing now ...')
     # # get ROI-aug and ROI-aug-avg
     auc_val, results_path = run_deploy_onnx(test_loader, args)
     with open(os.path.join(os.path.dirname(args.log_path), 'inference_log.log'), 'a') as fp:
@@ -74,7 +72,7 @@ def run_deploy_onnx(data_loader, args):
     fpr, tpr, _ = metrics.roc_curve(np.array(type_all), np.array(scores_all), pos_label=1)
     auc_val = metrics.auc(fpr, tpr)
     print(' There are %d test samples in the list' % len(fnames_all))
-    print(' AUROC = %f' % auc_val)
+    print(' AUROC = %.4f' % auc_val)
 
     # # save the score file
     result_df = pd.DataFrame(list(zip(pid_all, fnames_all, type_all, logits_all, scores_all)), columns=['patient_id', 'ROI_path', 'label', 'logits', 'score'])
@@ -82,7 +80,8 @@ def run_deploy_onnx(data_loader, args):
     result_df.to_csv(results_path, sep='\t', index=False)
     # # calculate time taken
     stop = timeit.default_timer()
-    print(' Time taken: ', stop - start) 
+    time = float(stop - start)
+    print(f' Time taken: {time:.2f} seconds') 
     return auc_val, results_path
     
 

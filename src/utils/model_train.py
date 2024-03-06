@@ -145,8 +145,10 @@ def train(args):
         torch.manual_seed(args.random_state)
         torch.cuda.manual_seed_all(args.random_state)
         np.random.seed(args.random_state)
+    # for result reproducibility    
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+    # model selection
     num_channels = 1
     custom_layer_name = []
     if args.dcnn == 'googlenet':
@@ -158,7 +160,6 @@ def train(args):
         else:
             model = models.__dict__[args.dcnn]()
         model = modify_classification_layer_v1(model, num_channels)
-        #custom_layer_name = resnet18_ordered_layer_names.copy()
     elif args.dcnn == 'wide_resnet50_2':
         model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
         model = modify_classification_layer_v1(model, num_channels)
@@ -175,8 +176,7 @@ def train(args):
         print('Using custom pretrained checkpoint file')
     else:
         print('ERROR. UNKNOWN model.')
-        return
-    
+        return    
 
     # # custom transfer learning >>
     if args.fine_tuning == 'partial':
@@ -199,8 +199,6 @@ def train(args):
     else:
         print('ERROR. UNKNOWN option for fine_tuning')
         return
-    
-    # # 
     
     torch.cuda.set_device(args.gpu_id)
     model.cuda(args.gpu_id)
@@ -230,7 +228,7 @@ def train(args):
         # # train for one epoch
         avg_loss = run_train(train_loader, model, criterion, optimizer)
         my_lr_scheduler.step()
-        # # save
+        # # validation and save checkpoint
         if epoch % args.save_every_N_epochs == 0 or epoch == args.num_epochs-1:
             # # evaluate on validation set
             auc_val = run_validate(valid_loader, model, args)

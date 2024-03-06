@@ -6,52 +6,29 @@ import torch
 import sklearn.metrics as sk_metrics
 import numpy as np
 
+from matplotlib.patches import Patch
+from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
+from matplotlib import rcParams
 
+COLORS = {"F":"#dd337c", "M":"#0fb5ae", "Overall":"#57c44f", "B":"#4046ca", "W":"#f68511", "COVID":"#57c44f", "Subgroup":"#7e84fa",} 
+STYLES = {"Default":"-", "M":"--", "F":"-", "B":"-", "W":"--"} # positive-associated
+SUBGROUP_NAME_MAPPING = {"F":"Female", "M":"Male"} # for the legend(s)
+AXIS_COLOR = "#6e6e6e"
 
-plt.rcParams["figure.figsize"] = [8, 6]
-plt.rcParams['figure.dpi'] = 300
-plt.rcParams['font.family'] = 'monospace'
-plt.rcParams.update({'font.size': 14})
-plt.rcParams['axes.titley'] = 1.0 
-plt.rcParams['axes.titlepad'] = 8
-plt.rcParams["legend.loc"] = 'lower right'
-plt.rcParams["legend.handlelength"] = 4.5
-plt.rcParams["legend.borderaxespad"] = 0.2
-plt.rcParams["legend.fontsize"] = 16
-
-color_dict = {"F":"#dd337c", "M":"#0fb5ae", "Overall":"#57c44f", "Black":"#4046ca", "White":"#f68511"} 
-style_dict = {"Default":"-", "M":"--", "F":"-", "Black":"-", "White":"--"} # positive-associated
-
-def get_confusion_matrix(predictions, groundtruth, threshold):
-    """ Get counts of true/false positives and true/false negatives. 
-    
-    Arguments
-    =========
-    predictions
-        numpy array contains prediction scores.
-    groundtruth
-        numpy array contains ture labels.
-    threshold
-        Threshold to calculate true/false positives and true/false negatives.
-
-    Returns
-    =======
-    tp 
-        counts of true positive
-    tn 
-        counts of true negative
-    fp 
-        counts of false positive
-    fn 
-        counts of false negative
-    
-    """
-    tp = np.sum(np.logical_and(predictions > threshold, groundtruth == 1))
-    tn = np.sum(np.logical_and(predictions <= threshold, groundtruth == 0))
-    fp = np.sum(np.logical_and(predictions > threshold, groundtruth == 0))
-    fn = np.sum(np.logical_and(predictions <= threshold, groundtruth == 1))
-    return tp, tn, fp, fn 
+rcParams['axes.labelweight'] = 'bold'
+rcParams['axes.titleweight'] = 'bold'
+rcParams['axes.labelsize'] = 8
+rcParams['axes.titlesize'] = 10
+rcParams['font.size'] = 8
+rcParams['font.weight'] = 'bold'
+rcParams['grid.alpha'] = 0.5
+rcParams['savefig.dpi'] = 300
+rcParams['axes.grid'] = True
+rcParams['xtick.color'] = AXIS_COLOR
+rcParams['ytick.color'] = AXIS_COLOR
+rcParams['axes.labelcolor'] = AXIS_COLOR
+rcParams['axes.edgecolor'] = AXIS_COLOR
 
 def info_pred_mapping(info:pd.DataFrame, pred:pd.DataFrame)->pd.DataFrame:
     """ Map patient attributes information (e.g. sex, race) to prediction score and labels
@@ -81,7 +58,7 @@ def info_pred_mapping(info:pd.DataFrame, pred:pd.DataFrame)->pd.DataFrame:
     return info_pred
     
 
-def subgroup_bias_calculation(info_pred:pd.DataFrame, test_list:list, output_file:str, threshold:float)->pd.DataFrame:
+def metric_calculation(result_df, info_pred, test_list, positive_group, prev_diff, threshold=0.5):
     """ Calculate performance and bias measurements for subgroups. 
     
     Arguments
@@ -101,88 +78,148 @@ def subgroup_bias_calculation(info_pred:pd.DataFrame, test_list:list, output_fil
         Dataframe contains calculated performance and bias measurements.
     
     """
-    print("\nStart subgroup bias measurements")
-    # nuanced auroc and AEG
-    subgroup_df = info_pred[[test_list[0],test_list[1]]].copy()
-    true_label = info_pred[['label']].copy()
-    pred_prob = info_pred[['score']].copy()
-    # fairness measurements
-    dp = {}
     for grp in test_list:
+        dp = {}
         info_sub = info_pred.loc[info_pred[grp]==1]
         task_gt = info_sub['label']
         task_pred = info_sub['score']
-        dp[f"{grp}"] = {}
-        tp, tn, fp, fn = get_confusion_matrix(task_pred, task_gt, threshold)
-        # Demographic Parity criteria
-        dp[f"{grp}"]['Demographic Parity (thres)'] = (tp+fp) / (tp+tn+fp+fn+1e-8)
-        # Equalized Odds criteria (sensitivity)
-        dp[f"{grp}"]['TPR'] = tp / (tp+fn+1e-8)
+        dp['subgroup'] = [grp]
+        dp['experiment'] = [abs(prev_diff)]
+        dp['positive associated'] = [positive_group]
+        # Predicted prevalence
+        dp['metric'] = ["Predicted Prevalence"]
+        dp['value'] = len(info_sub[info_sub['score'] > 0.5]) / len(info_sub)
+        #dp['value'] = np.mean(task_pred)
+        result_df = pd.concat([result_df, pd.DataFrame(dp)], ignore_index=True)
+        if prev_diff == 0:
+            result_df = pd.concat([result_df, pd.DataFrame({**dp, 'positive associated': [test_list[1]]})], ignore_index=True)
         # AUROC
-        dp[f"{grp}"]['AUROC'] = sk_metrics.roc_auc_score(y_score=task_pred, y_true=task_gt)
-        # Overall AUROC for COVID
-        dp[f"{grp}"]['Overall AUROC'] = sk_metrics.roc_auc_score(y_score=info_pred["score"], y_true=info_pred["label"])
-        # AUROC for subgroup classification
-        dp[f"{grp}"]['AUROC_subgroup'] = sk_metrics.roc_auc_score(y_score=info_pred["score"], y_true=info_pred[grp])
-            
-    return dp
+        dp['metric'] = ["AUROC"]
+        dp['value'] = [sk_metrics.roc_auc_score(y_score=task_pred, y_true=task_gt)]
+        result_df = pd.concat([result_df, pd.DataFrame(dp)], ignore_index=True)
+        if prev_diff == 0:
+            result_df = pd.concat([result_df, pd.DataFrame({**dp, 'positive associated': [test_list[1]]})], ignore_index=True)            
+    return result_df
   
 def analysis(args):
-    exp_dir = args.exp_dir  
-    test_info = pd.read_csv(args.testing_info_file)    
-    group_dict = {'sex':['M','F'], 'race':['White','Black']}
+    """
+    Main script to load test results, measure bias and do plotting.
+    """
+    # # get basic infomation for bias measurements
+    main_dir = args.main_dir  
+    test_info = pd.read_csv(args.testing_info_file)
+    group_dict = {'sex':['F', 'M'], 'race':['Black', 'White']}    
     test_list = group_dict.get(args.test_subgroup)
-    prev_diff_p = []
-    prev_diff_n = []
-    results_p = []
-    results_n = []
+    result_df = pd.DataFrame(columns=['subgroup', 'experiment', 'positive associated', 'metric', 'value'])    
     # # calculate bias measurements
-    for exp in exp_list:
-        prev = int(''.join(filter(str.isdigit, exp)))
-        prev_diff = 2 * prev - 1 
-        test_result = pd.read_csv(os.path.join(main_dir, exp, args.testing_result_file), sep='\t')
-        test_info_result = info_pred_mapping(test_info, test_result)
-        output_file = os.path.join(exp_dir, 'subgroup_bias_measure.csv')
-        metric_summary = subgroup_bias_calculation(test_info_result, test_list, output_file, args.threshold)
-        if prev_diff > 0:
-            prev_diff_p.append(prev_diff)
-            results_p.append(metric_summary)
-        elif prev_diff < 0:
-            prev_diff_n.append(-prev_diff)
-            results_n.append(metric_summary)
+    for exp in args.exp_list:        
+        if args.amplification_type.lower() == "quantitative misrepresentation":            
+            x_tick = 2 * int(''.join(filter(str.isdigit, exp))) - 100
+            pos_as = test_list[0] if x_tick >= 0 else test_list[1]
+            x_label = "Training Prevelance Difference(%)"
+            y_lim = {'AUROC':[0.5, 0.75], 'Predicted Prevalence':[0,1]}
+        elif args.amplification_type.lower() == "inductive transfer learning":
+            x_tick = int(''.join(filter(str.isdigit, exp))) if "baseline" not in exp else 0
+            pos_as = exp[0] if "baseline" not in exp else test_list[0]
+            x_label = "Number of Frozen Layers"
+            y_lim = {'AUROC':[0.5, 0.75], 'Predicted Prevalence':[0.25,0.75]}
         else:
-            prev_diff_p.append(prev_diff)
-            prev_diff_n.append(prev_diff)
-            results_p.append(metric_summary)
-            results_n.append(metric_summary)
-    results_p = [x for _,x in sorted(zip(prev_diff_p,results_p))]
-    prev_diff_p = sorted(prev_diff_p)
-    results_n = [x for _,x in sorted(zip(prev_diff_n,results_n))]
-    prev_diff_n = sorted(prev_diff_n)
-    dp_p_0 = [x for x in results_p[test_list[0]]['Demographic Parity (thres)']]
-    dp_n_0 = [x for x in results_n[test_list[0]]['Demographic Parity (thres)']]
-    dp_p_1 = [x for x in results_p[test_list[1]]['Demographic Parity (thres)']]
-    dp_n_1 = [x for x in results_n[test_list[1]]['Demographic Parity (thres)']]
-    auc_p_0 = [x for x in results_p[test_list[0]]['AUROC']]
-    auc_n_0 = [x for x in results_n[test_list[0]]['AUROC']]
-    auc_p_1 = [x for x in results_p[test_list[1]]['AUROC']]
-    auc_n_1 = [x for x in results_n[test_list[1]]['AUROC']]
-    fig, (ax1, ax2) = plt.subplots(1, 2)
-    ax1.plot(prev_diff_p, dp_p_0, c=color_dict[test_list[0]])
+            print('ERROR. UNKNOWN bias amplification type.')
+            return
+        test_score = pd.read_csv(os.path.join(main_dir, exp, args.testing_result_file), sep='\t')
+        test_info_result = info_pred_mapping(test_info, test_score)        
+        result_df = metric_calculation(result_df, test_info_result, test_list, pos_as, x_tick, args.threshold)
+        
+    #    result_df.to_csv(os.path.join(main_dir, "test_score_base_2.csv"))
+    # # plot the metric
+            
+    results_plotting(data=result_df, x_col="experiment", x_label=x_label, hue_col="subgroup", style_col="positive associated",
+                    s_col="metric", value_col="value", exp_type=args.amplification_type, y_lim=y_lim)
     
-    
-    
+def results_plotting(data, x_col, x_label, hue_col, style_col, s_col, value_col, exp_type, color_dict=COLORS, style_dict=STYLES, y_lim=None):  
+    """
+    Function to generate subplots with input plot sections and parameters.
+
+    Arguments
+    =========
+    data
+        dataframe that contains the data for plotting
+    x_col
+        name for column that contains x-axis ticks
+    x_label
+        set the x label name
+    hue_col
+        name for column that contains subgroups mapped with different colors during plotting
+    style_col
+        name for column that determine line styles by positive-associated subgroup
+    s_col
+        name for column that contains sub-sections in the figure    
+    value_col
+        name for column that contains metric value
+    exp_type
+        indicate which bias amplification approach
+    style_dict
+        dictionary that determines plotting style
+    color_dict
+        dictionary that determins plotting colors
+    y_lim
+        set range for y axis according to metric
+    """
+    # # create figure with sub-sections       
+    fig = plt.figure(figsize = (10, 4))
+    fig.suptitle(exp_type.title(), fontsize = 10, weight='bold')  
+    gs = fig.add_gridspec(1, 2)
+    data = data.sort_values(x_col)
+    axes = []
+    for c in range(2):
+        axes.append(fig.add_subplot(gs[0,c]))
+        axes[-1].set_xticks(data[x_col].unique().tolist())
+        axes[-1].set_xlabel(x_label)
+    # # generate plots in each sub-sections
+    for i, m in enumerate(sorted(data[s_col].unique().tolist())):
+      ax = axes[i]
+      ax.set_title(f"Subgroup {m}")
+      ax.set_ylabel(m)
+      if y_lim is not None:
+          ylim = y_lim.get(m)
+          ax.set_ylim(ylim[0], ylim[1])
+      temp_data = data[data[s_col] == m].copy()
+      gb = [hue_col, style_col]
+      for gp, df in temp_data.groupby(gb):
+        hue = gp[0]
+        style = gp[-1]
+        ax.plot(df[x_col], df[value_col], c=color_dict[hue], ls=style_dict[style], linewidth=3)
+        ax.set_xticks(data[x_col].unique().tolist())
+        # set the "0" to "B" (for baseline)
+        labels = ax.get_xticks().tolist()
+        labels[0] = "B"
+        ax.set_xticklabels(labels)
+        name_map = SUBGROUP_NAME_MAPPING
+        for h in data[hue_col].unique().tolist():
+            if h not in name_map:
+                name_map[h] = h
+        hue_lines = [Patch(facecolor=color_dict[h], label=name_map[h]) for h in data[hue_col].unique().tolist()]
+        hue_legend = ax.legend(handles=hue_lines,  title=hue_col, loc='lower left')
+        if style_col:
+          style_lines = [Line2D([0], [0], ls=style_dict[s], color='k', label=name_map[s]) for s in data[style_col].unique().tolist()]
+          style_legend = ax.legend(handles=style_lines, title="Positive-Associated", loc='lower right')
+          fig.add_artist(hue_legend)  
+    # # show the figure
+    plt.show()
+    plt.close("all")               
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--main_dir',type=str, required=True)
+    parser.add_argument('-a', '--amplification_type',type=str, required=True,
+    help="Choose which bias amplification type (quantitative misrepresentation or inductive transfer learning.")
     parser.add_argument('-e', '--exp_list', nargs='+', default=[], required=True)
     parser.add_argument('-r', '--testing_result_file',type=str, required=True)
     parser.add_argument('-i', '--testing_info_file',type=str, required=True)
     parser.add_argument('-t', '--threshold', type=float, default=0.5)
     parser.add_argument('-s', '--test_subgroup', type=str, required=True)
     args = parser.parse_args()
-    analysis(args)
-    
+    print("\nStart subgroup bias measurements")
+    analysis(args)    
     print("\nDone\n")
 

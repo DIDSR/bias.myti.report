@@ -20,7 +20,7 @@ def train_split(args):
             raise RuntimeError('Input test subgroups is not currently supported!')        
         #only manipulate prevalence in each subgroup
         else:    
-            print(f"Start data split of prevalence of {prev} for {test_subgroup} in {args.input_file}\n")
+            print(f"Start data sampling with prevalence of {prev} for {test_subgroup} in {args.input_file}")
             out = pd.DataFrame()
             remain_subgroup = [i for i in subgroup_list if i != test_subgroup]
             #equally sampling in each subgroup combinations
