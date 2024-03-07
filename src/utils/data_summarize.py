@@ -131,8 +131,8 @@ def read_open_A1_20221010(args):
   patient_df.set_index("submitter_id", inplace=True) # set patient id as index
   print(f"Filtered to {len(patient_df)} patients based on series modality")
   total_patients = img_series_df["case_ids_0"].nunique()
-  progress_bar = IntProgress(min=0, max=len(total_patients), description='Reading:')
-	display(progress_bar)
+  progress_bar = IntProgress(min=0, max=total_patients, description='Reading:')
+  display(progress_bar)
   # # iterate over the patient-id
   num_patients_to_json = 0
   num_images_to_json = 0
