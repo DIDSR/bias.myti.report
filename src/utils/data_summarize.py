@@ -112,8 +112,9 @@ def read_open_A1_20221010(args):
   patient_df.set_index("submitter_id", inplace=True) # set patient id as index
   print(f"Filtered to {len(patient_df)} patients based on series modality")
   total_patients = img_series_df["case_ids_0"].nunique()
-  progress_bar = IntProgress(min=0, max=total_patients, description='Reading:')
-  display(progress_bar)
+  if args.notebook:
+    progress_bar = IntProgress(min=0, max=total_patients, description='Reading:')
+    display(progress_bar)
   # # iterate over the patient-id
   num_patients_to_json = 0
   num_images_to_json = 0
@@ -131,7 +132,10 @@ def read_open_A1_20221010(args):
           pass
   
   for i, (patient_id, df_patient) in enumerate(img_series_df.groupby("case_ids_0")):
-    #print(f"{i}/{total_patients} ({((i/total_patients)*100):.2f}%)", end="\r")
+    if args.notebook: 
+        progress_bar.value += 1
+    else:
+        print(f"{i}/{total_patients} ({((i/total_patients)*100):.2f}%)", end="\r")
     patient_skip = True
     # #
     #patient_id = patient_row['submitter_id']
@@ -148,7 +152,7 @@ def read_open_A1_20221010(args):
         "repo":"open-A1",
         }
     for study_idx, study_row in df_patient.iterrows():
-        progress_bar.value += 1
+        
         patient_study_path1 = os.path.join(args.input_dir, study_row['case_ids_0'], str(study_row['study_uid_0']), str(study_row['series_uid']))
         patient_study_path2 = os.path.join(args.input_dir, str(study_row['study_uid_0']), str(study_row['series_uid']))
         if os.path.exists(patient_study_path1):
@@ -197,8 +201,8 @@ def read_open_A1_20221010(args):
         save_to_file(patient_info_list, args.output_file)
         patient_info_list = []
     
-    
-  print(f"{i+1}/{total_patients} ({(((i+1)/total_patients)*100):.2f}%)", end="\r")
+  if not args.notebook:
+      print(f"{i+1}/{total_patients} ({(((i+1)/total_patients)*100):.2f}%)", end="\r")
   # # print summary info and save output files
   print('Saving {} patients to json'.format(num_patients_to_json))
   print('Saving {} images to json'.format(num_images_to_json))
@@ -234,6 +238,7 @@ if __name__ == "__main__":
   parser.add_argument('-o', '--output_file', type=str, help='<Required> Output log file', required=True)
   parser.add_argument("--overwrite", default=False, action="store_true", help="(Optional) pass to overwrite existing output files")
   parser.add_argument("--save-every", dest="save_every", type=int, default=20, help="(Optional; default=20) How often to save information; helps with memory issues.")
+  parser.add_argument("--notebook", default=False, action="store_true", help="Pass to switch display if running in notebook (show progress bar instead of counter).")
   args = parser.parse_args()
   read_open_A1_20221010(args)
   print(f"complete in {((time.time()-start_time)/60):.2f} min")
