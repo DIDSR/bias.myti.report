@@ -2,8 +2,7 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 from torch.utils.data import DataLoader
-from distutils.util import strtobool
-from collections import OrderedDict
+#from collections import OrderedDict
 # #
 from dat_data_load import Dataset
 import os
@@ -19,6 +18,15 @@ import onnxruntime
 # # CONSTANTS
 master_iter = 0
 
+def strtobool(value: str) -> bool:
+  """
+  Change strings to boolean.
+  """
+  value = value.lower()
+  if value in ("y", "yes", "on", "1", "true", "t"):
+    return True
+  return False
+  
 
 def save_checkpoint(state, filename='checkpoint.pth.tar'):
     """
@@ -71,16 +79,15 @@ def apply_custom_transfer_learning__resnet18(net):
     fine_tune_layers = ','.join(layers[args.freeze_up_to-len(layers):]).split(',')
     for name, param in net.named_parameters():
         if name not in fine_tune_layers:
-            #print(name)
             param.requires_grad = False
-    
+    # # make sure layers are correctly frozen
     parameters = list(filter(lambda p: p.requires_grad, net.parameters()))
     assert len(parameters) == len(fine_tune_layers)
                 
     return net
 
 
-def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels, is_training=True):
+def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels):
     """ 
     Load customized pre-trained models with given weight file.
     
@@ -94,8 +101,6 @@ def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels, is_train
         current GPU ID.
     num_channels
         number of channels.
-    is_training
-        indicate if is in training mode.
 
     Returns
     =======
@@ -103,35 +108,15 @@ def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels, is_train
         loaded pre-trained model.
     
     """
-    device = f'cuda:{gpu_ids}'
-    ckpt_dict = torch.load(ckpt_path, map_location=device)
-
+    # # load model
     model = models.__dict__[base_dcnn](weights='IMAGENET1K_V1')
     model = modify_classification_layer_v1(model, num_channels)
-    state_dict = ckpt_dict['state_dict']
-    for k in list(state_dict.keys()):
-        # retain only encoder_q up to before the embedding layer
-        if k.startswith('module.encoder_q') and not k.startswith('module.encoder_q.fc'):
-            # remove prefix
-            state_dict['module.model.' + k[len("module.encoder_q."):]] = state_dict[k]
-            # delete renamed or unused k
-            del state_dict[k]
-        elif 'encoder_k' in k or 'module.queue' in k:
-            del state_dict[k]
-        elif k.startswith('module.encoder_q.fc'):
-            del state_dict[k]
-    # # modify key names in the state_dict to match the new model
-    new_state_dict = OrderedDict()
-
-    for k, v in state_dict.items():
-        if k.startswith('module.model.'):
-            name = k[13:]  # remove `module.`
-        else:
-            name = k
-        new_state_dict[name] = v
-    # # this is copying the weights and biases
-    model.load_state_dict(new_state_dict, strict=False)
-
+    # # load state_dicts from the weight file
+    device = f'cuda:{gpu_ids}'
+    ckpt_dict = torch.load(ckpt_path, map_location=device)
+    state_dict = ckpt_dict['state_dict']    
+    # # copy the weights and biases
+    model.load_state_dict(state_dict, strict=False)
     return model
         
 
@@ -153,26 +138,24 @@ def train(args):
     custom_layer_name = []
     if args.dcnn == 'googlenet':
         model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
-        model = modify_classification_layer_v1(model, num_channels)
+        model = modify_classification_layer_v1(model, num_channels=1)
     elif args.dcnn == 'resnet18':
         if args.pretrained_weights == True:
             model = models.__dict__[args.dcnn](weights='IMAGENET1K_V1')
         else:
             model = models.__dict__[args.dcnn]()
-        model = modify_classification_layer_v1(model, num_channels)
+        model = modify_classification_layer_v1(model, num_channels=1)
     elif args.dcnn == 'wide_resnet50_2':
         model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
-        model = modify_classification_layer_v1(model, num_channels)
+        model = modify_classification_layer_v1(model, num_channels=1)
     elif args.dcnn == 'densenet121':
         model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
-        model = modify_classification_layer_v1(model, num_channels)
+        model = modify_classification_layer_v1(model, num_channels=1)
     elif args.dcnn == 'resnext50_32x4d':
         model = models.__dict__[args.dcnn](pretrained=args.pretrained_weights)
-        model = modify_classification_layer_v1(model, num_channels)
+        model = modify_classification_layer_v1(model, num_channels=1)
     elif args.dcnn == 'CheXpert_Resnet':
-        model = load_custom_checkpoint(args.custom_checkpoint_file, 'resnet18', args.gpu_id, num_channels)      
-    elif args.dcnn == 'CheXpert-Mimic_Densenet':
-        model = load_custom_checkpoint(args.custom_checkpoint_file, 'densenet121', args.gpu_id, num_channels)
+        model = load_custom_checkpoint(args.custom_checkpoint_file, 'resnet18', args.gpu_id, num_channels=1)
         print('Using custom pretrained checkpoint file')
     else:
         print('ERROR. UNKNOWN model.')
@@ -181,18 +164,10 @@ def train(args):
     # # custom transfer learning >>
     if args.fine_tuning == 'partial':
         print(f"Fine tuning with first {args.freeze_up_to} layers frozen")
-        if args.dcnn == 'googlenet':
-            print('ERROR. Custom transfer learning not implemented for this model.')
-        elif args.dcnn == 'resnet18' or args.dcnn == 'CheXpert_Resnet':
+        if args.dcnn == 'resnet18' or args.dcnn == 'CheXpert_Resnet':
             model = apply_custom_transfer_learning__resnet18(model)
-        elif args.dcnn == 'wide_resnet50_2':
-            print('ERROR. Custom transfer learning not implemented for this model.')
-        elif args.dcnn == 'densenet121' or args.dcnn == 'CheXpert-Mimic_Densenet':
-            model = apply_custom_transfer_learning__densenet121(model)
-        elif args.dcnn == 'resnext50_32x4d':
-            print('ERROR. Custom transfer learning not implemented for this model.')
         else:
-            print('ERROR. UNKNOWN model.')
+            print('ERROR. Custom transfer learning not implemented for this model.')
             return
     elif args.fine_tuning == 'full':
         print('Full fine tuning selected')
@@ -363,7 +338,7 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--validation_file', help='input validation list file', required=True)
     parser.add_argument('-o', '--output_base_dir', help='output based dir', required=True)
     parser.add_argument('-d', '--dcnn', default='CheXpert_Resnet',
-        help="which dcnn to use: 'googlenet', 'resnet18', 'wide_resnet50_2', 'resnext50_32x4d', 'densenet121', 'CheXpert_Resnet', 'CheXpert-Mimic_Densenet'")        
+        help="which dcnn to use: 'googlenet', 'resnet18', 'wide_resnet50_2', 'resnext50_32x4d', 'densenet121', 'CheXpert_Resnet'")        
     parser.add_argument('--freeze_up_to',  type=int, help="Specify the number of layers being frozen during training.")    
     parser.add_argument('--pretrained_weights', default=True, type=lambda x: bool(strtobool(x)), help="False if train from scratch.")
     parser.add_argument('-f', '--fine_tuning', default='full', help="options: 'full' or 'partial'")
@@ -378,7 +353,7 @@ if __name__ == '__main__':
     parser.add_argument('--decay_every_N_epoch', type=int, default=3, help='Drop the learning rate every N epochs')
     parser.add_argument('--decay_multiplier', type=float, default=0.2, help='Decay multiplier')
     parser.add_argument('-e', '--save_every_N_epochs', type=int, default=1, help='save checkpoint every N number of epochs')
-    parser.add_argument('--bsave_valid_results_at_epochs', type=bool, default=False, 
+    parser.add_argument('--bsave_valid_results_at_epochs', type=lambda x: bool(strtobool(x)), default=False, 
         help='save validation results csv at every epoch, True/False')
     parser.add_argument('-g', '--gpu_id', type=int, default=0, help='GPU ID')
     parser.add_argument('-c', '--custom_checkpoint_file',  

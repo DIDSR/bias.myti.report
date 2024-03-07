@@ -11,7 +11,6 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtSvgWidgets import *
 import sys 
 import shutil
-from pathlib import Path
 import os
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
@@ -438,7 +437,8 @@ class FinalPage(Page):
           self.tile_title.append(QLabel(self.m_list[i], self))
           self.tile_layout.addWidget(self.tile_title[-1], alignment=Qt.AlignmentFlag.AlignLeft)
           self.tile_figures.append(ClickLabel(self))
-          self.tile_figures[-1].setPixmap(QPixmap(self.example_images[-1]).scaled(200,150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+          if os.path.isfile(self.example_images[-1]):
+              self.tile_figures[-1].setPixmap(QPixmap(self.example_images[-1]).scaled(200,150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
           self.tile_figures[-1].setObjectName("not_selected")
           self.tile_figures[-1].clicked.connect(lambda x=i: self.fig_select(x))
           self.tile_layout.addWidget(self.tile_figures[-1])
@@ -497,7 +497,7 @@ class FinalPage(Page):
           w.setStyleSheet(styleSheet)
         
         # # Set the large image and descriptiong
-        self.lbl_selected_plot.setPixmap(QPixmap(self.example_images[figure_number]).scaled(500,375, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        self.lbl_selected_plot.setPixmap(QPixmap(self.example_images[figure_number]).scaled(480, 360, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         self.lbl_selected_dscp.setText(self.info_list[figure_number])
         self.current_plot = figure_number
     

@@ -1,6 +1,6 @@
 import os
 import glob
-import fnmatch
+#import fnmatch
 import argparse
 import pydicom
 import pandas as pd
@@ -76,24 +76,6 @@ def manufacturer_lookup(manufacturer_info):
 	print(f"manufacturer value {manufacturer_info} not in lookup table")
 	return manufacturer_info
 
-def get_dcms(file_path):
-    dcms = []
-    for p, d, f in os.walk(file_path):
-        for file in f:
-            if file.endswith('.dcm'):
-                fp = os.path.join(p, file)
-                dcms.append(fp)
-    return dcms
-
-def searchthis(location, searchterm):
-	lis_paths = []
-	for dir_path, dirs, file_names in os.walk(location):
-		for file_name in file_names:
-			fullpath = os.path.join(dir_path, file_name)
-			if searchterm in fullpath:
-				lis_paths += [fullpath]
-	return lis_paths
-
 def save_to_file(data:list, filepath:str):
     if len(data) > 0:
         with open(filepath, "a") as file:
@@ -103,14 +85,13 @@ def save_to_file(data:list, filepath:str):
     return
 	
 def read_open_A1_20221010(args):
-  '''
-  using the imaging data and the associated MIDRC tsv files downloaded on 20221010
+  """
+  Summarized the downloaded Open-A1 data set using the imaging data and the associated MIDRC tsv files. Summary file will be save as a json file.
 
   	Info on supporting files:
-		../data/20221010_open_A1_all_Cases.tsv: get patient-level info (submitter_id, sex, age, race, COVID_status)
-		../data/20221010_open_A1_all_Imaging_Studies.tsv: for a submitter_id (case_ids_0), use the study_modality_0
-			identify the study_uid which is the subdirectory name. However, sometimes, the study_uid is the main directory
-  '''
+		/data/20221010_open_A1_all_Cases.tsv: get patient-level info (submitter_id, sex, age, race, COVID_status)
+		/data/20221010_open_A1_all_Imaging_Series.tsv: get image series info
+  """
   # information to gather (pixel spacing and img size done separately)
   img_info_dict = {
     'modality':(0x0008,0x0060),
