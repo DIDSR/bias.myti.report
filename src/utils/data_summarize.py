@@ -134,8 +134,8 @@ def read_open_A1_20221010(args):
   for i, (patient_id, df_patient) in enumerate(img_series_df.groupby("case_ids_0")):
     if args.notebook: 
         progress_bar.value += 1
-    else:
-        print(f"{i}/{total_patients} ({((i/total_patients)*100):.2f}%)", end="\r")
+    
+    print(f"{i}/{total_patients} ({((i/total_patients)*100):.2f}%)", end="\r")
     patient_skip = True
     # #
     #patient_id = patient_row['submitter_id']
@@ -201,8 +201,8 @@ def read_open_A1_20221010(args):
         save_to_file(patient_info_list, args.output_file)
         patient_info_list = []
     
-  if not args.notebook:
-      print(f"{i+1}/{total_patients} ({(((i+1)/total_patients)*100):.2f}%)", end="\r")
+  
+  print(f"{i+1}/{total_patients} ({(((i+1)/total_patients)*100):.2f}%)", end="\r")
   # # print summary info and save output files
   print('Saving {} patients to json'.format(num_patients_to_json))
   print('Saving {} images to json'.format(num_images_to_json))
