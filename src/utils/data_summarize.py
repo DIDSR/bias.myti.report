@@ -9,8 +9,9 @@ from PIL import Image
 import datetime
 import time
 import json
-
-
+from ipywidgets import IntProgress
+from IPython.display import display
+# #
 # consistent terminology
 race_lookup_table = {
 	'American Indian or Alaska Native':['AMERICAN INDIAN OR ALASKA NATIVE'],
@@ -105,12 +106,10 @@ def read_open_A1_20221010(args):
   '''
   using the imaging data and the associated MIDRC tsv files downloaded on 20221010
 
-  Info on supporting files:
-    ../data/20221010_open_A1_all_Cases.tsv: get patient-level info (submitter_id, sex, age, race, COVID_status)
-    ../data/20221010_open_A1_all_Imaging_Studies.tsv: for a submitter_id (case_ids_0), use the study_modality_0
-      identify the study_uid which is the subdirectory name. However, sometimes, the study_uid is the main directory
-  
-  11/02/2022: works for both open-A1 and open-R1
+  	Info on supporting files:
+		../data/20221010_open_A1_all_Cases.tsv: get patient-level info (submitter_id, sex, age, race, COVID_status)
+		../data/20221010_open_A1_all_Imaging_Studies.tsv: for a submitter_id (case_ids_0), use the study_modality_0
+			identify the study_uid which is the subdirectory name. However, sometimes, the study_uid is the main directory
   '''
   # information to gather (pixel spacing and img size done separately)
   img_info_dict = {
@@ -132,6 +131,8 @@ def read_open_A1_20221010(args):
   patient_df.set_index("submitter_id", inplace=True) # set patient id as index
   print(f"Filtered to {len(patient_df)} patients based on series modality")
   total_patients = img_series_df["case_ids_0"].nunique()
+  progress_bar = IntProgress(min=0, max=len(total_patients), description='Reading:')
+	display(progress_bar)
   # # iterate over the patient-id
   num_patients_to_json = 0
   num_images_to_json = 0
@@ -149,14 +150,7 @@ def read_open_A1_20221010(args):
           pass
   
   for i, (patient_id, df_patient) in enumerate(img_series_df.groupby("case_ids_0")):
-    print(f"{i}/{total_patients} ({((i/total_patients)*100):.2f}%)", end="\r")
-    #if num_patients_to_json > 0 and num_patients_to_json % 100 == 0:
-    #    print('Processed {} patients with {} series and {} images so far...'.format(num_patients_to_json, num_series_to_json, num_images_to_json))
-    
-    #imgs_good = []
-    #imgs_good_info = []
-    #imgs_bad = []
-    #imgs_bad_info = []
+    #print(f"{i}/{total_patients} ({((i/total_patients)*100):.2f}%)", end="\r")
     patient_skip = True
     # #
     #patient_id = patient_row['submitter_id']
@@ -173,6 +167,7 @@ def read_open_A1_20221010(args):
         "repo":"open-A1",
         }
     for study_idx, study_row in df_patient.iterrows():
+        progress_bar.value += 1
         patient_study_path1 = os.path.join(args.input_dir, study_row['case_ids_0'], str(study_row['study_uid_0']), str(study_row['series_uid']))
         patient_study_path2 = os.path.join(args.input_dir, str(study_row['study_uid_0']), str(study_row['series_uid']))
         if os.path.exists(patient_study_path1):
@@ -245,6 +240,7 @@ def read_open_A1_20221010(args):
     fp.write('Saved {} images in json\n'.format(num_images_to_json))
     fp.write('Saved {} series in json\n'.format(num_series_to_json))
     fp.write('Missed {} images in json\n'.format(num_missing_images))
+
 
 
 if __name__ == "__main__":
