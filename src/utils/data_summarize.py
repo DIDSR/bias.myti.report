@@ -7,10 +7,10 @@ import pandas as pd
 import numpy as np
 from PIL import Image
 import datetime
-# #
-#open_A1_Cases = "/data/20221010_open_A1_all_Cases.tsv"
-#open_A1_Imaging_Studies = "/data/20221010_open_A1_all_Imaging_Studies.tsv"
-#open_A1_Imaging_Series = "/data/MIDRC3/20221010_open_A1_all_Imaging_Series.tsv"
+import time
+import json
+
+
 # consistent terminology
 race_lookup_table = {
 	'American Indian or Alaska Native':['AMERICAN INDIAN OR ALASKA NATIVE'],
@@ -93,6 +93,13 @@ def searchthis(location, searchterm):
 				lis_paths += [fullpath]
 	return lis_paths
 
+def save_to_file(data:list, filepath:str):
+    if len(data) > 0:
+        with open(filepath, "a") as file:
+            for d in data:
+                json.dump(d, file)
+                file.write(os.linesep)
+    return
 	
 def read_open_A1_20221010(args):
   '''
@@ -116,28 +123,56 @@ def read_open_A1_20221010(args):
    # get patient info
   patient_df = pd.read_csv(args.case_tsv, sep='\t')
   img_series_df = pd.read_csv(args.series_tsv, sep='\t')
-  df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images','bad_images', 'bad_images_info', 'repo'])
+  #df = pd.DataFrame(columns=['patient_id', 'images', 'images_info', 'patient_info', 'num_images','bad_images', 'bad_images_info', 'repo'])
   print('There are {} patients'.format(len(patient_df.index)))
+  # remove series that are not in the chosen modalities
+  img_series_df = img_series_df[img_series_df['modality'].isin(modality_choices)].copy()
+  # remove patients with no valid series
+  patient_df = patient_df[patient_df['submitter_id'].isin(img_series_df['case_ids_0'])].copy()
+  patient_df.set_index("submitter_id", inplace=True) # set patient id as index
+  print(f"Filtered to {len(patient_df)} patients based on series modality")
+  total_patients = img_series_df["case_ids_0"].nunique()
   # # iterate over the patient-id
   num_patients_to_json = 0
   num_images_to_json = 0
   num_series_to_json = 0
   num_missing_images = 0
-  for idx, patient_row in patient_df.iterrows():
-    if num_patients_to_json > 0 and num_patients_to_json % 1000 == 0:
-        print('Processed {} patients with {} series and {} images so far...'.format(num_patients_to_json, num_series_to_json, num_images_to_json))
-    imgs_good = []
-    imgs_good_info = []
-    imgs_bad = []
-    imgs_bad_info = []
+  
+  patient_info_list = []
+  
+  # create the output file
+  if args.overwrite:
+      with open(args.output_file, "w") as file:
+          pass
+  else:
+      with open(args.output_file, "x") as file:
+          pass
+  
+  for i, (patient_id, df_patient) in enumerate(img_series_df.groupby("case_ids_0")):
+    print(f"{i}/{total_patients} ({((i/total_patients)*100):.2f}%)", end="\r")
+    #if num_patients_to_json > 0 and num_patients_to_json % 100 == 0:
+    #    print('Processed {} patients with {} series and {} images so far...'.format(num_patients_to_json, num_series_to_json, num_images_to_json))
+    
+    #imgs_good = []
+    #imgs_good_info = []
+    #imgs_bad = []
+    #imgs_bad_info = []
     patient_skip = True
     # #
-    patient_id = patient_row['submitter_id']
+    #patient_id = patient_row['submitter_id']
     # # identify the dir/sub-dir based on the Imaging_Studies file
-    df_patient = img_series_df.loc[img_series_df['case_ids_0'] == patient_id]
+    #df_patient = img_series_df.loc[img_series_df['case_ids_0'] == patient_id]
+    patient_info = {
+        "patient_id": patient_id,
+        "images" : [],
+        "images_info":[],
+        "patient_info":[],
+        "num_images":None,
+        "bad_images":[],
+        "bad_images_info":[],
+        "repo":"open-A1",
+        }
     for study_idx, study_row in df_patient.iterrows():
-      if study_row['modality'] in modality_choices:
-        patient_study_path = None
         patient_study_path1 = os.path.join(args.input_dir, study_row['case_ids_0'], str(study_row['study_uid_0']), str(study_row['series_uid']))
         patient_study_path2 = os.path.join(args.input_dir, str(study_row['study_uid_0']), str(study_row['series_uid']))
         if os.path.exists(patient_study_path1):
@@ -146,41 +181,59 @@ def read_open_A1_20221010(args):
           patient_study_path = patient_study_path2
         else:
           num_missing_images += 1
-        if patient_study_path is not None and study_row['modality'] in modality_choices:
-          patient_skip = False
-          # # get the dicom info here
-          # # there should be at least 1 dicom file in this folder
-          dcm_files = glob.glob(os.path.join(patient_study_path, '*.dcm'))
-          num_images_to_json += len(dcm_files)
-          num_series_to_json += 1
-          for each_dcm in dcm_files:
-            ds = pydicom.read_file(each_dcm)
-            imgs_good.append(each_dcm)
-            # get img info:
-            img_info = {key: ds[img_info_dict[key][0],img_info_dict[key][1]].value if img_info_dict[key] in ds else 'MISSING' for key in img_info_dict}
-            img_info['pixel spacing'] = [ds[0x0018,0x1164].value[0], ds[0x0018,0x1164].value[1]] if (0x0018,0x1164) in ds else 'MISSING'
-            img_info['image size'] = ds.pixel_array.shape
-            img_info['manufacturer'] = manufacturer_lookup(img_info['manufacturer'])
-            imgs_good_info.append(img_info)
+          continue # skip invalid series path
+        
+        patient_skip = False
+        # # get the dicom info here
+        # # there should be at least 1 dicom file in this folder
+        dcm_files = glob.glob(os.path.join(patient_study_path, '*.dcm'))
+        num_images_to_json += len(dcm_files)
+        num_series_to_json += 1
+        for each_dcm in dcm_files:
+          ds = pydicom.read_file(each_dcm)
+          patient_info['images'].append(each_dcm)
+          # get img info:
+          img_info = {key: ds[img_info_dict[key][0],img_info_dict[key][1]].value if img_info_dict[key] in ds else 'MISSING' for key in img_info_dict}
+          img_info['pixel spacing'] = [ds[0x0018,0x1164].value[0], ds[0x0018,0x1164].value[1]] if (0x0018,0x1164) in ds else 'MISSING'
+          img_info['image size'] = ds.pixel_array.shape
+          img_info['manufacturer'] = manufacturer_lookup(img_info['manufacturer'])
+          patient_info['images_info'].append(img_info)
 
     # # create patient-level info
-    patient_info = {
+    patient_row = patient_df.loc[patient_id]
+    
+    patient_info["patient_info"] = {
             'sex':"M" if patient_row['sex'] == "Male" else "F" if patient_row['sex'] == "Female" else "Unknown",
             'race':race_lookup(patient_row['race']),
             'ethnicity':ethnicity_lookup(patient_row['ethnicity']),
             'COVID_positive':patient_row['covid19_positive'],
             'age':patient_row['age_at_index'],
             }
-    patient_good_info = [patient_info]
-    # add to df
-    if not patient_skip:
-      df.loc[len(df)] = [patient_id] + [imgs_good] + [imgs_good_info] + [patient_good_info] + [len(imgs_good)] +[imgs_bad] + [imgs_bad_info] + ['open-A1']
-      num_patients_to_json += 1
+    
+    if len(patient_info['images']) == 0: # no images for this patient
+        continue
+    patient_info['num_images'] = len(patient_info['images'])
+
+    num_patients_to_json += 1
+    patient_info_list.append(patient_info)
+    # save information to file
+    if num_patients_to_json % args.save_every == 0:
+        save_to_file(patient_info_list, args.output_file)
+        patient_info_list = []
+    
+    
+  print(f"{i+1}/{total_patients} ({(((i+1)/total_patients)*100):.2f}%)", end="\r")
   # # print summary info and save output files
   print('Saving {} patients to json'.format(num_patients_to_json))
   print('Saving {} images to json'.format(num_images_to_json))
   print('Saving {} series to json'.format(num_series_to_json))
-  print('Missing {} images to json'.format(num_missing_images))
+  print('Missing {} images'.format(num_missing_images))
+  # read in the json file and convert the format
+  with open(args.output_file, "r") as file:
+      output_information = [json.loads(line) for line in file]
+      
+  # convert the output information to a dataframe
+  df = pd.DataFrame.from_records(output_information)
   df.to_json(args.output_file, indent=4, orient='table', index=False)
   pre, ext = os.path.splitext(args.output_file)
   out_log_file = pre + '.log'
@@ -196,10 +249,14 @@ def read_open_A1_20221010(args):
 
 if __name__ == "__main__":
   print("Starting...")
+  start_time = time.time()
   parser = argparse.ArgumentParser(description='PyTorch Training')
   parser.add_argument('-i', '--input_dir', type=str, help='<Required> Input directory where dicom data files are saved', required=True)
   parser.add_argument('-c', '--case_tsv', type=str, help='<Required> Input tsv file with all cases info', required=True)
   parser.add_argument('-s', '--series_tsv', type=str, help='<Required> Input tsv file with all image series info', required=True)
   parser.add_argument('-o', '--output_file', type=str, help='<Required> Output log file', required=True)
+  parser.add_argument("--overwrite", default=False, action="store_true", help="(Optional) pass to overwrite existing output files")
+  parser.add_argument("--save-every", dest="save_every", type=int, default=20, help="(Optional; default=20) How often to save information; helps with memory issues.")
   args = parser.parse_args()
   read_open_A1_20221010(args)
+  print(f"complete in {((time.time()-start_time)/60):.2f} min")
