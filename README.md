@@ -64,7 +64,6 @@ Click the 'Next Page' button on bottom left after all steps are finished to navi
 2. Selected figure will be displayed along with the description below.
 3. Click the "Save Report" button to save the selected figure and description.
 
-For detailed information, view the [myti.report documentation](https://didsr.github.io/myti.report/).
 
 ![Page_1](assets/page_3.png)
 
@@ -78,6 +77,8 @@ For detailed information, view the [myti.report documentation](https://didsr.git
 <p style="text-align: center;">  Example figure showing bias mitigation comparison when sex-related bias has been amplified by quantitative misrepresentation. Each subplot shows the predicted disease prevalence within each patient subgroup. </p>
 
 ---
+
+For more detailed information, view the [myti.report documentation](https://didsr.github.io/myti.report/).
 
 ## System Requirements
 ```
