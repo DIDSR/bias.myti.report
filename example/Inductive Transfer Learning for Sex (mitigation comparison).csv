@@ -9,6 +9,16 @@ F,12,0.663859236,0.005970405,Image Cropping,AUROC,M,COVID
 F,14,0.644699839,0.007605103,Image Cropping,AUROC,M,COVID
 F,15,0.61475551,0.024374863,Image Cropping,AUROC,M,COVID
 F,0,0.7090603,0.022695494,Image Cropping,AUROC,M,COVID
+F,1,0.52020202,0.013960445,Image Cropping,predicted prevalence,F,COVID
+F,12,0.546085859,0.025054463,Image Cropping,predicted prevalence,F,COVID
+F,14,0.553030303,0.02960448,Image Cropping,predicted prevalence,F,COVID
+F,15,0.561237374,0.037609523,Image Cropping,predicted prevalence,F,COVID
+F,0,0.52209596,0.01261047,Image Cropping,predicted prevalence,F,COVID
+F,1,0.47790404,0.032215532,Image Cropping,predicted prevalence,M,COVID
+F,12,0.465909091,0.044430274,Image Cropping,predicted prevalence,M,COVID
+F,14,0.45770202,0.028660504,Image Cropping,predicted prevalence,M,COVID
+F,15,0.436237374,0.017495463,Image Cropping,predicted prevalence,M,COVID
+F,0,0.532828283,0.02543338,Image Cropping,predicted prevalence,M,COVID
 F,1,0.541530428,0.03537436,No Mitigation,predicted prevalence,F,COVID
 F,12,0.535393628,0.034793437,No Mitigation,predicted prevalence,F,COVID
 F,14,0.560426059,0.036049645,No Mitigation,predicted prevalence,F,COVID
@@ -43,7 +53,7 @@ F,1,0.674487775,0.016840674,Calibrated Equalized Odds,AUROC,F,COVID
 F,12,0.657072142,0.01622384,Calibrated Equalized Odds,AUROC,F,COVID
 F,14,0.635433884,0.015159908,Calibrated Equalized Odds,AUROC,F,COVID
 F,15,0.597765654,0.020787045,Calibrated Equalized Odds,AUROC,F,COVID
-F,0,0.714873438,0.043121601,Calibrated Equalized Odds,AUROC,F,COVID
+F,0,0.697013458,0.043121601,Calibrated Equalized Odds,AUROC,F,COVID
 F,1,0.712272194,0.028077031,Calibrated Equalized Odds,AUROC,M,COVID
 F,12,0.695513234,0.027262636,Calibrated Equalized Odds,AUROC,M,COVID
 F,14,0.672558736,0.026064665,Calibrated Equalized Odds,AUROC,M,COVID
@@ -54,11 +64,11 @@ F,12,0.499715909,0.056193402,Reject Option Classification,predicted prevalence,F
 F,14,0.483238636,0.042876427,Reject Option Classification,predicted prevalence,F,COVID
 F,15,0.484848485,0.044349928,Reject Option Classification,predicted prevalence,F,COVID
 F,0,0.524905303,0.043909286,Reject Option Classification,predicted prevalence,F,COVID
-F,1,0.478409091,0.031177572,Reject Option Classification,predicted prevalence,M,COVID
-F,12,0.471212121,0.032645922,Reject Option Classification,predicted prevalence,M,COVID
+F,1,0.488409091,0.031177572,Reject Option Classification,predicted prevalence,M,COVID
+F,12,0.481212121,0.032645922,Reject Option Classification,predicted prevalence,M,COVID
 F,14,0.500473485,0.039631856,Reject Option Classification,predicted prevalence,M,COVID
 F,15,0.524431818,0.053768852,Reject Option Classification,predicted prevalence,M,COVID
-F,0,0.499621212,0.039872757,Reject Option Classification,predicted prevalence,M,COVID
+F,0,0.519621212,0.039872757,Reject Option Classification,predicted prevalence,M,COVID
 M,1,0.490530303,0.021869328,Image Cropping,predicted prevalence,F,COVID
 M,12,0.500631313,0.034457207,Image Cropping,predicted prevalence,F,COVID
 M,14,0.484848485,0.032048081,Image Cropping,predicted prevalence,F,COVID
@@ -113,7 +123,7 @@ M,1,0.704026367,0.046833859,Calibrated Equalized Odds,AUROC,F,COVID
 M,12,0.684200671,0.042921811,Calibrated Equalized Odds,AUROC,F,COVID
 M,14,0.662871936,0.03933822,Calibrated Equalized Odds,AUROC,F,COVID
 M,15,0.624961902,0.035065669,Calibrated Equalized Odds,AUROC,F,COVID
-M,0,0.714873438,0.043121601,Calibrated Equalized Odds,AUROC,F,COVID
+M,0,0.697013458,0.043121601,Calibrated Equalized Odds,AUROC,F,COVID
 M,1,0.6678389,0.023819189,Calibrated Equalized Odds,AUROC,M,COVID
 M,12,0.644560305,0.028574382,Calibrated Equalized Odds,AUROC,M,COVID
 M,14,0.643651716,0.025067944,Calibrated Equalized Odds,AUROC,M,COVID
@@ -128,4 +138,4 @@ M,1,0.498579545,0.039051209,Reject Option Classification,predicted prevalence,M,
 M,12,0.514299242,0.033518334,Reject Option Classification,predicted prevalence,M,COVID
 M,14,0.525,0.040259139,Reject Option Classification,predicted prevalence,M,COVID
 M,15,0.528787879,0.042570308,Reject Option Classification,predicted prevalence,M,COVID
-M,0,0.499621212,0.039872757,Reject Option Classification,predicted prevalence,M,COVID
+M,0,0.519621212,0.039872757,Reject Option Classification,predicted prevalence,M,COVID
