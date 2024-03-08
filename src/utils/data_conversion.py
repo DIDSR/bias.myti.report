@@ -10,6 +10,19 @@ from distutils.util import strtobool
 import tqdm
 
 def get_dcms(file_path):
+    """
+    Gets a list of the dicom files in a specific directory and any subdirectories.
+    
+    Arguments
+    =========
+    file_path
+        The directory in which to search for dicom files.
+    
+    Returns
+    =======
+    dcms : list
+        A list of the dicom files.
+    """
     dcms = []
     for p, d, f in os.walk(file_path):
         for file in f:
@@ -19,7 +32,8 @@ def get_dcms(file_path):
     return dcms
 
 def process_convert_image_loop(img_info:list):
-    """ Read dicom files, do histogram equalization, cropping the image and save as jpeg file.
+    """
+    Reads a dicom file, does histogram equalization, crops the image and saves as jpeg file.
     
     Arguments
     =========
@@ -48,6 +62,12 @@ def process_convert_image_loop(img_info:list):
 def process_convert_dicom_to_jpeg(args):
     """ 
     Convert and crop dicom files and save as jpeg files, where the name of the jpeg is patient_id_#.
+    
+    Arguments
+    =========
+    args : argparse.Namespace
+        The input arguments to the python script; includes the input summary file and the directory in which to save the converted jpegs.
+        
     """
     print("\nStart image conversion to jpeg")
     input_file = args.input_file
