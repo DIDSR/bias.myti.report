@@ -22,13 +22,26 @@ from src.utils.dat_data_load import Dataset
 
 def to_numpy(tensor):
     """
-    transfer tensor to numpy.
+    Convert a tensor to a numpy array.
+    
+    Arguments
+    =========
+    tensor : torch.Tensor
+    
+    Returns
+    =======
+    numpy.array
     """
     return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
 
 def inference_onnx(args):
     """
     Main script to run model deployment.
+    
+    Arguments
+    =========
+    args : argparse.Namespace
+        The input arguments to the python script.
     """
     torch.cuda.set_device(args.gpu_id)
     # # Create dataset
@@ -45,7 +58,14 @@ def inference_onnx(args):
 
 def run_deploy_onnx(data_loader, args):
     """ 
-    Function that deploys on the validation data loader, calculates sample based AUC and saves the scores in a tsv file.
+    Deploys the model on the validation data loader, calculates sample-based AUC and saves the scores in a tsv file.
+    
+    Arguments
+    =========
+    data_loader : torch.utils.data.DataLoader
+        The validation dataloader.
+    args : argparse.Namespace
+        The input arguments to the python script.
     """
     start = timeit.default_timer()
     ort_session = onnxruntime.InferenceSession(args.weight_file,  providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])

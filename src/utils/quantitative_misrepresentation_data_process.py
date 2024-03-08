@@ -10,6 +10,11 @@ def train_split(args):
     Manipulate prevalence in race or sex subgroups. The given subgroup will be sampled to the specified prevalence, 
     while the opposite subgroup will be sampled to (1-prevalence).
     
+    Arguments
+    =========
+    args : argparse.Namespace
+        The input arguments to the python script.
+    
     """
     #read input data csv files
     random_state=args.random_state

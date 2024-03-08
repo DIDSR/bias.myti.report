@@ -24,6 +24,14 @@ master_iter = 0
 def strtobool(value: str) -> bool:
   """
   Change strings to boolean.
+  
+  Arguments
+  =========
+  value : str
+  
+  Returns
+  =======
+  bool
   """
   value = value.lower()
   if value in ("y", "yes", "on", "1", "true", "t"):
@@ -34,6 +42,13 @@ def strtobool(value: str) -> bool:
 def save_checkpoint(state, filename='checkpoint.pth.tar'):
     """
     Save the model checkpoint.
+    
+    Arguments
+    =========
+    state
+        The checkpoint to save.
+    filename : str
+        The file name with which to the checkpoint.
     """
     torch.save(state, filename)
 
@@ -45,14 +60,14 @@ def modify_classification_layer_v1(model, num_channels):
     Arguments
     =========
     model
-        pytorch model to be modified
-    num_channels
-        number of outputs for the fully connected layer
+        Pytorch model to be modified.
+    num_channels : int
+        Number of outputs for the fully connected layer (the number of classes).
 
     Returns
     =======
     model
-        modified model.
+        Modified model.
     """
     num_ftrs = model.fc.in_features
     model.fc = nn.Linear(num_ftrs, num_channels)
@@ -61,6 +76,15 @@ def modify_classification_layer_v1(model, num_channels):
 def apply_custom_transfer_learning__resnet18(net):
     """ 
     Set the ResNet18 model to freeze first certain number of layers.
+    
+    Arguments
+    =========
+    net
+      Pytorch model to freeze.
+    
+    Returns
+    =======
+    net
     """
     # # get all the layer names
     model_layers = [name for name,para in net.named_parameters()]
@@ -96,19 +120,19 @@ def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels):
     
     Arguments
     =========
-    ckpt_path
-        file path of the pre-trained model.
-    base_dcnn
-        name of the model architecture, e.g. resnet18, densenet121, etc.
-    gpu_ids
-        current GPU ID.
-    num_channels
-        number of channels.
+    ckpt_path : str
+        File path of the pre-trained model.
+    base_dcnn : str
+        Name of the model architecture (e.g. resnet18, densenet121).
+    gpu_ids : int
+        Current GPU ID.
+    num_channels : int
+        Number of channels (classes).
 
     Returns
     =======
     model
-        loaded pre-trained model.
+        Loaded pre-trained model.
     
     """
     # # load model
@@ -127,6 +151,11 @@ def train(args):
     """
     Main script for model training, including model selection, pre-trained weights loading,
     training/validation data loading, and model fine-tuning.
+    
+    Arguments
+    =========
+    args : argparse.Namespace
+        The input arguments to the python script.
     """
     # set random state, if specified
     if args.random_state is not None:
@@ -250,19 +279,19 @@ def run_train(train_loader, model, criterion, optimizer):
     
     Arguments
     =========
-    train_loader
-        loaded training data set
+    train_loader : torch.utils.data.DataLoader
+        Loaded training data set.
     model
-        the model to be trained
+        The model to be trained.
     criterion
-        loss function to be minimized
+        Loss function to be minimized.
     optimizer
-        training optimizer
+        Training optimizer.
 
     Returns
     =======
     float
-        average loss for current epoch
+        Average loss for the current epoch.
     """
     global master_iter
 
@@ -289,7 +318,21 @@ def run_train(train_loader, model, criterion, optimizer):
 
 def run_validate(val_loader, model, args):
     """ 
-    Function that deploys on the input data loader, calculates sample based AUC and saves the scores in a tsv file.
+    Deploys the model on the input data loader, calculates sample based AUC and saves the scores in a tsv file.
+    
+    Arguments
+    =========
+    val_loader : torch.utils.data.DataLoader
+        Validation data.
+    model
+        The model to deploy.
+    args : argparse.Namespace
+        Input arguments to the python script.
+    
+    Returns
+    =======
+    float
+        The calculated AUC value.
     """
     global master_iter
 
