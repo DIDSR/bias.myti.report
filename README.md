@@ -14,9 +14,9 @@
 
 This repository contains the implementation of two AI bias amplification approaches presented in the paper: “Bias amplification to facilitate the systematic evaluation of bias mitigation methods”.  The graphical user interface(GUI) tool helps the user to better understand the amplified model bias with or without bias mitigation. The whole platform allows an objective assessment and systematic comparison of bias mitigation methods, and assists the user to select the most appropriate mitigation method under different circumstances.
 
-Testing results for two amplification approaches are included in two example Jupyter notebooks, please see [here](Bias-Amplification) to access.
+Testing results for two amplification approaches are included in two example Jupyter notebooks, please see [here](#Bias-Amplification) to access.
 
-Instructions on how to use the GUI tool can be found [here](Quick-Guide-for-mytireport-GUI).
+Instructions on how to use the GUI tool can be found [here](#Quick-Guide-for-biasmytireport-GUI).
 
 ## Related References
 - A. Burgon, Y. Zhang, B. Sahiner, N. Petrick, K. H. Cha, R. K. Samala*, “Manipulation of sources of bias in AI device development”, Proc. of SPIE (2024)
