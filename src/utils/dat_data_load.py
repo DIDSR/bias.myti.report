@@ -22,7 +22,16 @@ transform = transforms.Compose([
 
 def read_jpg(imageName):
     """ 
-    Function to read jpg image with rotation enabled for data augmentation.
+    Reads jpg image and applies the transforms listed in the file (default=rotation).
+    
+    Arguments
+    ==========
+    imageName : str
+        The file path of the input image
+    
+    Returns
+    =======
+    Tensor
     """
     return transform(Image.open(imageName).convert('RGB'))
 
@@ -30,14 +39,19 @@ def read_jpg(imageName):
 class Dataset(BaseDataset):
     """ Class for customized dataset 
 
-    Parameters
-    ----------
-    patient_ids
-        list of patient IDs in dataset.
-    images
-        list of image paths in dataset.
-    class_values
-        list of task labels in dataset.
+    Arguments
+    =========
+    list_file : str
+        The file path to the file containing the input information; to be read into a pandas.DataFrame.
+    train_flag : bool
+        Training process indicator.
+    default_out_class : str
+        The name of the column in list_file that indicates the model's output class.
+    default_patient_id : str
+        The name of the column in list_file that indicates the sample's patient id.
+    default_path : str
+        The name of the column in list_file that indicates the sample's file path.
+    
     """
     def __init__(
             self,
