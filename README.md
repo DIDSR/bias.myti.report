@@ -1,4 +1,4 @@
-# Bias.myti.report
+# bias.myti.report
 
 **Bias.myti.report is a visualization tool to facilitate the comparison of user-implemented bias mitigation methods for AI models.**
 
