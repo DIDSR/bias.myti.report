@@ -2,7 +2,21 @@ import pandas as pd
 import os
 
 def load_data(dir, amp):
-  """ Loads all of the tsv files in the directory into a single tsv (with variable indicating the source tsv) """
+  """
+  Loads all of the tsv files in the directory into a single tsv (with variable indicating the source tsv). 
+  
+  Arguments
+  =========
+  dir : str
+      The source directory in which to find tsv files.
+  amp : str
+      The amplification approach (indirect [ITL] or direct[QM]).
+  
+  Returns
+  =======
+  pandas.DataFrame
+      A dataframe containing all of the information from the relvant files.
+  """
   df_list = []
   for file in os.listdir(dir):
     if file.endswith(".tsv"):
