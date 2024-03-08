@@ -83,7 +83,7 @@ class InitialPage(Page):
         # # program title
         self.title_box = QWidget()
         self.title_box.setObjectName("box")        
-        self.lbl_title = QLabel('bias.myti.Report', self.title_box)
+        self.lbl_title = QLabel('bias.myti.report', self.title_box)
         self.lbl_title.setObjectName("title")
         self.layout.addWidget(self.lbl_title)
         self.lbl_subtitle = QLabel('A tool to facilitate the comparison of user-implemented bias mitigation methods for AI models', self)
@@ -247,7 +247,7 @@ class SecondPage(Page):
         """Widgets for the second page"""
         clearLayout(self.layout)
         # # program title
-        self.lbl_title = QLabel('bias.myti.Report', self)
+        self.lbl_title = QLabel('bias.myti.report', self)
         self.lbl_title.setObjectName("title")
         self.layout.addWidget(self.lbl_title,0,0,1,2)
        
@@ -409,7 +409,7 @@ class FinalPage(Page):
         """Widgets for the page"""
         clearLayout(self.layout)
         # # program title
-        self.lbl_title = QLabel('bias.myti.Report', self)
+        self.lbl_title = QLabel('bias.myti.report', self)
         self.lbl_title.setObjectName('title')
         self.layout.addWidget(self.lbl_title, 0,0,1,2)
         self.layout.setSpacing(0)

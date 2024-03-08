@@ -11,13 +11,42 @@ Bias.myti.report is a bias visualization tool designed to facilitate the systema
 
 Getting Started
 ===============
-* Bias Amplification Implementation
 
-To implement proposed bias amplification approaches, please follow the instructions in example Jupyter notebooks included in the `examples folder`_. Users can either use the MIDRC Open-A1 data set provided in the example or their own data set. Please note that the data set must have subgroup attribute information to amplify and measure bias. 
+Bias Amplification
+------------------
 
-* Bias Visualization
+To apply bias amplification, a data set with both class and subgroup attribute information is required. Please follow steps below for implementation:
 
-To visualize bias using myti.report GUI tool, an **input csv** which contains results from bias amplification (and mitigation) experiments is required. To make a comparison between bias mitigation methods, users have to implement mitigation algorithms by themselves and aggregate the results into one single csv file.
+**1. Quantitative Misrepresentation**
+
+**Step 1.** Partition your own data set into training, validation and test sets.
+
+**Step 2.** Create a list of new training sets with a range of disease prevalence difference between subgroups.
+
+**Step 3.** Train your customized models with sampled training sets from **Step 1**.
+
+**Step 4.** Deploy your models on the test set.
+
+**Step 5.** Calculate metrics to measure subgroup bias (subgroup predicted prevalence, sensitivity, etc.)
+
+**2. Inductive Transfer Learning**
+
+**Step 1.** Partition your own data set into training, validation and test sets.
+
+**Step 2.** Train your customized model to classify subgroup attributes.
+
+**Step 3.** Fine-tune the result model from **Step 2** with different number of freezing layers for target task classification.
+
+**Step 4.** Deploy your final models on the test set.
+
+**Step 5.** Calculate metrics to measure subgroup bias (subgroup predicted prevalence, sensitivity, etc.)
+
+Demonstrations for both approaches can be found in two separate example Jupyter notebooks included in the `examples folder`_. 
+
+Bias Visualization
+------------------
+
+To visualize bias using myti.report GUI tool, an **input csv** which contains results from bias amplification (and mitigation) experiments is required. To make a comparison between bias mitigation methods, users have to implement mitigation algorithms by their choice and aggregate the results into one single csv file.
 
 
 

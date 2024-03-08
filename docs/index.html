@@ -37,14 +37,27 @@
 </section>
 <section id="getting-started">
 <h1>Getting Started<a class="headerlink" href="#getting-started" title="Link to this heading">¶</a></h1>
-<ul class="simple">
-<li><p>Bias Amplification Implementation</p></li>
-</ul>
-<p>To implement proposed bias amplification approaches, please follow the instructions in example Jupyter notebooks included in the <a class="reference external" href="https://github.com/DIDSR/myti.report/tree/main/example">examples folder</a>. Users can either use the MIDRC Open-A1 data set provided in the example or their own data set. Please note that the data set must have subgroup attribute information to amplify and measure bias.</p>
-<ul class="simple">
-<li><p>Bias Visualization</p></li>
-</ul>
-<p>To visualize bias using myti.report GUI tool, an <strong>input csv</strong> which contains results from bias amplification (and mitigation) experiments is required. To make a comparison between bias mitigation methods, users have to implement mitigation algorithms by themselves and aggregate the results into one single csv file.</p>
+<section id="bias-amplification">
+<h2>Bias Amplification<a class="headerlink" href="#bias-amplification" title="Link to this heading">¶</a></h2>
+<p>To apply bias amplification, a data set with both class and subgroup attribute information is required. Please follow steps below for implementation:</p>
+<p><strong>1. Quantitative Misrepresentation</strong></p>
+<p><strong>Step 1.</strong> Partition your own data set into training, validation and test sets.</p>
+<p><strong>Step 2.</strong> Create a list of new training sets with a range of disease prevalence difference between subgroups.</p>
+<p><strong>Step 3.</strong> Train your customized models with sampled training sets from <strong>Step 1</strong>.</p>
+<p><strong>Step 4.</strong> Deploy your models on the test set.</p>
+<p><strong>Step 5.</strong> Calculate metrics to measure subgroup bias (subgroup predicted prevalence, sensitivity, etc.)</p>
+<p><strong>2. Inductive Transfer Learning</strong></p>
+<p><strong>Step 1.</strong> Partition your own data set into training, validation and test sets.</p>
+<p><strong>Step 2.</strong> Train your customized model to classify subgroup attributes.</p>
+<p><strong>Step 3.</strong> Fine-tune the result model from <strong>Step 2</strong> with different number of freezing layers for target task classification.</p>
+<p><strong>Step 4.</strong> Deploy your final models on the test set.</p>
+<p><strong>Step 5.</strong> Calculate metrics to measure subgroup bias (subgroup predicted prevalence, sensitivity, etc.)</p>
+<p>Demonstrations for both approaches can be found in two separate example Jupyter notebooks included in the <a class="reference external" href="https://github.com/DIDSR/myti.report/tree/main/example">examples folder</a>.</p>
+</section>
+<section id="bias-visualization">
+<h2>Bias Visualization<a class="headerlink" href="#bias-visualization" title="Link to this heading">¶</a></h2>
+<p>To visualize bias using myti.report GUI tool, an <strong>input csv</strong> which contains results from bias amplification (and mitigation) experiments is required. To make a comparison between bias mitigation methods, users have to implement mitigation algorithms by their choice and aggregate the results into one single csv file.</p>
+</section>
 </section>
 <section id="terminology">
 <h1>Terminology<a class="headerlink" href="#terminology" title="Link to this heading">¶</a></h1>
