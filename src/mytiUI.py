@@ -18,17 +18,17 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 from src.plot_generation import *
 
 class ClickLabel(QLabel):
-    """class to create clickable QLabel object"""
+    """Clickable QLabel object."""
     clicked = pyqtSignal()
 
     def mousePressEvent(self, event):
-        """define the mouse click event for the QLabel"""
+        """Mouse click event for the QLabel."""
         self.clicked.emit()
         QLabel.mousePressEvent(self, event)
 
 
 class Page(QWidget):
-  """Parent class for all the pages"""
+  """Parent class for all the pages."""
   def __init__(self, parent, page_number):
     super().__init__()
     self.parent = parent
@@ -36,11 +36,11 @@ class Page(QWidget):
     self.setProperty("class", "page")  
     
   def UIComponents(self):
-    """ Placeholder"""
+    """ Placeholder for child classes."""
     pass
     
   def load(self):
-    """ Run background processes and load UI components, provided the conditions are met """
+    """ Run background processes and load UI components, provided the conditions are met. """
     if self.check_conditions():
       self.run_background()
       self.UIComponents()
@@ -49,7 +49,7 @@ class Page(QWidget):
       
   def check_conditions(self, *conditions): 
     """ Conditions are variables that must be input in order for the page to load.
-    This is the default for page(s) with no conditions """
+    This is the default for page(s) with no conditions. """
     return True
     
   def run_background(self):
@@ -68,6 +68,11 @@ class InitialPage(Page):
     Class for the first page (user input) of the tool.
     This page allows users to upload .csv data file,
     specify bias amplification type and study type.
+    
+    Arguments
+    =========
+    parent
+        The parent widget.
     """
     def __init__(self, parent):
         super().__init__(parent=parent, page_number=1)
@@ -76,7 +81,7 @@ class InitialPage(Page):
         self.setLayout(self.layout)
 
     def UIComponents(self):
-        """Widgets for the page."""
+        """Creates the widgets for the page."""
         # Set layout
         clearLayout(self.layout)
         
@@ -198,7 +203,7 @@ class InitialPage(Page):
 
 
     def upload_csv(self):
-        """Get the csv file from user input, and display amplification type selection"""
+        """Get the csv file from user input, and display amplification type selection."""
         dialog = QFileDialog()
         fname = dialog.getOpenFileName(None, "Import CSV", "", "CSV data files (*.csv)")
         self.edit_up_load_file.setText(fname[0])
@@ -208,7 +213,7 @@ class InitialPage(Page):
 
         
     def approach_type(self):
-        """Update bias amplification type selected by user"""
+        """Update bias amplification type selected by user."""
         text = str(self.combo_exp_type.currentText())
         self.parent.exp_type = text         
         # # show selected type
@@ -223,7 +228,7 @@ class InitialPage(Page):
         
     
     def study_update(self):
-        """Update study type selected by user"""
+        """Update study type selected by user."""
         rb = self.sender()
         if rb.isChecked():
             self.parent.study_type = rb.text()
@@ -235,6 +240,11 @@ class SecondPage(Page):
     Class to build the second page (variable selection).
     This page allows user to select columns corresponding to variables required for bias report.
     Additional information is provided for the user for better clarification.
+    
+    Arguments
+    =========
+    parent
+        The parent widget.
     """
     def __init__(self, parent):
         super().__init__(parent=parent, page_number=2)
@@ -244,7 +254,7 @@ class SecondPage(Page):
         self.UIComponents()
         
     def UIComponents(self):
-        """Widgets for the second page"""
+        """Creates the widgets for the second page."""
         clearLayout(self.layout)
         # # program title
         self.lbl_title = QLabel('bias.myti.report', self)
@@ -308,12 +318,12 @@ class SecondPage(Page):
         self.check_boxes()
 
     def get_columns(self):
-        """Get list of columns from the input csv file"""
+        """ Get the list of columns from the input csv file. """
         data = pd.read_csv(self.parent.csv_path)
         return list(data.columns)
         
     def check_boxes(self):
-      """Update selected variables"""
+      """ Update selected variables. """
       for k in self.selection_defaults.keys():
         self.parent.variables[k] = str(self.selection_boxes[k].currentText())
       for key in list(self.parent.variables.keys()):
@@ -321,7 +331,7 @@ class SecondPage(Page):
            del self.parent.variables[key]
         
     def check_conditions(self):
-      """Sanity check to decide if the second page can be appropriately loaded"""
+      """ Sanity check to decide if the second page can be appropriately loaded. """
       # # check if the csv file is valid
       if type(self.parent.csv_path) != str or not os.path.exists(self.parent.csv_path): 
         msg = QMessageBox(self) 
@@ -344,7 +354,7 @@ class SecondPage(Page):
         return True
 
     def add_info(self):
-      """Update additional information for the variable clicked by user"""
+      """ Update additional information for the variable clicked by user. """
       # # detailed information
       self.selection_infos = {
           "Positive-associated Subgroup":"The column which indicates the subgroup associated with a more frequent positive outcome label",
@@ -371,7 +381,7 @@ class FinalPage(Page):
     """
     Class to build the third page (report display).
     This page show bias results with figures and corrsponding text description.
-    It allows user to save report in .png or .pdf format.
+    Allows user to save report in .png or .pdf format.
     """
     def __init__(self, parent, page_number=3):
         super().__init__(parent = parent, page_number=page_number)
@@ -383,12 +393,12 @@ class FinalPage(Page):
         self.UIComponents()
         
     def run_background(self):
-        """Generate figures and descriptions"""
+        """ Generate figures and descriptions. """
         self.parent.pages["Page 2"].check_boxes()
         self.m_list, self.info_list = bias_report_generation(self.parent.variables, self.parent.csv_path, self.parent.exp_type, self.parent.study_type)
 
     def check_conditions(self):
-        """Sanity check if the third page can be appropriately loaded"""
+        """ Sanity check if the third page can be appropriately loaded. """
         data = pd.read_csv(self.parent.csv_path)
         cols = list(data.columns)
         variables = list(self.parent.variables.values())
@@ -406,7 +416,7 @@ class FinalPage(Page):
           return False
         
     def UIComponents(self):
-        """Widgets for the page"""
+        """ Widgets for the page. """
         clearLayout(self.layout)
         # # program title
         self.lbl_title = QLabel('bias.myti.report', self)
@@ -489,7 +499,7 @@ class FinalPage(Page):
         self.layout.setRowStretch(3, 10)
 
     def fig_select(self, figure_number):
-        """Update the selected figure by user"""
+        """ Update the selected figure by user. """
         for i, w in enumerate(self.tile_figures):
           if i == figure_number:
             w.setObjectName("selected")
@@ -503,12 +513,12 @@ class FinalPage(Page):
         self.current_plot = figure_number
     
     def save_fig(self):
-        """Save the figure and description"""
+        """ Save the figure and description. """
         name = QFileDialog.getSaveFileName(self, 'Save File', 'saved_report.png', "Images (*.png *.jpg);;PDF files (*.pdf)")
         save_report(self.info_list[self.current_plot], self.example_images[self.current_plot], name[0])
 
 class MainWindow(QMainWindow):
-    """Class for the main window including main pages, logo, side menus, navigation bars."""
+    """ Class for the main window including main pages, logo, side menus, navigation bars. """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setWindowTitle("bias.myti.Report")
@@ -537,7 +547,7 @@ class MainWindow(QMainWindow):
         self.change_page(1)
     
     def load_GUI(self):
-        """Widgets for the main window"""
+        """ Creates widgets for the main window. """
         # Set up overall layout
         self.main_layout = QGridLayout()
         self.main_widget = QWidget()
@@ -566,7 +576,7 @@ class MainWindow(QMainWindow):
     
     
     def set_pages(self):
-        """Set up three pages"""
+        """ Set up the three pages. """
         self.pages = {}
         self.page_layouts = {}
         self.page_classes = {"Page 1":InitialPage, "Page 2":SecondPage, "Page 3": FinalPage}
@@ -579,7 +589,7 @@ class MainWindow(QMainWindow):
         self.sidebar_buttons["Page 3"].clicked.connect(lambda x: self.change_page(3))
     
     def change_page(self, page_number:int, *args, **kwargs):
-        """Naviagte between three pages"""
+        """ Naviagte between the three pages. """
         # # check if condition is satisfied to change page
         if not self.pages[f"Page {page_number}"].check_conditions():
           return
@@ -598,15 +608,15 @@ class MainWindow(QMainWindow):
           w.setStyleSheet(styleSheet)
       
     def next_page(self):
-        """naviagte to the next page"""
+        """ Naviagte to the next page. """
         self.change_page(self.current_page + 1)
     
     def prev_page(self):
-        """navigate to the previous page"""
+        """ Navigate to the previous page. """
         self.change_page(self.current_page - 1)
     
     def make_sidebar(self):
-        """Set up side menu bars"""
+        """ Set up side menu bars. """
         self.sidebar_buttons = {}
         self.sidebar_layout = QVBoxLayout()
         # # add fda logo
@@ -651,7 +661,7 @@ class MainWindow(QMainWindow):
         self.sidebar.setLayout(self.sidebar_layout)
     
     def make_navbar(self):
-        """Add naviagtion buttons"""
+        """ Add naviagtion buttons. """
         self.nav_layout = QHBoxLayout()
         
         self.OSEL_label = QLabel("OSEL")
@@ -679,7 +689,7 @@ class MainWindow(QMainWindow):
         self.update_navbar()
     
     def update_navbar(self):
-        """adjust page navigation buttons for each page"""
+        """ Adjust page navigation buttons for each page. """
         if self.current_page == 1:
           self.prev_button.hide()
         else:
@@ -697,9 +707,9 @@ class MainWindow(QMainWindow):
 
 class AboutWindow(QMainWindow):     
     """
-    Class for about me window.
-    Include gitHub link, version number
-    and other necessary infomation
+    Class for the "about me" window.
+    Includes GitHub link, version number
+    and other necessary infomation.
     """                    
     def __init__(self):
         super().__init__()
@@ -708,7 +718,7 @@ class AboutWindow(QMainWindow):
         self.load_GUI()
 
     def load_GUI(self):
-        """widget components for the window"""
+        """Creates widget components for the window. """
         self.main_layout = QGridLayout()
         self.main_widget = QWidget()
         self.main_widget.setLayout(self.main_layout)
