@@ -103,6 +103,11 @@ def metric_calculation(result_df, info_pred, test_list, positive_group, prev_dif
 def analysis(args):
     """
     Main script to load test results, measure bias and do plotting.
+    
+    Arguments
+    =========
+    args : argparse.Namespace
+        The input arguments to the python script.
     """
     # # get basic infomation for bias measurements
     main_dir = args.main_dir  
@@ -134,7 +139,7 @@ def analysis(args):
     
 def results_plotting(data, x_col, x_label, hue_col, style_col, s_col, value_col, exp_type, color_dict=COLORS, style_dict=STYLES, y_lim=None):  
     """
-    Function to generate subplots with input plot sections and parameters.
+    Generates subplots based on input plot sections and parameters.
 
     Arguments
     =========
