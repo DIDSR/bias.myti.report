@@ -124,11 +124,11 @@ def read_open_A1_20221010(args):
   patient_info_list = []
   
   # create the output file
-  if args.overwrite:
-      with open(args.output_file, "w") as file:
-          pass
+  if not args.overwrite and os.path.exists(args.output_file):
+      print(f"A file already exists at {args.output_file}. To overwrite, run the program using the --overwrite command.")
+      return 
   else:
-      with open(args.output_file, "x") as file:
+      with open(args.output_file, "w") as file:
           pass
   
   for i, (patient_id, df_patient) in enumerate(img_series_df.groupby("case_ids_0")):
@@ -137,10 +137,7 @@ def read_open_A1_20221010(args):
     
     print(f"{i}/{total_patients} ({((i/total_patients)*100):.2f}%)", end="\r")
     patient_skip = True
-    # #
-    #patient_id = patient_row['submitter_id']
-    # # identify the dir/sub-dir based on the Imaging_Studies file
-    #df_patient = img_series_df.loc[img_series_df['case_ids_0'] == patient_id]
+    
     patient_info = {
         "patient_id": patient_id,
         "images" : [],
