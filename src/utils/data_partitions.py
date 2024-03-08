@@ -24,6 +24,11 @@ def bootstrapping(args):
     Partitioning patient data into train, validation, validation_2 and testing.
     In each dataset, patient can be partitioned equally or by customized ratio in race, sex, image modality and COVID. 
     
+    Arguments
+    =========
+    args : argparse.Namespace
+        The input arguments to the python script.
+    
     """
     print("Beginning bootstrapping")
     # 0) check for issues with input arguments ======================================================================
@@ -119,7 +124,17 @@ def bootstrapping(args):
 
 def adjust_subgroups(in_df):
     """
-    Adjust subgroup information displayed in dataframe to only reflect attributes that are specified as import in equal_stratification_groups.
+    Adjusts subgroup information displayed in dataframe to only reflect attributes that are specified as import in equal_stratification_groups.
+    
+    Arguments
+    =========
+    in_df : pandas.DataFrame
+        The sample data to be balanced.
+        
+    Returns
+    =======
+    pd.DataFrame
+        The sample data with filtered subgroups.
     """
     df = in_df.copy()
     rel_subs = list(set([x for y in equal_stratification_groups for x in y.split("-")]))
@@ -137,23 +152,23 @@ def adjust_subgroups(in_df):
 
 def adjust_comp(in_df, random_seed, split_frac=1, split_num=None):
     """
-    Adjusts the composition of in_df to match the comp specified.
+    Adjusts the composition of in_df to match the composition specified.
     
     Arguments
     =========
-    in_df
-        input dataframe (by-patient)
-    random_seed
-        random control
-    split_frac
-        the fraction (decimal) of the available data to return
-    split_num
-        the number of patients overall to return
+    in_df : pandas.DataFrame
+        input dataframe (by-patient).
+    random_seed : int
+        The random state to use when selecting patients in each subgroup.
+    split_frac : float
+        The portion of the available data to return.
+    split_num : int
+        The number of patients overall to return.
         
     Returns
     =======
     pandas.DataFrame
-        dataframe that with matched comp
+        Dataframe adjusted to match the specified composition.
     """
     df = in_df.copy()
     subgroup_proportions = {sub:1 for sub in equal_stratification_groups}
@@ -179,6 +194,18 @@ def adjust_comp(in_df, random_seed, split_frac=1, split_num=None):
 def prevent_data_leakage(base_df, df_list:list):
     """
     Prevent duplicate patient/images in different datasets
+    
+    Arguments
+    =========
+    base_df : pandas.DataFrame
+        A dataframe containing all of the patient information.
+    df_list : list
+        A list of the dataframes of the existing partitions.
+    
+    Returns
+    =======
+    pandas.DataFrame
+        A dataframe containing all of the samples that are not already contained in an existing partition.
     """
     out_df = base_df.copy()
     for df in df_list:
@@ -187,7 +214,19 @@ def prevent_data_leakage(base_df, df_list:list):
 
 def convert_to_csv(df, tasks):
     """
-    Convert the partitioned datasets to save as csv files
+    Convert the partitioned datasets to save as csv files.
+    
+    Arguments
+    =========
+    df : pandas.DataFrame
+        The dataset information to be saved.
+    tasks : list
+        The list of classes which the model will be trained to classify.
+    
+    Returns
+    =======
+    pandas.DataFrame
+        The input dataset in a training-friendly format.
     """
     for grp in group_dict:
         temp_df = df[grp].str.get_dummies()
@@ -205,23 +244,23 @@ def convert_from_summary(df, conversion_table, min_img, max_img, selection_mode,
     
     Arguments
     =========
-    df
-        dataframe that read from data summary json file
-    conversion_table
-        dataframe that read from data conversion json file
-    min_img
-        minimal number of images per patient
-    max_img
-        maximum number of images per patient
-    selection_mode
-        string that specify how to select images for patients
-    random_state
-        for random control
+    df : pandas.DataFrame
+        The data read from the summary json file.
+    conversion_table : pandas.DataFrame
+        The information from the data_conversion json file.
+    min_img : int
+        The minimum number of images to be included per patient.
+    max_img : int
+        The maximum number of images to be included per patient.
+    selection_mode : str
+        Specifies how to select images for patients.
+    random_state : int
+        The random state used during patient selection.
         
-    returns
+    Returns
     =======
     pandas.DataFrame
-        dataframe that contains patient information and sampled images for each patient
+        Patient information and the selected images for each patient.
     """
     for val in group_dict.values():
         x = val['loc']
@@ -262,6 +301,16 @@ def convert_from_summary(df, conversion_table, min_img, max_img, selection_mode,
 def get_subgroup(row):
     """
     Get subgroup strings.
+    
+    Arguments
+    =========
+    row : pandas.Series
+        A row from the DataFrame (representing a single patient).
+    
+    Returns
+    =======
+    str
+        The patient's subgroup.
     """
     subgroup = ""
     for g in group_dict:
@@ -277,13 +326,13 @@ def get_stats(df_dict):
     
     Arguments
     =========
-    df_dict
-        dictionary that contains datasets as keys, and data csv files as corresponding values
+    df_dict : dict
+        Maps the datasets (keys) to data csv files (values).
         
     Returns
     =======
     pandas.DataFrame
-        generated summary that contains number of patients/images in each dataset.    
+        Summary that contains number of patients/images in each dataset.    
     """
     df_list = []
     for id, split_df in df_dict.items():
