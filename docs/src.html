@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>myti.report GUI &#8212; bias.myti.Report  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=89af775e" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="bias.myti.Report" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-src">
+<span id="myti-report-gui"></span><h1>myti.report GUI<a class="headerlink" href="#module-src" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="src.AboutWindow">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.</span></span><span class="sig-name descname"><span class="pre">AboutWindow</span></span><a class="headerlink" href="#src.AboutWindow" title="Link to this definition">¶</a></dt>
+<dd><p>Class for about me window.
+Include gitHub link, version number
+and other necessary infomation</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="src.AboutWindow.load_GUI">
+<span class="sig-name descname"><span class="pre">load_GUI</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.AboutWindow.load_GUI" title="Link to this definition">¶</a></dt>
+<dd><p>widget components for the window</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="src.ClickLabel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.</span></span><span class="sig-name descname"><span class="pre">ClickLabel</span></span><a class="headerlink" href="#src.ClickLabel" title="Link to this definition">¶</a></dt>
+<dd><p>class to create clickable QLabel object</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="src.ClickLabel.mousePressEvent">
+<span class="sig-name descname"><span class="pre">mousePressEvent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.ClickLabel.mousePressEvent" title="Link to this definition">¶</a></dt>
+<dd><p>define the mouse click event for the QLabel</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="src.FinalPage">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.</span></span><span class="sig-name descname"><span class="pre">FinalPage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">page_number</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.FinalPage" title="Link to this definition">¶</a></dt>
+<dd><p>Class to build the third page (report display).
+This page show bias results with figures and corrsponding text description.
+It allows user to save report in .png or .pdf format.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="src.FinalPage.UIComponents">
+<span class="sig-name descname"><span class="pre">UIComponents</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.FinalPage.UIComponents" title="Link to this definition">¶</a></dt>
+<dd><p>Widgets for the page</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.FinalPage.check_conditions">
+<span class="sig-name descname"><span class="pre">check_conditions</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.FinalPage.check_conditions" title="Link to this definition">¶</a></dt>
+<dd><p>Sanity check if the third page can be appropriately loaded</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.FinalPage.fig_select">
+<span class="sig-name descname"><span class="pre">fig_select</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">figure_number</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.FinalPage.fig_select" title="Link to this definition">¶</a></dt>
+<dd><p>Update the selected figure by user</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.FinalPage.run_background">
+<span class="sig-name descname"><span class="pre">run_background</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.FinalPage.run_background" title="Link to this definition">¶</a></dt>
+<dd><p>Generate figures and descriptions</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.FinalPage.save_fig">
+<span class="sig-name descname"><span class="pre">save_fig</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.FinalPage.save_fig" title="Link to this definition">¶</a></dt>
+<dd><p>Save the figure and description</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="src.InitialPage">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.</span></span><span class="sig-name descname"><span class="pre">InitialPage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.InitialPage" title="Link to this definition">¶</a></dt>
+<dd><p>Class for the first page (user input) of the tool.
+This page allows users to upload .csv data file,
+specify bias amplification type and study type.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="src.InitialPage.UIComponents">
+<span class="sig-name descname"><span class="pre">UIComponents</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.InitialPage.UIComponents" title="Link to this definition">¶</a></dt>
+<dd><p>Widgets for the page.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.InitialPage.approach_type">
+<span class="sig-name descname"><span class="pre">approach_type</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.InitialPage.approach_type" title="Link to this definition">¶</a></dt>
+<dd><p>Update bias amplification type selected by user</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.InitialPage.study_update">
+<span class="sig-name descname"><span class="pre">study_update</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.InitialPage.study_update" title="Link to this definition">¶</a></dt>
+<dd><p>Update study type selected by user</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.InitialPage.upload_csv">
+<span class="sig-name descname"><span class="pre">upload_csv</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.InitialPage.upload_csv" title="Link to this definition">¶</a></dt>
+<dd><p>Get the csv file from user input, and display amplification type selection</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="src.MainWindow">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.</span></span><span class="sig-name descname"><span class="pre">MainWindow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.MainWindow" title="Link to this definition">¶</a></dt>
+<dd><p>Class for the main window including main pages, logo, side menus, navigation bars.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="src.MainWindow.about_info">
+<span class="sig-name descname"><span class="pre">about_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.MainWindow.about_info" title="Link to this definition">¶</a></dt>
+<dd><p>show about me window</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.MainWindow.change_page">
+<span class="sig-name descname"><span class="pre">change_page</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">page_number</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.MainWindow.change_page" title="Link to this definition">¶</a></dt>
+<dd><p>Naviagte between three pages</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.MainWindow.load_GUI">
+<span class="sig-name descname"><span class="pre">load_GUI</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.MainWindow.load_GUI" title="Link to this definition">¶</a></dt>
+<dd><p>Widgets for the main window</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.MainWindow.make_navbar">
+<span class="sig-name descname"><span class="pre">make_navbar</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.MainWindow.make_navbar" title="Link to this definition">¶</a></dt>
+<dd><p>Add naviagtion buttons</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.MainWindow.make_sidebar">
+<span class="sig-name descname"><span class="pre">make_sidebar</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.MainWindow.make_sidebar" title="Link to this definition">¶</a></dt>
+<dd><p>Set up side menu bars</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.MainWindow.next_page">
+<span class="sig-name descname"><span class="pre">next_page</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.MainWindow.next_page" title="Link to this definition">¶</a></dt>
+<dd><p>naviagte to the next page</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.MainWindow.prev_page">
+<span class="sig-name descname"><span class="pre">prev_page</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.MainWindow.prev_page" title="Link to this definition">¶</a></dt>
+<dd><p>navigate to the previous page</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.MainWindow.set_pages">
+<span class="sig-name descname"><span class="pre">set_pages</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.MainWindow.set_pages" title="Link to this definition">¶</a></dt>
+<dd><p>Set up three pages</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.MainWindow.update_navbar">
+<span class="sig-name descname"><span class="pre">update_navbar</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.MainWindow.update_navbar" title="Link to this definition">¶</a></dt>
+<dd><p>adjust page navigation buttons for each page</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="src.Page">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.</span></span><span class="sig-name descname"><span class="pre">Page</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">page_number</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.Page" title="Link to this definition">¶</a></dt>
+<dd><p>Parent class for all the pages</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="src.Page.UIComponents">
+<span class="sig-name descname"><span class="pre">UIComponents</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.Page.UIComponents" title="Link to this definition">¶</a></dt>
+<dd><p>Placeholder</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.Page.check_conditions">
+<span class="sig-name descname"><span class="pre">check_conditions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">conditions</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.Page.check_conditions" title="Link to this definition">¶</a></dt>
+<dd><p>Conditions are variables that must be input in order for the page to load.
+This is the default for page(s) with no conditions</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.Page.load">
+<span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.Page.load" title="Link to this definition">¶</a></dt>
+<dd><p>Run background processes and load UI components, provided the conditions are met</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.Page.run_background">
+<span class="sig-name descname"><span class="pre">run_background</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.Page.run_background" title="Link to this definition">¶</a></dt>
+<dd><p>Runs any background work that needs to be run before the page can be loaded.
+This is the default for page(s) with no background work.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="src.SecondPage">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.</span></span><span class="sig-name descname"><span class="pre">SecondPage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.SecondPage" title="Link to this definition">¶</a></dt>
+<dd><p>Class to build the second page (variable selection).
+This page allows user to select columns corresponding to variables required for bias report.
+Additional information is provided for the user for better clarification.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="src.SecondPage.UIComponents">
+<span class="sig-name descname"><span class="pre">UIComponents</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.SecondPage.UIComponents" title="Link to this definition">¶</a></dt>
+<dd><p>Widgets for the second page</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.SecondPage.add_info">
+<span class="sig-name descname"><span class="pre">add_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.SecondPage.add_info" title="Link to this definition">¶</a></dt>
+<dd><p>Update additional information for the variable clicked by user</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.SecondPage.check_boxes">
+<span class="sig-name descname"><span class="pre">check_boxes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.SecondPage.check_boxes" title="Link to this definition">¶</a></dt>
+<dd><p>Update selected variables</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.SecondPage.check_conditions">
+<span class="sig-name descname"><span class="pre">check_conditions</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.SecondPage.check_conditions" title="Link to this definition">¶</a></dt>
+<dd><p>Sanity check to decide if the second page can be appropriately loaded</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.SecondPage.get_columns">
+<span class="sig-name descname"><span class="pre">get_columns</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.SecondPage.get_columns" title="Link to this definition">¶</a></dt>
+<dd><p>Get list of columns from the input csv file</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.bias_report_generation">
+<span class="sig-prename descclassname"><span class="pre">src.</span></span><span class="sig-name descname"><span class="pre">bias_report_generation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">csv_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exp_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">study_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.bias_report_generation" title="Link to this definition">¶</a></dt>
+<dd><p>Function to load inputs from the user, generate report figures and descriptions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>variables</strong> – dictionary that contains user specified column names for every variables</p></li>
+<li><p><strong>csv_path</strong> – path for the csv file which contains the data</p></li>
+<li><p><strong>exp_type</strong> – string to indicate the bias amplification type</p></li>
+<li><p><strong>study_type</strong> – string to indicate the study type</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>m_list</strong> (obj:<cite>list</cite>) – list contains plotted metrics</p></li>
+<li><p><strong>info_list</strong> (obj:<cite>list</cite>) – list contains report description text corresponding to each metric</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.calculate_CI">
+<span class="sig-prename descclassname"><span class="pre">src.</span></span><span class="sig-name descname"><span class="pre">calculate_CI</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Mean'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">std_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Std'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">confidence_level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.95</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">25</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.calculate_CI" title="Link to this definition">¶</a></dt>
+<dd><p>Function to calculate confidence interval according to standard deviation, confidence level and sample size.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – dataframe that contains the data to calculate CI</p></li>
+<li><p><strong>mean_col</strong> – name for column with mean value</p></li>
+<li><p><strong>std_col</strong> – name for column with standard deviation</p></li>
+<li><p><strong>confidence_level</strong> – confidence level, currently support 0.9, 0.95 and 0.99</p></li>
+<li><p><strong>size</strong> (<em>sample</em>) – number of samples for each experiments in the data</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>dataframe that adds computed lower and upper confidence interval bound</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.figure_plotting">
+<span class="sig-prename descclassname"><span class="pre">src.</span></span><span class="sig-name descname"><span class="pre">figure_plotting</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hue_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">study_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ylim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0,</span> <span class="pre">1)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_label</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_label</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">style_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">style_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Mean'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lower_CI_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'lower_CI'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upper_CI_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'upper_CI'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_section</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.figure_plotting" title="Link to this definition">¶</a></dt>
+<dd><p>Function to generate subplots with input plot sections and parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> – dataframe that contains the data for plotting</p></li>
+<li><p><strong>x_col</strong> – name for column that contains x-axis ticks</p></li>
+<li><p><strong>s_col</strong> – name for column that contains sub-sections in the figure</p></li>
+<li><p><strong>hue_col</strong> – name for column that contains subgroups mapped with different colors during plotting</p></li>
+<li><p><strong>ylim</strong> – set the y-limits for all axes</p></li>
+<li><p><strong>y_label</strong> – set the y label name</p></li>
+<li><p><strong>x_label</strong> – set the x label name</p></li>
+<li><p><strong>style_col</strong> – name for column that determine line styles by positive-associated subgroup</p></li>
+<li><p><strong>style_dict</strong> – dictionary that determines plotting style</p></li>
+<li><p><strong>color_dict</strong> – dictionary that determins plotting colors</p></li>
+<li><p><strong>mean_col</strong> – name for column that contains metric mean value</p></li>
+<li><p><strong>lower_CI_col</strong> – name for column that contains lower bound of confidence interval</p></li>
+<li><p><strong>upper_CI_col</strong> – name for column that contains upper bound of confidence interval</p></li>
+<li><p><strong>plot_section</strong> – list that has all the sub-sections for plotting (including legends section)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.save_report">
+<span class="sig-prename descclassname"><span class="pre">src.</span></span><span class="sig-name descname"><span class="pre">save_report</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">info</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">img_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.save_report" title="Link to this definition">¶</a></dt>
+<dd><p>Function to combine the figure and report description, add title and other information, and save the report.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>info</strong> – report description text</p></li>
+<li><p><strong>img_path</strong> – path for the figure which being saved</p></li>
+<li><p><strong>save_path</strong> – path to save the final report</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-src.utils">
+<span id="bias-amplification-implementation"></span><h1>Bias Amplification Implementation<a class="headerlink" href="#module-src.utils" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="src.utils.Dataset">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">Dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">list_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_flag</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_out_class</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Yes'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_patient_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'patient_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Path'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.Dataset" title="Link to this definition">¶</a></dt>
+<dd><p>Class for customized dataset</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>patient_ids</strong> – list of patient IDs in dataset.</p></li>
+<li><p><strong>images</strong> – list of image paths in dataset.</p></li>
+<li><p><strong>class_values</strong> – list of task labels in dataset.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.adjust_comp">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">adjust_comp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">in_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_seed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">split_frac</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">split_num</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.adjust_comp" title="Link to this definition">¶</a></dt>
+<dd><p>Adjusts the composition of in_df to match the comp specified.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>in_df</strong> – input dataframe (by-patient)</p></li>
+<li><p><strong>random_seed</strong> – random control</p></li>
+<li><p><strong>split_frac</strong> – the fraction (decimal) of the available data to return</p></li>
+<li><p><strong>split_num</strong> – the number of patients overall to return</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>dataframe that with matched comp</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.adjust_subgroups">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">adjust_subgroups</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">in_df</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.adjust_subgroups" title="Link to this definition">¶</a></dt>
+<dd><p>Adjust subgroup information displayed in dataframe to only reflect attributes that are specified as import in equal_stratification_groups.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.analysis">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">analysis</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.analysis" title="Link to this definition">¶</a></dt>
+<dd><p>Main script to load test results, measure bias and do plotting.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.apply_custom_transfer_learning__resnet18">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">apply_custom_transfer_learning__resnet18</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">net</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.apply_custom_transfer_learning__resnet18" title="Link to this definition">¶</a></dt>
+<dd><p>Set the ResNet18 model to freeze first certain number of layers.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.bootstrapping">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">bootstrapping</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.bootstrapping" title="Link to this definition">¶</a></dt>
+<dd><p>Partitioning patient data into train, validation, validation_2 and testing.
+In each dataset, patient can be partitioned equally or by customized ratio in race, sex, image modality and COVID.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.convert_from_summary">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">convert_from_summary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conversion_table</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_img</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_img</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">selection_mode</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.convert_from_summary" title="Link to this definition">¶</a></dt>
+<dd><p>Create overall dataframe from json to csv format, and sample the images per patient according to image selection inputs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – dataframe that read from data summary json file</p></li>
+<li><p><strong>conversion_table</strong> – dataframe that read from data conversion json file</p></li>
+<li><p><strong>min_img</strong> – minimal number of images per patient</p></li>
+<li><p><strong>max_img</strong> – maximum number of images per patient</p></li>
+<li><p><strong>selection_mode</strong> – string that specify how to select images for patients</p></li>
+<li><p><strong>random_state</strong> – for random control</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>dataframe that contains patient information and sampled images for each patient</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.convert_to_csv">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">convert_to_csv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tasks</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.convert_to_csv" title="Link to this definition">¶</a></dt>
+<dd><p>Convert the partitioned datasets to save as csv files</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.get_stats">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">get_stats</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df_dict</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.get_stats" title="Link to this definition">¶</a></dt>
+<dd><p>Generate statistical summary of partitioned data, including subgroup information.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>df_dict</strong> – dictionary that contains datasets as keys, and data csv files as corresponding values</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>generated summary that contains number of patients/images in each dataset.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.get_subgroup">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">get_subgroup</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">row</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.get_subgroup" title="Link to this definition">¶</a></dt>
+<dd><p>Get subgroup strings.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.inference_onnx">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">inference_onnx</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.inference_onnx" title="Link to this definition">¶</a></dt>
+<dd><p>Main script to run model deployment.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.info_pred_mapping">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">info_pred_mapping</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">info</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pred</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#src.utils.info_pred_mapping" title="Link to this definition">¶</a></dt>
+<dd><p>Map patient attributes information (e.g. sex, race) to prediction score and labels
+according to the patient id</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>info</strong> – Dataframe contains patient attributes info.</p></li>
+<li><p><strong>pred</strong> – Dataframe contains model prediction scores.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Dataframe combines patient attributes and predictions.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.load_custom_checkpoint">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">load_custom_checkpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ckpt_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_dcnn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gpu_ids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_channels</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.load_custom_checkpoint" title="Link to this definition">¶</a></dt>
+<dd><p>Load customized pre-trained models with given weight file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ckpt_path</strong> – file path of the pre-trained model.</p></li>
+<li><p><strong>base_dcnn</strong> – name of the model architecture, e.g. resnet18, densenet121, etc.</p></li>
+<li><p><strong>gpu_ids</strong> – current GPU ID.</p></li>
+<li><p><strong>num_channels</strong> – number of channels.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>loaded pre-trained model.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>model</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.metric_calculation">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">metric_calculation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">info_pred</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">positive_group</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_diff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.metric_calculation" title="Link to this definition">¶</a></dt>
+<dd><p>Calculate performance and bias measurements for subgroups.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>info_pred</strong> – Dataframe contains patient attributes and predictions.</p></li>
+<li><p><strong>test_list</strong> – List of subgroups for bias measurements calculation.</p></li>
+<li><p><strong>output_file</strong> – File path to store calculated performance and bias measurements.</p></li>
+<li><p><strong>threshold</strong> – Threshold</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Dataframe contains calculated performance and bias measurements.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.modify_classification_layer_v1">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">modify_classification_layer_v1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_channels</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.modify_classification_layer_v1" title="Link to this definition">¶</a></dt>
+<dd><p>Modify the last fully connected layer to have given output size.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> – pytorch model to be modified</p></li>
+<li><p><strong>num_channels</strong> – number of outputs for the fully connected layer</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>modified model.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>model</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.prevent_data_leakage">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">prevent_data_leakage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df_list</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.prevent_data_leakage" title="Link to this definition">¶</a></dt>
+<dd><p>Prevent duplicate patient/images in different datasets</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.process_convert_dicom_to_jpeg">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">process_convert_dicom_to_jpeg</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.process_convert_dicom_to_jpeg" title="Link to this definition">¶</a></dt>
+<dd><p>Convert and crop dicom files and save as jpeg files, where the name of the jpeg is patient_id_#.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.process_convert_image_loop">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">process_convert_image_loop</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img_info</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.process_convert_image_loop" title="Link to this definition">¶</a></dt>
+<dd><p>Read dicom files, do histogram equalization, cropping the image and save as jpeg file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>img_info</strong> – List contains file path for the dicom file, and file path to store resulted jpeg file.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.read_jpg">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">read_jpg</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">imageName</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.read_jpg" title="Link to this definition">¶</a></dt>
+<dd><p>Function to read jpg image with rotation enabled for data augmentation.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.read_open_A1_20221010">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">read_open_A1_20221010</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.read_open_A1_20221010" title="Link to this definition">¶</a></dt>
+<dd><p>Summarized the downloaded Open-A1 data set using the imaging data and the associated MIDRC tsv files. Summary file will be save as a json file.</p>
+<blockquote>
+<div><dl class="simple">
+<dt>Info on supporting files:</dt><dd><p>/data/20221010_open_A1_all_Cases.tsv: get patient-level info (submitter_id, sex, age, race, COVID_status)
+/data/20221010_open_A1_all_Imaging_Series.tsv: get image series info</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.results_plotting">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">results_plotting</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_label</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hue_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">style_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exp_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{'B':</span> <span class="pre">'#4046ca',</span> <span class="pre">'COVID':</span> <span class="pre">'#57c44f',</span> <span class="pre">'F':</span> <span class="pre">'#dd337c',</span> <span class="pre">'M':</span> <span class="pre">'#0fb5ae',</span> <span class="pre">'Overall':</span> <span class="pre">'#57c44f',</span> <span class="pre">'Subgroup':</span> <span class="pre">'#7e84fa',</span> <span class="pre">'W':</span> <span class="pre">'#f68511'}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">style_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{'B':</span> <span class="pre">'-',</span> <span class="pre">'Default':</span> <span class="pre">'-',</span> <span class="pre">'F':</span> <span class="pre">'-',</span> <span class="pre">'M':</span> <span class="pre">'--',</span> <span class="pre">'W':</span> <span class="pre">'--'}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_lim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.results_plotting" title="Link to this definition">¶</a></dt>
+<dd><p>Function to generate subplots with input plot sections and parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> – dataframe that contains the data for plotting</p></li>
+<li><p><strong>x_col</strong> – name for column that contains x-axis ticks</p></li>
+<li><p><strong>x_label</strong> – set the x label name</p></li>
+<li><p><strong>hue_col</strong> – name for column that contains subgroups mapped with different colors during plotting</p></li>
+<li><p><strong>style_col</strong> – name for column that determine line styles by positive-associated subgroup</p></li>
+<li><p><strong>s_col</strong> – name for column that contains sub-sections in the figure</p></li>
+<li><p><strong>value_col</strong> – name for column that contains metric value</p></li>
+<li><p><strong>exp_type</strong> – indicate which bias amplification approach</p></li>
+<li><p><strong>style_dict</strong> – dictionary that determines plotting style</p></li>
+<li><p><strong>color_dict</strong> – dictionary that determins plotting colors</p></li>
+<li><p><strong>y_lim</strong> – set range for y axis according to metric</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.run_deploy_onnx">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">run_deploy_onnx</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_loader</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.run_deploy_onnx" title="Link to this definition">¶</a></dt>
+<dd><p>Function that deploys on the validation data loader, calculates sample based AUC and saves the scores in a tsv file.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.run_train">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">run_train</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">train_loader</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">criterion</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.run_train" title="Link to this definition">¶</a></dt>
+<dd><p>Function that runs the training</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>train_loader</strong> – loaded training data set</p></li>
+<li><p><strong>model</strong> – the model to be trained</p></li>
+<li><p><strong>criterion</strong> – loss function to be minimized</p></li>
+<li><p><strong>optimizer</strong> – training optimizer</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>average loss for current epoch</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.run_validate">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">run_validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val_loader</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.run_validate" title="Link to this definition">¶</a></dt>
+<dd><p>Function that deploys on the input data loader, calculates sample based AUC and saves the scores in a tsv file.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.save_checkpoint">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">save_checkpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'checkpoint.pth.tar'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.save_checkpoint" title="Link to this definition">¶</a></dt>
+<dd><p>Save the model checkpoint.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.train">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">train</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.train" title="Link to this definition">¶</a></dt>
+<dd><p>Main script for model training, including model selection, pre-trained weights loading,
+training/validation data loading, and model fine-tuning.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.utils.train_split">
+<span class="sig-prename descclassname"><span class="pre">src.utils.</span></span><span class="sig-name descname"><span class="pre">train_split</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.utils.train_split" title="Link to this definition">¶</a></dt>
+<dd><p>Manipulate prevalence in race or sex subgroups. The given subgroup will be sampled to the specified prevalence,
+while the opposite subgroup will be sampled to (1-prevalence).</p>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+<h3><a href="index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="index.html">bias.myti.Report</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">myti.report GUI</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#src.AboutWindow"><code class="docutils literal notranslate"><span class="pre">AboutWindow</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.ClickLabel"><code class="docutils literal notranslate"><span class="pre">ClickLabel</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.FinalPage"><code class="docutils literal notranslate"><span class="pre">FinalPage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.InitialPage"><code class="docutils literal notranslate"><span class="pre">InitialPage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.MainWindow"><code class="docutils literal notranslate"><span class="pre">MainWindow</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.Page"><code class="docutils literal notranslate"><span class="pre">Page</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.SecondPage"><code class="docutils literal notranslate"><span class="pre">SecondPage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.bias_report_generation"><code class="docutils literal notranslate"><span class="pre">bias_report_generation()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.calculate_CI"><code class="docutils literal notranslate"><span class="pre">calculate_CI()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.figure_plotting"><code class="docutils literal notranslate"><span class="pre">figure_plotting()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.save_report"><code class="docutils literal notranslate"><span class="pre">save_report()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#module-src.utils">Bias Amplification Implementation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.Dataset"><code class="docutils literal notranslate"><span class="pre">Dataset</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.adjust_comp"><code class="docutils literal notranslate"><span class="pre">adjust_comp()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.adjust_subgroups"><code class="docutils literal notranslate"><span class="pre">adjust_subgroups()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.analysis"><code class="docutils literal notranslate"><span class="pre">analysis()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.apply_custom_transfer_learning__resnet18"><code class="docutils literal notranslate"><span class="pre">apply_custom_transfer_learning__resnet18()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.bootstrapping"><code class="docutils literal notranslate"><span class="pre">bootstrapping()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.convert_from_summary"><code class="docutils literal notranslate"><span class="pre">convert_from_summary()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.convert_to_csv"><code class="docutils literal notranslate"><span class="pre">convert_to_csv()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.get_stats"><code class="docutils literal notranslate"><span class="pre">get_stats()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.get_subgroup"><code class="docutils literal notranslate"><span class="pre">get_subgroup()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.inference_onnx"><code class="docutils literal notranslate"><span class="pre">inference_onnx()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.info_pred_mapping"><code class="docutils literal notranslate"><span class="pre">info_pred_mapping()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.load_custom_checkpoint"><code class="docutils literal notranslate"><span class="pre">load_custom_checkpoint()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.metric_calculation"><code class="docutils literal notranslate"><span class="pre">metric_calculation()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.modify_classification_layer_v1"><code class="docutils literal notranslate"><span class="pre">modify_classification_layer_v1()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.prevent_data_leakage"><code class="docutils literal notranslate"><span class="pre">prevent_data_leakage()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.process_convert_dicom_to_jpeg"><code class="docutils literal notranslate"><span class="pre">process_convert_dicom_to_jpeg()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.process_convert_image_loop"><code class="docutils literal notranslate"><span class="pre">process_convert_image_loop()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.read_jpg"><code class="docutils literal notranslate"><span class="pre">read_jpg()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.read_open_A1_20221010"><code class="docutils literal notranslate"><span class="pre">read_open_A1_20221010()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.results_plotting"><code class="docutils literal notranslate"><span class="pre">results_plotting()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.run_deploy_onnx"><code class="docutils literal notranslate"><span class="pre">run_deploy_onnx()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.run_train"><code class="docutils literal notranslate"><span class="pre">run_train()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.run_validate"><code class="docutils literal notranslate"><span class="pre">run_validate()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.save_checkpoint"><code class="docutils literal notranslate"><span class="pre">save_checkpoint()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.train"><code class="docutils literal notranslate"><span class="pre">train()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#src.utils.train_split"><code class="docutils literal notranslate"><span class="pre">train_split()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/src.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      
+      
+      
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="_sources/src.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

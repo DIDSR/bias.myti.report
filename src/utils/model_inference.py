@@ -3,7 +3,6 @@ import torch.nn as nn
 import torchvision.models as models
 from torch.utils.data import DataLoader
 # #
-from dat_data_load import Dataset
 import os
 import argparse
 import json
@@ -16,6 +15,10 @@ import timeit
 import torch.onnx
 import onnx
 import onnxruntime
+import sys 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+from src.utils.dat_data_load import Dataset
 
 def to_numpy(tensor):
     """

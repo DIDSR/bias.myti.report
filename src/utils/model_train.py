@@ -4,7 +4,6 @@ import torchvision.models as models
 from torch.utils.data import DataLoader
 #from collections import OrderedDict
 # #
-from dat_data_load import Dataset
 import os
 import argparse
 import numpy as np
@@ -15,6 +14,10 @@ import json
 import torch.onnx
 import onnx
 import onnxruntime
+import sys 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+from src.utils.dat_data_load import Dataset
 # # CONSTANTS
 master_iter = 0
 
