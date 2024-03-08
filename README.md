@@ -1,6 +1,6 @@
-# myti.report
+# Bias.myti.report
 
-**Myti.report is a visualization tool to facilitate the comparison of user-implemented bias mitigation methods for AI models.**
+**Bias.myti.report is a visualization tool to facilitate the comparison of user-implemented bias mitigation methods for AI models.**
 
 <picture>
   <source media="(max-width: 799px)" srcset="assets/visual_abstract_vertical.png" />
@@ -13,6 +13,10 @@
 ---
 
 This repository contains the implementation of two AI bias amplification approaches presented in the paper: “Bias amplification to facilitate the systematic evaluation of bias mitigation methods”.  The graphical user interface(GUI) tool helps the user to better understand the amplified model bias with or without bias mitigation. The whole platform allows an objective assessment and systematic comparison of bias mitigation methods, and assists the user to select the most appropriate mitigation method under different circumstances.
+
+Testing results for two amplification approaches are included in two example Jupyter notebooks, please see [here](Bias-Amplification) to access.
+
+Instructions on how to use the GUI tool can be found [here](Quick-Guide-for-mytireport-GUI).
 
 ## Related References
 - A. Burgon, Y. Zhang, B. Sahiner, N. Petrick, K. H. Cha, R. K. Samala*, “Manipulation of sources of bias in AI device development”, Proc. of SPIE (2024)
@@ -28,8 +32,8 @@ With increasing utilization of AI in clinical practice, it is critical to unders
 ## Bias Amplification
 Examples showing instructions on how to implement the two bias amplification approaches can be found in [example for quantitative misrepresention](https://github.com/DIDSR/myti.report/blob/main/example/Bias%20amplification%20(quantitative%20misrepresentation)%20example.ipynb) and [example for inductive transfer learning](https://github.com/DIDSR/myti.report/blob/main/example/Bias%20amplification%20(inductive%20transfer%20learning)%20example.ipynb).
 
-## Quick Guide for myti.report GUI
-To visualize the bias by myti.report GUI, run the following code:
+## Quick Guide for bias.myti.report GUI
+To visualize the bias by bias.myti.report GUI, run the following code:
 ```
 python src/mytiUI.py
 ```
@@ -78,13 +82,11 @@ Click the 'Next Page' button on bottom left after all steps are finished and nav
 
 ---
 
-For more detailed information, view the [myti.report documentation](https://didsr.github.io/myti.report/).
+For more detailed information, view the [bias.myti.report documentation](https://didsr.github.io/myti.report/).
 
 ## System Requirements
-```
-python 3.10.12
-Ubuntu 22.04.3 LTS
-```
+The tool is developed and tested with ```Ubuntu 22.04.3 LTS``` and ```python 3.10.12```.
+
 Python package requirements can be found in [requirements.txt](requirements.txt).
 
 ## Data
