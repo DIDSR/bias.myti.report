@@ -9,6 +9,7 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import * 
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtSvgWidgets import *
+from pathlib import Path
 import sys 
 import shutil
 import os
