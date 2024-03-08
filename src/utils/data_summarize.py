@@ -50,10 +50,15 @@ def race_lookup(race_info):
     """
     Converts the patient's recorded race to a standard format.
     
-    Parameters
-    ----------
+    Arguments
+    =========
     race_info
         The patient's recorded race.
+        
+    Returns
+    =======
+    race_info : str
+        The race information in standardized terminology.
     """
     race_info = str(race_info)
     if race_info in race_lookup_table:
@@ -68,10 +73,15 @@ def ethnicity_lookup(ethnicity_info):
     """
     Converts the patient's ethnicity information to a standard format.
     
-    Parameters
-    ----------
+    Arguments
+    =========
     ethnicity_info
         The patient's ethnicity info.
+    
+    Returns
+    =======
+    ethnicity_info : str
+        The ethnicity information in standardized terminology.
     """
     
     ethnicity_info = str(ethnicity_info)
@@ -87,10 +97,15 @@ def manufacturer_lookup(manufacturer_info):
     """
     Converts the sample's manufacturer information to a standard format.
     
-    Parameters
-    ----------
+    Arguments
+    =========
     manufacturer_info
         The sample's manufacturer info.
+        
+    Returns
+    =======
+    manufacturer_info : str
+        The manufacturer information in standardized terminology.
     """
     manufacturer_info = str(manufacturer_info)
     if manufacturer_info in manufacturer_lookup_table:
@@ -106,8 +121,8 @@ def save_to_file(data:list, filepath:str):
     Saves the list of dictionaries to a json file, with each dictionary on its own line.
     Created to be used in read_open_A1.
     
-    Parameters
-    ----------
+    Arguments
+    =========
     data
         A list of dictionaries, to be saved in json format.
     filepath
@@ -119,7 +134,6 @@ def save_to_file(data:list, filepath:str):
             for d in data:
                 json.dump(d, file)
                 file.write(os.linesep)
-    return
 	
 def read_open_A1(args):
   """
@@ -129,8 +143,8 @@ def read_open_A1(args):
 		...all_Cases.tsv: get patient-level info (submitter_id, sex, age, race, COVID_status)
 		...all_Imaging_Series.tsv: get image series info
   
-  Parameters
-  ----------
+  Arguments
+  =========
   args : argparse.Namespace
     A collection of the input arguments to the python script; includes input and output file names.
     	
