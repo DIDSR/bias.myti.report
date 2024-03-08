@@ -47,36 +47,73 @@ manufacturer_lookup_table = {
 modality_choices = ['CR', 'DX']
 
 def race_lookup(race_info):
-	race_info = str(race_info)
-	if race_info in race_lookup_table:
-		return race_info
-	for key in race_lookup_table:
-		if race_info in race_lookup_table[key]:
-			return key
-	print(f"race value {race_info} not in lookup table")
-	return race_info
+    """
+    Converts the patient's recorded race to a standard format.
+    
+    Parameters
+    ----------
+    race_info
+        The patient's recorded race.
+    """
+    race_info = str(race_info)
+    if race_info in race_lookup_table:
+      return race_info
+    for key in race_lookup_table:
+        if race_info in race_lookup_table[key]:
+            return key
+    print(f"race value {race_info} not in lookup table")
+    return race_info
 
 def ethnicity_lookup(ethnicity_info):
-	ethnicity_info = str(ethnicity_info)
-	if ethnicity_info in ethnicity_lookup_table:
-		return ethnicity_info
-	for key in ethnicity_lookup_table:
-		if ethnicity_info in ethnicity_lookup_table[key]:
-			return key
-	print(f"ethnicity value {ethnicity_info} not in lookup table")
-	return ethnicity_info
+    """
+    Converts the patient's ethnicity information to a standard format.
+    
+    Parameters
+    ----------
+    ethnicity_info
+        The patient's ethnicity info.
+    """
+    
+    ethnicity_info = str(ethnicity_info)
+    if ethnicity_info in ethnicity_lookup_table:
+        return ethnicity_info
+    for key in ethnicity_lookup_table:
+    	  if ethnicity_info in ethnicity_lookup_table[key]:
+    		  return key
+    print(f"ethnicity value {ethnicity_info} not in lookup table")
+    return ethnicity_info
 
 def manufacturer_lookup(manufacturer_info):
-	manufacturer_info = str(manufacturer_info)
-	if manufacturer_info in manufacturer_lookup_table:
-		return manufacturer_info
-	for key in manufacturer_lookup_table:
-		if manufacturer_info in manufacturer_lookup_table[key]:
-			return key
-	print(f"manufacturer value {manufacturer_info} not in lookup table")
-	return manufacturer_info
+    """
+    Converts the sample's manufacturer information to a standard format.
+    
+    Parameters
+    ----------
+    manufacturer_info
+        The sample's manufacturer info.
+    """
+    manufacturer_info = str(manufacturer_info)
+    if manufacturer_info in manufacturer_lookup_table:
+        return manufacturer_info
+    for key in manufacturer_lookup_table:
+        if manufacturer_info in manufacturer_lookup_table[key]:
+            return key
+    print(f"manufacturer value {manufacturer_info} not in lookup table")
+    return manufacturer_info
 
 def save_to_file(data:list, filepath:str):
+    """
+    Saves the list of dictionaries to a json file, with each dictionary on its own line.
+    Created to be used in read_open_A1.
+    
+    Parameters
+    ----------
+    data
+        A list of dictionaries, to be saved in json format.
+    filepath
+        The json file in which to save the dictionaries
+    
+    """
     if len(data) > 0:
         with open(filepath, "a") as file:
             for d in data:
@@ -84,13 +121,19 @@ def save_to_file(data:list, filepath:str):
                 file.write(os.linesep)
     return
 	
-def read_open_A1_20221010(args):
+def read_open_A1(args):
   """
-  Summarized the downloaded Open-A1 data set using the imaging data and the associated MIDRC tsv files. Summary file will be save as a json file.
-
-  	Info on supporting files:
-		/data/20221010_open_A1_all_Cases.tsv: get patient-level info (submitter_id, sex, age, race, COVID_status)
-		/data/20221010_open_A1_all_Imaging_Series.tsv: get image series info
+  Filters and summarizes the downloaded Open-A1 data set using the imaging data and the associated MIDRC tsv files. Summary file will be save as a json file.
+  
+  Info on supporting files:
+		...all_Cases.tsv: get patient-level info (submitter_id, sex, age, race, COVID_status)
+		...all_Imaging_Series.tsv: get image series info
+  
+  Parameters
+  ----------
+  args : argparse.Namespace
+    A collection of the input arguments to the python script; includes input and output file names.
+    	
   """
   # information to gather (pixel spacing and img size done separately)
   img_info_dict = {
@@ -237,5 +280,5 @@ if __name__ == "__main__":
   parser.add_argument("--save-every", dest="save_every", type=int, default=20, help="(Optional; default=20) How often to save information; helps with memory issues.")
   parser.add_argument("--notebook", default=False, action="store_true", help="Pass to switch display if running in notebook (show progress bar instead of counter).")
   args = parser.parse_args()
-  read_open_A1_20221010(args)
+  read_open_A1(args)
   print(f"complete in {((time.time()-start_time)/60):.2f} min")
