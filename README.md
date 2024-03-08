@@ -20,8 +20,8 @@ This repository contains the implementation of two AI bias amplification approac
 
 # Introduction
 With increasing utilization of AI in clinical practice, it is critical to understand and control AI model bias to ensure health equities. Numerous methods have been developed to mitigate bias, however, there is a lack of consistent way to systematically evaluate the effectiveness and potential trade-off of these mitigation methods. To facilitate such evaluation, we presented two bias amplification approaches by promoting the spurious correlation between AI outputs and patient attributes.
-- Quantitative misrepresentation: a manipulation of data selection to the training set such that the disease prevalence is varied between different patient subgroups.
-- Inductive transfer learning: a two-step transfer learning approach where the AI is trained to classify patient attributes during the first step. The AI is then fine-tuned to perform clinical tasks during the second step.
+- **Quantitative misrepresentation:** a manipulation of data selection to the training set such that the disease prevalence is varied between different patient subgroups.
+- **Inductive transfer learning:** a two-step transfer learning approach where the AI is trained to classify patient attributes during the first step. The AI is then fine-tuned to perform clinical tasks during the second step.
 
 # Getting Started
 
@@ -39,7 +39,7 @@ Here is a quick guidance on how to use the tool.
 2. Specify the implemented bias amplification approach (quantitative misrepresentation or inductive transfer learning).
 3. Select the study type (mitigation comparison, finite sample size or none of these).
 
-Click the 'Next Page' button on bottom left after all steps are finished to navigate to the next page.
+Click the 'Next Page' button on bottom left after all steps are finished and navigate to the next page.
 
 ![Page_1](assets/page_1.png)
 
@@ -48,10 +48,10 @@ Click the 'Next Page' button on bottom left after all steps are finished to navi
 ---
 
 ### Page 2 (Variables Page)
-1. Click the icons to display detailed information on corresponding variables.
+1. Click the icons to display detailed information for corresponding variables.
 2. Specify corresponding column names in the *csv* file to variables.
 
-Click the 'Next Page' button on bottom left after all steps are finished to navigate to the next page.
+Click the 'Next Page' button on bottom left after all steps are finished and navigate to the next page.
 
 ![Page_2](assets/page_2.png)
 
@@ -60,11 +60,10 @@ Click the 'Next Page' button on bottom left after all steps are finished to navi
 ---
 
 ### Page 3 (Report Page)
-1. Previews for bias visualization figures. Click to select the one wish to display.
+1. Previews for bias visualization figures. Click on the figure for display.
 2. Selected figure will be displayed along with the description below.
-3. Click the "Save Report" button to save the selected figure and description.
+3. Click the "Save Report" button to save the selected figure and description as a report.
 
-For detailed information, view the [myti.report documentation](https://didsr.github.io/myti.report/).
 
 ![Page_1](assets/page_3.png)
 
@@ -73,11 +72,13 @@ For detailed information, view the [myti.report documentation](https://didsr.git
 ---
 
 ## Example Outputs
-![Example Output](examples/example_bias_mitigation_comparison.png)
+![Example Output](example/example_bias_mitigation_comparison.png)
 
 <p style="text-align: center;">  Example figure showing bias mitigation comparison when sex-related bias has been amplified by quantitative misrepresentation. Each subplot shows the predicted disease prevalence within each patient subgroup. </p>
 
 ---
+
+For more detailed information, view the [myti.report documentation](https://didsr.github.io/myti.report/).
 
 ## System Requirements
 ```
