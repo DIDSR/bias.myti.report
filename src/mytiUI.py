@@ -15,7 +15,8 @@ import shutil
 import os
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
-from src.plot_generation import *
+from src.plot_generation import bias_report_generation
+from src.report_generation import create_report
 
 class ClickLabel(QLabel):
     """Clickable QLabel object."""
@@ -514,8 +515,8 @@ class FinalPage(Page):
     
     def save_fig(self):
         """ Save the figure and description. """
-        name = QFileDialog.getSaveFileName(self, 'Save File', 'saved_report.png', "Images (*.png *.jpg);;PDF files (*.pdf)")
-        save_report(self.info_list[self.current_plot], self.example_images[self.current_plot], name[0])
+        name = QFileDialog.getSaveFileName(self, 'Save File', 'saved_report.pdf', "PDF files (*.pdf)")
+        create_report(self.m_list, self.example_images, self.parent.study_type, self.parent.exp_type, name[0])
 
 class MainWindow(QMainWindow):
     """ Class for the main window including main pages, logo, side menus, navigation bars. """

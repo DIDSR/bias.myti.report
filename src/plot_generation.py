@@ -6,33 +6,10 @@ import pandas as pd
 from datetime import date, datetime
 from math import ceil
 import os
-
-# Formatting details
-text_width = 8 # in inches
-COLORS = {"F":"#dd337c", "M":"#0fb5ae", "Overall":"#57c44f", "B":"#4046ca", "W":"#f68511", "COVID":"#57c44f", "Subgroup":"#7e84fa",} 
-STYLES = {"Default":"-", "M":"--", "F":"-", "B":"-", "W":"--"} # positive-associated
-ACCENT_COLOR = "#430c82" # used for bias deg indicator arrow and accompanying text
-HIGHLIGHT_COLOR = "#FDCA40"
-SUBGROUP_NAME_MAPPING = {"F":"Female", "M":"Male","B":"Black", "W":"White"} # for the legend(s)
-CI_ALPHA = 0.3
-AXIS_COLOR = "#6e6e6e"
-NUM_SUB_COL = 3 # number of plots in a row in the figure
-FIGURE_RATIO = 0.75
-
-# Matplotlib Rc parameters (importing this file will apply them)
-rcParams['axes.labelweight'] = 'bold'
-rcParams['axes.titleweight'] = 'bold'
-rcParams['axes.labelsize'] = 8
-rcParams['axes.titlesize'] = 10
-rcParams['font.size'] = 8
-rcParams['font.weight'] = 'bold'
-rcParams['grid.alpha'] = 0.5
-rcParams['savefig.dpi'] = 300
-rcParams['axes.grid'] = True
-rcParams['xtick.color'] = AXIS_COLOR
-rcParams['ytick.color'] = AXIS_COLOR
-rcParams['axes.labelcolor'] = AXIS_COLOR
-rcParams['axes.edgecolor'] = AXIS_COLOR
+import sys
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+from src.plot_formatting import *
  
 def figure_plotting(
     data, x_col, s_col, hue_col, study_type, ylim=(0,1), y_label=None, x_label=None, style_col=None, 
@@ -242,10 +219,12 @@ def bias_report_generation(variables, csv_path, exp_type, study_type):
     if study_type == 'Compare Bias Mitigation Methods':
         s_col = variables.get('Mitigation Method')
         section_name = data[s_col].unique().tolist()
+        if 'No Mitigation' in section_name:
+            section_name.insert(0, section_name.pop(section_name.index('No Mitigation')))
         section_name.append("legends")
     elif study_type == 'Study Finite Sample Size Effect':
         s_col = variables.get('Training Data Size')
-        section_name = data[s_col].unique().tolist()
+        section_name = sorted(data[s_col].unique().tolist())
         section_name.append("legends")
     elif study_type == 'None':
         data['Section Name'] = 'Bias amplification'
@@ -282,13 +261,13 @@ def bias_report_generation(variables, csv_path, exp_type, study_type):
         # # generate corresponding report description
         # according to study type
         if study_type == "None":
-            info = f"The report presents the subgroup {m} when model bias has been amplified by {exp_type.lower()}."
+            info = f"The figure presents the subgroup {m} when model bias has been amplified by {exp_type.lower()}."
         elif study_type == "Compare Bias Mitigation Methods":
-            info = f"The report compares the subgroup {m} between different bias mitigation methods when bias is amplified by {exp_type.lower()}." + \
-            "Each subplot in the figure represents one implemented mitigation method."
+            info = f"The figure compares the subgroup {m} between different bias mitigation methods when bias is amplified by {exp_type.lower()}." + \
+            "The first subplot presents the amplified bias (without mitigation), and the rest subplots show results from different implemented mitigation methods."
         else:            
-            info = f"The report compares the subgroup {m} between different training set size when bias is amplified by {exp_type.lower()}." + \
-            "Subplots in the figure represent various sample size used for model training."
+            info = f"The figure compares the subgroup {m} between models with different training set sizes when bias is amplified by {exp_type.lower()}." + \
+            "Subplots in the figure present results with different sample sizes used for model training."
         # according to amplification type
         if exp_type == "Quantitative Misrepresentation":
             info = info + "For these experiments, the positive-associated subgroup refers to the subgroup with the higher disease prevalence in the training set." + \
@@ -298,49 +277,4 @@ def bias_report_generation(variables, csv_path, exp_type, study_type):
             "The x-axis indicates the number of layers being frozen during the final model fine-tune step, while B indicates the baseline model."                    
         info_list.append(info)
     return m_list, info_list
-    
-
-def save_report(info, img_path, save_path):
-    """
-    Function to combine the figure and report description, add title and other information, and save the report.
-
-    Arguments
-    =========
-    info
-        report description text
-    img_path
-        path for the figure which being saved
-    save_path
-        path to save the final report
-    """
-    fig = plt.figure(figsize = (text_width, text_width))
-    gs = fig.add_gridspec(4,1)
-    ax1 = fig.add_subplot(gs[:-1,:])
-    # # add title
-    ax1.set_title('Bias Amplification/Mitigation Report')
-    # # add figure
-    images = plt.imread(img_path)
-    ax1.axis("off")    
-    ax1.imshow(images)
-    # # add report description
-    ax2 = fig.add_subplot(gs[-1,:])
-    ax2.axis("off")
-    ax2.set_title(None)
-    ax2.set_ylim(0,1)
-    ax2.set_xlim(0,1)
-    curr_time = datetime.now().strftime('%H:%M:%S')
-    info = info + "\n\nReport generated by: myti.report v1.0" + f"\nDate: {date.today()}" + f"\nTime: {curr_time}"
-    ax2.text(0.02, 0.25, info, wrap=True)
-    logo = plt.imread('UI_assets/fda_logo.jpg')
-    fig.figimage(logo, 1700, 10)
-    fig.savefig(save_path, bbox_inches='tight')
-
-    
-
-
-
-
-
-
-
     

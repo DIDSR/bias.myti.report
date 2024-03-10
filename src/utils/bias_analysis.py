@@ -5,30 +5,14 @@ from scipy.special import logit, expit
 import torch
 import sklearn.metrics as sk_metrics
 import numpy as np
-
+import sys
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
-from matplotlib import rcParams
+SCRIPT_DIR = os.path.dirname(os.path.abspath(os.path.join('..', 'src')))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+from src.plot_formatting import *
 
-COLORS = {"F":"#dd337c", "M":"#0fb5ae", "Overall":"#57c44f", "B":"#4046ca", "W":"#f68511", "COVID":"#57c44f", "Subgroup":"#7e84fa",} 
-STYLES = {"Default":"-", "M":"--", "F":"-", "B":"-", "W":"--"} # positive-associated
-SUBGROUP_NAME_MAPPING = {"F":"Female", "M":"Male"} # for the legend(s)
-AXIS_COLOR = "#6e6e6e"
-
-rcParams['axes.labelweight'] = 'bold'
-rcParams['axes.titleweight'] = 'bold'
-rcParams['axes.labelsize'] = 8
-rcParams['axes.titlesize'] = 10
-rcParams['font.size'] = 8
-rcParams['font.weight'] = 'bold'
-rcParams['grid.alpha'] = 0.5
-rcParams['savefig.dpi'] = 300
-rcParams['axes.grid'] = True
-rcParams['xtick.color'] = AXIS_COLOR
-rcParams['ytick.color'] = AXIS_COLOR
-rcParams['axes.labelcolor'] = AXIS_COLOR
-rcParams['axes.edgecolor'] = AXIS_COLOR
 
 def info_pred_mapping(info:pd.DataFrame, pred:pd.DataFrame)->pd.DataFrame:
     """ Map patient attributes information (e.g. sex, race) to prediction score and labels
