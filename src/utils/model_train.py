@@ -17,6 +17,7 @@ import onnxruntime
 import sys 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
+sys.path.append(os.path.dirname(os.path.dirname(SCRIPT_DIR)))
 from src.utils.dat_data_load import Dataset
 # # CONSTANTS
 master_iter = 0
@@ -139,8 +140,11 @@ def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels):
     model = models.__dict__[base_dcnn](weights='IMAGENET1K_V1')
     model = modify_classification_layer_v1(model, num_channels)
     # # load state_dicts from the weight file
-    device = f'cuda:{gpu_ids}'
-    ckpt_dict = torch.load(ckpt_path, map_location=device)
+    if torch.cuda.is_available():
+        device = f'cuda:{gpu_ids}'
+        ckpt_dict = torch.load(ckpt_path, map_location=device)
+    else:
+        ckpt_dict = torch.load(ckpt_path)
     state_dict = ckpt_dict['state_dict']    
     # # copy the weights and biases
     model.load_state_dict(state_dict, strict=False)
@@ -207,8 +211,9 @@ def train(args):
         print('ERROR. UNKNOWN option for fine_tuning')
         return
     
-    torch.cuda.set_device(args.gpu_id)
-    model.cuda(args.gpu_id)
+    if torch.cuda.is_available():
+        torch.cuda.set_device(args.gpu_id)
+        model.cuda(args.gpu_id)
     # # Create tr and vd datasets
     train_dataset = Dataset(args.input_train_file, train_flag=True, default_out_class=args.train_task)
     valid_dataset = Dataset(args.validation_file, train_flag=False, default_out_class=args.train_task)
@@ -301,8 +306,9 @@ def run_train(train_loader, model, criterion, optimizer):
     for i, (_, _, images, target) in enumerate(train_loader):
         # # measure data loading time
         master_iter += 1
-        images = images.cuda()
-        target = target.cuda()
+        if torch.cuda.is_available():
+            images = images.cuda()
+            target = target.cuda()
         optimizer.zero_grad()
         output = model(images.float())
         # # compute loss
