@@ -389,7 +389,8 @@ def run_validate(val_loader, model, args):
     with torch.no_grad():
         for i, (pid, fname, images, target) in enumerate(val_loader):
             # # compute output
-            images = images.cuda()
+            if torch.cuda.is_available():
+                images = images.cuda()
             output = model(images.float())
             # #
             target_image_pred_logits = torch.flatten(output)
