@@ -271,7 +271,7 @@ def train(args):
             auc_val = run_validate(valid_loader, model, args)
             progress_values = [epoch, avg_loss, auc_val]
             if JUPYTER:
-                progress_table.children += tuple( [ widgets.VBox([widgets.Label(f"{x}:.5f")], layout=table_layout) for x in progress_values ])
+                progress_table.children += tuple( [ widgets.VBox([widgets.HTML(str(round(x,5)))], layout=table_layout) for x in progress_values ])
             else:
                 print("> {:d}\t{:1.5f}\t\t{:1.5f}".format(*progress_values))
             if epoch == args.num_epochs-1:
@@ -285,9 +285,9 @@ def train(args):
                 'auc': auc_val,
                 'optimizer': optimizer.state_dict(),
             }, checkpoint_file)
-            if JUPYTER:
-                progress_bar.value += 1
-                epoch_progress_bar.value = 0
+        if JUPYTER:
+            progress_bar.value += 1
+            epoch_progress_bar.value = 0
             
     # # log the final model performance
     with open(args.log_path, 'a') as fp:
