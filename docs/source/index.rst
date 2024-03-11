@@ -7,6 +7,12 @@ Bias.myti.report facilitates the systematic comparison of bias mitigation method
 2. A `visualization GUI`_ to assist with the interpretation of results.
 
 
+Getting Started
+===============
+
+This repository contains two example notebooks in the `examples folder`_ that demonstrate how to amplify bias using data from the MIDRC open-A1 repository. Additionally, the `examples folder`_ contains several example csv files, containing example inputs in to the visualization GUI. To implement the amplification approaches using your own data and/or models, see the implementation instructions in the next section. 
+
+
 .. _Implementation instructions for two bias amplification approaches:
 
 Bias Amplification
