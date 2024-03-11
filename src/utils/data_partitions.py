@@ -265,7 +265,10 @@ def convert_from_summary(df, conversion_table, min_img, max_img, selection_mode,
     for val in group_dict.values():
         x = val['loc']
         df = df[df['images_info'].str.len() != 0].copy() # remove rows without image information
-        df[x[1]] = df.apply(lambda row: row[x[0]][0][x[1]], axis=1)
+        try: # legacy for old way of saving image information
+            df[x[1]] = df.apply(lambda row: row[x[0]][0][x[1]], axis=1)
+        except:
+            df[x[1]] = df.apply(lambda row: row[x[0]][x[1]], axis=1)
     df['race'] = df['race'].replace({" ":"_"},regex=True)
     df['race'] = df['race'].replace({"Black_or_African_American":"Black"}, regex=True)
     # to get the study date with the image, we need to joint-explode images and images_information

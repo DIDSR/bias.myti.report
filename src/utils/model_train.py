@@ -17,7 +17,18 @@ import onnxruntime
 import sys 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
+sys.path.append(os.path.dirname(os.path.dirname(SCRIPT_DIR)))
 from src.utils.dat_data_load import Dataset
+import psutil
+if "jupyter" in psutil.Process(os.getppid()).name():
+    import ipywidgets as widgets
+    from IPython.display import display
+    JUPYTER = True
+else:
+    JUPYTER = False
+        
+
+
 # # CONSTANTS
 master_iter = 0
 
@@ -139,8 +150,11 @@ def load_custom_checkpoint(ckpt_path, base_dcnn, gpu_ids, num_channels):
     model = models.__dict__[base_dcnn](weights='IMAGENET1K_V1')
     model = modify_classification_layer_v1(model, num_channels)
     # # load state_dicts from the weight file
-    device = f'cuda:{gpu_ids}'
-    ckpt_dict = torch.load(ckpt_path, map_location=device)
+    if torch.cuda.is_available():
+        device = f'cuda:{gpu_ids}'
+        ckpt_dict = torch.load(ckpt_path, map_location=device)
+    else:
+        ckpt_dict = torch.load(ckpt_path)
     state_dict = ckpt_dict['state_dict']    
     # # copy the weights and biases
     model.load_state_dict(state_dict, strict=False)
@@ -207,8 +221,9 @@ def train(args):
         print('ERROR. UNKNOWN option for fine_tuning')
         return
     
-    torch.cuda.set_device(args.gpu_id)
-    model.cuda(args.gpu_id)
+    if torch.cuda.is_available():
+        torch.cuda.set_device(args.gpu_id)
+        model.cuda(args.gpu_id)
     # # Create tr and vd datasets
     train_dataset = Dataset(args.input_train_file, train_flag=True, default_out_class=args.train_task)
     valid_dataset = Dataset(args.validation_file, train_flag=False, default_out_class=args.train_task)
@@ -228,18 +243,37 @@ def train(args):
     my_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.decay_every_N_epoch, gamma=args.decay_multiplier)
     # # start training
     print(f'Training for task: {args.train_task}')
-    print('EPOCH\tTR-AVG-LOSS\tVD-AUC')
+    
+    progress_table_headers = ["EPOCH", "TR-AVG-LOSS", "VD-AUC"]
+    if JUPYTER:
+        progress_bar = widgets.IntProgress(min=0, max=args.num_epochs, description="Training progress:", style=dict(description_width="150px",bar_color="#007CBA"))
+        display(progress_bar)
+        epoch_progress_bar = widgets.IntProgress(min=0, max=len(train_loader), description="Current epoch:", style=dict(description_width="150px",bar_color="#64b5de"))
+        display(epoch_progress_bar)
+        
+        table_layout = widgets.Layout(border="1px solid")
+        table_items = [widgets.VBox([widgets.Label(x, style=dict(font_weight="bold"))], layout=table_layout) for x in progress_table_headers]
+        progress_table = widgets.GridBox(table_items, layout=widgets.Layout(grid_template_columns="repeat(3,150px)"))
+        display(progress_table)
+    else:        
+        print("\t".join(progress_table_headers))
+    
     criterion = nn.BCEWithLogitsLoss()
     auc_val = -1
+        
     for epoch in range(args.num_epochs):
         # # train for one epoch
-        avg_loss = run_train(train_loader, model, criterion, optimizer)
+        avg_loss = run_train(train_loader, model, criterion, optimizer, epoch_progress_bar=epoch_progress_bar)
         my_lr_scheduler.step()
         # # validation and save checkpoint
         if epoch % args.save_every_N_epochs == 0 or epoch == args.num_epochs-1:
             # # evaluate on validation set
             auc_val = run_validate(valid_loader, model, args)
-            print("> {:d}\t{:1.5f}\t\t{:1.5f}".format(epoch, avg_loss, auc_val))
+            progress_values = [epoch, avg_loss, auc_val]
+            if JUPYTER:
+                progress_table.children += tuple( [ widgets.VBox([widgets.HTML(str(round(x,5)))], layout=table_layout) for x in progress_values ])
+            else:
+                print("> {:d}\t{:1.5f}\t\t{:1.5f}".format(*progress_values))
             if epoch == args.num_epochs-1:
                 checkpoint_file = os.path.join(args.output_base_dir, 'checkpoint__last.pth.tar')
             else:
@@ -251,6 +285,9 @@ def train(args):
                 'auc': auc_val,
                 'optimizer': optimizer.state_dict(),
             }, checkpoint_file)
+        if JUPYTER:
+            progress_bar.value += 1
+            epoch_progress_bar.value = 0
             
     # # log the final model performance
     with open(args.log_path, 'a') as fp:
@@ -273,7 +310,7 @@ def train(args):
     print('Final epoch model saved to: ' + onnx_model_path)
 
 
-def run_train(train_loader, model, criterion, optimizer):
+def run_train(train_loader, model, criterion, optimizer, epoch_progress_bar=None):
     """ 
     Function that runs the training
     
@@ -287,6 +324,8 @@ def run_train(train_loader, model, criterion, optimizer):
         Loss function to be minimized.
     optimizer
         Training optimizer.
+    epoch_progress_bar : ipywidgets.IntProgress
+        (Optional) The progress bar which displays the progress of the current epoch in the jupyter notebook.
 
     Returns
     =======
@@ -301,8 +340,9 @@ def run_train(train_loader, model, criterion, optimizer):
     for i, (_, _, images, target) in enumerate(train_loader):
         # # measure data loading time
         master_iter += 1
-        images = images.cuda()
-        target = target.cuda()
+        if torch.cuda.is_available():
+            images = images.cuda()
+            target = target.cuda()
         optimizer.zero_grad()
         output = model(images.float())
         # # compute loss
@@ -313,6 +353,8 @@ def run_train(train_loader, model, criterion, optimizer):
         optimizer.step()
         #my_lr_scheduler.step()
         # #
+        if epoch_progress_bar is not None:
+            epoch_progress_bar.value += 1
     return avg_loss/len(train_loader)
 
 
@@ -347,7 +389,8 @@ def run_validate(val_loader, model, args):
     with torch.no_grad():
         for i, (pid, fname, images, target) in enumerate(val_loader):
             # # compute output
-            images = images.cuda()
+            if torch.cuda.is_available():
+                images = images.cuda()
             output = model(images.float())
             # #
             target_image_pred_logits = torch.flatten(output)
