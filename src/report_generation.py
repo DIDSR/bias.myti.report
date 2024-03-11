@@ -57,28 +57,28 @@ def create_report(metrics, img_path, study_type, exp_type, save_path):
     story = []
     # adding study title and descriptions
     if study_type == "Compare Bias Mitigation Methods":
-        report_title = "Bia Mitigation Comparison Report"
+        report_title = "Bias Mitigation Comparison Report"
         study_title = "Study: Bias Mitigation Method Comparison"
         study_desc = "The study is designed to systematically evaluate bias mitigation methods implemented by the user. " + \
         f"After bias amplification through {exp_type.lower()}, mitigation methods are applied on these biased models and " + \
         "assessed by their effectiveness under different levels of bias."
-        figue_desc_1 = "Figures below present results for bias mitigation comparison. The first subplot presents " + \
-        "the amplified bias (without mitigation), while the rest subplots show results from different implemented mitigation methods."
+        figue_desc_1 = "Each figure under this section presents one metric result respectively. Inside each figure, the first subplot presents " + \
+        "the amplified bias (without mitigation), while the rest subplots show results from different implemented mitigation methods. "
     elif study_type == "Study Finite Sample Size Effect":
         report_title = "Bias Finite Sample Effect Report"
         study_title = "Study: Finite Sample Size Test"
         study_desc = f"The study is designed to explore the bias amplification effect by {exp_type.lower()} when sample size is limited. " + \
         "Bias amplification is applied to models trained with different training set size " + \
         "and the degrees to which the bias is promoted are compared across these models."
-        figue_desc_1 = "Figures below present results for finite sample size study. " + \
-        "Subplots in the figure present results with different sample sizes used for model training."
+        figue_desc_1 = "Each figure under this section presents one metric result respectively. Inside each figure, " + \
+        "the subplots show results with different sample sizes used for model training. "
     else:
         report_title = "Bias Amplification Report"
         study_title = "Study: Bias Amplification Study"
         study_desc = f"The study is designed to sysmatically amplify model bias by {exp_type.lower()}. " + \
         "The approach can produce models with different degrees of bias, " + \
         "which facilitates a systematic evaluation on bias mitigation methods."
-        figue_desc_1 = "Figures below show bias amplification results by {exp_type.lower()}."
+        figue_desc_1 = "Each figure under this section presents one metric result respectively. "
     
     if exp_type == "Quantitative Misrepresentation":
         exp_title = "Bias Ampilification Approach: Quantitative Misrepresentation"
@@ -106,7 +106,7 @@ def create_report(metrics, img_path, study_type, exp_type, save_path):
     story.append(Paragraph(figue_desc_1 + figue_desc_2, styleSheet['BodyText']))
     # adding figures
     for i, m in enumerate(metrics):
-        story.append(Paragraph(m, styleSheet['Heading3']))
+        story.append(Paragraph(f"{i+1}. {m}", styleSheet['Heading3']))
         figure = Image(img_path[i], width=6*inch, height=4.5*inch, kind='proportional')
         story.append(figure)
         if i != len(metrics)-1:

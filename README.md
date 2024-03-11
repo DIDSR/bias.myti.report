@@ -66,7 +66,7 @@ Click the 'Next Page' button on bottom left after all steps are finished and nav
 ### Page 3 (Report Page)
 1. Previews for bias visualization figures. Click on the figure for display.
 2. Selected figure will be displayed along with the description below.
-3. Click the "Save Report" button to save the selected figure and description as a report. An example report can be viewed [here](https://github.com/DIDSR/myti.report/blob/main/example/Example_report.pdf).
+3. Click the "Save Report" button to save the selected figure and description as a report. Example reports are included in the [example folder](https://github.com/DIDSR/myti.report/blob/main/example).
 
 
 ![Page_1](assets/page_3.png)

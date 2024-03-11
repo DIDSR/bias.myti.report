@@ -224,7 +224,7 @@ def bias_plots_generation(variables, csv_path, exp_type, study_type):
         section_name.append("legends")
     elif study_type == 'Study Finite Sample Size Effect':
         s_col = variables.get('Training Data Size')
-        section_name = sorted(data[s_col].unique().tolist())
+        section_name = data[s_col].unique().tolist()
         section_name.append("legends")
     elif study_type == 'None':
         data['Section Name'] = 'Bias amplification'
