@@ -13,7 +13,7 @@
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="myti.report GUI" href="src.html" />
+    <link rel="next" title="bias.myti.report GUI" href="src.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -73,7 +73,7 @@
 <div class="toctree-wrapper compound">
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">bias.myti.report</a></li>
-<li class="toctree-l1"><a class="reference internal" href="src.html">myti.report GUI</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="src.html">bias.myti.report GUI</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.AboutWindow"><code class="docutils literal notranslate"><span class="pre">AboutWindow</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.ClickLabel"><code class="docutils literal notranslate"><span class="pre">ClickLabel</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.FinalPage"><code class="docutils literal notranslate"><span class="pre">FinalPage</span></code></a></li>
@@ -81,10 +81,11 @@
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.MainWindow"><code class="docutils literal notranslate"><span class="pre">MainWindow</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.Page"><code class="docutils literal notranslate"><span class="pre">Page</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.SecondPage"><code class="docutils literal notranslate"><span class="pre">SecondPage</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="src.html#src.bias_report_generation"><code class="docutils literal notranslate"><span class="pre">bias_report_generation()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.html#src.bias_plots_generation"><code class="docutils literal notranslate"><span class="pre">bias_plots_generation()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.calculate_CI"><code class="docutils literal notranslate"><span class="pre">calculate_CI()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.html#src.create_report"><code class="docutils literal notranslate"><span class="pre">create_report()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.figure_plotting"><code class="docutils literal notranslate"><span class="pre">figure_plotting()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="src.html#src.save_report"><code class="docutils literal notranslate"><span class="pre">save_report()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.html#src.on_page"><code class="docutils literal notranslate"><span class="pre">on_page()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="src.html#module-src.utils">Bias Amplification Implementation</a><ul>
@@ -96,23 +97,27 @@
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.bootstrapping"><code class="docutils literal notranslate"><span class="pre">bootstrapping()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.convert_from_summary"><code class="docutils literal notranslate"><span class="pre">convert_from_summary()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.convert_to_csv"><code class="docutils literal notranslate"><span class="pre">convert_to_csv()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.ethnicity_lookup"><code class="docutils literal notranslate"><span class="pre">ethnicity_lookup()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.get_stats"><code class="docutils literal notranslate"><span class="pre">get_stats()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.get_subgroup"><code class="docutils literal notranslate"><span class="pre">get_subgroup()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.inference_onnx"><code class="docutils literal notranslate"><span class="pre">inference_onnx()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.info_pred_mapping"><code class="docutils literal notranslate"><span class="pre">info_pred_mapping()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.load_custom_checkpoint"><code class="docutils literal notranslate"><span class="pre">load_custom_checkpoint()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.manufacturer_lookup"><code class="docutils literal notranslate"><span class="pre">manufacturer_lookup()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.metric_calculation"><code class="docutils literal notranslate"><span class="pre">metric_calculation()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.modify_classification_layer_v1"><code class="docutils literal notranslate"><span class="pre">modify_classification_layer_v1()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.prevent_data_leakage"><code class="docutils literal notranslate"><span class="pre">prevent_data_leakage()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.process_convert_dicom_to_jpeg"><code class="docutils literal notranslate"><span class="pre">process_convert_dicom_to_jpeg()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.process_convert_image_loop"><code class="docutils literal notranslate"><span class="pre">process_convert_image_loop()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.race_lookup"><code class="docutils literal notranslate"><span class="pre">race_lookup()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.read_jpg"><code class="docutils literal notranslate"><span class="pre">read_jpg()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.read_open_A1_20221010"><code class="docutils literal notranslate"><span class="pre">read_open_A1_20221010()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.read_open_A1"><code class="docutils literal notranslate"><span class="pre">read_open_A1()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.results_plotting"><code class="docutils literal notranslate"><span class="pre">results_plotting()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.run_deploy_onnx"><code class="docutils literal notranslate"><span class="pre">run_deploy_onnx()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.run_train"><code class="docutils literal notranslate"><span class="pre">run_train()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.run_validate"><code class="docutils literal notranslate"><span class="pre">run_validate()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.save_checkpoint"><code class="docutils literal notranslate"><span class="pre">save_checkpoint()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.save_to_file"><code class="docutils literal notranslate"><span class="pre">save_to_file()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.train"><code class="docutils literal notranslate"><span class="pre">train()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="src.html#src.utils.train_split"><code class="docutils literal notranslate"><span class="pre">train_split()</span></code></a></li>
 </ul>
@@ -149,7 +154,7 @@
 <h3><a href="#">Table of Contents</a></h3>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">bias.myti.report</a></li>
-<li class="toctree-l1"><a class="reference internal" href="src.html">myti.report GUI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="src.html">bias.myti.report GUI</a></li>
 <li class="toctree-l1"><a class="reference internal" href="src.html#module-src.utils">Bias Amplification Implementation</a></li>
 </ul>
 

@@ -1,5 +1,5 @@
-myti.report GUI
-===============
+bias.myti.report GUI
+====================
 
 .. automodule:: src
    :members:
