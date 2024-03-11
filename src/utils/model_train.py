@@ -271,7 +271,7 @@ def train(args):
             auc_val = run_validate(valid_loader, model, args)
             progress_values = [epoch, avg_loss, auc_val]
             if JUPYTER:
-                progress_table.children += tuple( [ widgets.VBox([widgets.Label(x)], layout=table_layout) for x in progress_values ])
+                progress_table.children += tuple( [ widgets.VBox([widgets.Label(f"{x}:.5f")], layout=table_layout) for x in progress_values ])
             else:
                 print("> {:d}\t{:1.5f}\t\t{:1.5f}".format(*progress_values))
             if epoch == args.num_epochs-1:
