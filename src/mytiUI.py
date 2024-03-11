@@ -15,7 +15,7 @@ import shutil
 import os
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
-from src.plot_generation import bias_report_generation
+from src.plot_generation import bias_plots_generation
 from src.report_generation import create_report
 
 class ClickLabel(QLabel):
@@ -396,7 +396,7 @@ class FinalPage(Page):
     def run_background(self):
         """ Generate figures and descriptions. """
         self.parent.pages["Page 2"].check_boxes()
-        self.m_list, self.info_list = bias_report_generation(self.parent.variables, self.parent.csv_path, self.parent.exp_type, self.parent.study_type)
+        self.m_list, self.info_list = bias_plots_generation(self.parent.variables, self.parent.csv_path, self.parent.exp_type, self.parent.study_type)
 
     def check_conditions(self):
         """ Sanity check if the third page can be appropriately loaded. """

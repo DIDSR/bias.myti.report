@@ -190,7 +190,7 @@ def calculate_CI(df, mean_col='Mean', std_col='Std', confidence_level=0.95, samp
     df['upper_CI'] = df[mean_col] + z*(df[std_col] / (sample_size**(0.5)) )
     return df
 
-def bias_report_generation(variables, csv_path, exp_type, study_type):
+def bias_plots_generation(variables, csv_path, exp_type, study_type):
     """
     Function to load inputs from the user, generate report figures and descriptions.
 
