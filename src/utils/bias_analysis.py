@@ -15,6 +15,7 @@ from src.plot_formatting import *
 
 COLORS = {"F":"#dd337c", "M":"#0fb5ae"}
 STYLES = {"F":"-", "M":"--"}
+SUBGROUP_NAME_MAPPING = {"F":"Female", "M":"Male"}
 
 def info_pred_mapping(info:pd.DataFrame, pred:pd.DataFrame)->pd.DataFrame:
     """ Map patient attributes information (e.g. sex, race) to prediction score and labels
