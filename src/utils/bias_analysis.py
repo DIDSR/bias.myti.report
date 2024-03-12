@@ -13,6 +13,8 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(os.path.join('..', 'src')))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 from src.plot_formatting import *
 
+COLORS = {"F":"#dd337c", "M":"#0fb5ae"}
+STYLES = {"F":"-", "M":"--"}
 
 def info_pred_mapping(info:pd.DataFrame, pred:pd.DataFrame)->pd.DataFrame:
     """ Map patient attributes information (e.g. sex, race) to prediction score and labels
