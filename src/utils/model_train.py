@@ -251,12 +251,13 @@ def train(args):
         epoch_progress_bar = widgets.IntProgress(min=0, max=len(train_loader), description="Current epoch:", style=dict(description_width="150px",bar_color="#64b5de"))
         display(epoch_progress_bar)
         
-        table_layout = widgets.Layout(border="1px solid")
-        table_items = [widgets.VBox([widgets.Label(x, style=dict(font_weight="bold"))], layout=table_layout) for x in progress_table_headers]
-        progress_table = widgets.GridBox(table_items, layout=widgets.Layout(grid_template_columns="repeat(3,150px)"))
-        display(progress_table)
-    else:        
-        print("\t".join(progress_table_headers))
+        #table_layout = widgets.Layout(border="1px solid")
+        #table_items = [widgets.VBox([widgets.Label(x, style=dict(font_weight="bold"))], layout=table_layout) for x in progress_table_headers]
+        #progress_table = widgets.GridBox(table_items, layout=widgets.Layout(grid_template_columns="repeat(3,150px)"))
+        #display(progress_table)
+    #else:        
+        #print("\t".join(progress_table_headers))
+    print("\t".join(progress_table_headers))
     
     criterion = nn.BCEWithLogitsLoss()
     auc_val = -1
@@ -270,10 +271,11 @@ def train(args):
             # # evaluate on validation set
             auc_val = run_validate(valid_loader, model, args)
             progress_values = [epoch, avg_loss, auc_val]
-            if JUPYTER:
-                progress_table.children += tuple( [ widgets.VBox([widgets.HTML(str(round(x,5)))], layout=table_layout) for x in progress_values ])
-            else:
-                print("> {:d}\t{:1.5f}\t\t{:1.5f}".format(*progress_values))
+            #if JUPYTER:
+                #progress_table.children += tuple( [ widgets.VBox([widgets.HTML(str(round(x,5)))], layout=table_layout) for x in progress_values ])
+            #else:
+                #print("> {:d}\t{:1.5f}\t\t{:1.5f}".format(*progress_values))
+            print("> {:d}\t{:1.5f}\t\t{:1.5f}".format(*progress_values))
             if epoch == args.num_epochs-1:
                 checkpoint_file = os.path.join(args.output_base_dir, 'checkpoint__last.pth.tar')
             else:
