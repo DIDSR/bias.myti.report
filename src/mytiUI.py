@@ -13,6 +13,7 @@ from pathlib import Path
 import sys 
 import shutil
 import os
+import json
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 from src.plot_generation import bias_plots_generation
@@ -396,7 +397,9 @@ class FinalPage(Page):
     def run_background(self):
         """ Generate figures and descriptions. """
         self.parent.pages["Page 2"].check_boxes()
-        self.m_list, self.info_list = bias_plots_generation(self.parent.variables, self.parent.csv_path, self.parent.exp_type, self.parent.study_type)
+        # # create the style window (don't show)
+        self.style_window = StyleEditor(root=self)
+        self.m_list, self.info_list = bias_plots_generation(self.parent.variables, self.parent.csv_path, self.parent.exp_type, self.parent.study_type, colors=COLORS, set_colors=SET_COLORS, name_mapping=SUBGROUP_NAME_MAPPING)
 
     def check_conditions(self):
         """ Sanity check if the third page can be appropriately loaded. """
@@ -496,8 +499,16 @@ class FinalPage(Page):
         self.btn_save_fig = QPushButton('Save Report', self)
         self.btn_save_fig.resize(self.btn_save_fig.sizeHint())
         self.btn_save_fig.clicked.connect(self.save_fig)
-        self.save_layout.addWidget(self.btn_save_fig, alignment=Qt.AlignmentFlag.AlignRight)        
+        self.save_layout.addWidget(self.btn_save_fig, alignment=Qt.AlignmentFlag.AlignRight)  
+        # # button to edit style
+        self.style_button = QPushButton("Settings")
+        self.style_button.clicked.connect(self._open_style_window)
+        self.layout.addWidget(self.style_button, 0, 1, 1, 1, alignment=Qt.AlignmentFlag.AlignRight)
         self.layout.setRowStretch(3, 10)
+        
+    def _open_style_window(self):
+        """ Opens the style settings dialog. """
+        self.style_window.show()
 
     def fig_select(self, figure_number):
         """ Update the selected figure by user. """
@@ -743,6 +754,156 @@ class AboutWindow(QMainWindow):
         self.fda_logo.setPixmap(QPixmap("UI_assets/fda_logo.jpg").scaled(60,60, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         self.main_layout.addWidget(self.fda_logo, 0, 1, 1, 1, alignment=Qt.AlignmentFlag.AlignRight)
         self.main_layout.setRowStretch(1, 5)
+
+class StyleEditor(QWidget):
+    """ Allows editing the colors and display names of different subgroups 
+    
+    Arguments
+    =========
+    root
+        The main page with which the editor is linked.
+    """
+    def __init__(self, root):
+        super().__init__()
+        self.style_file = "UI_assets/plot_style_settings.json"
+        self._read_styles()
+        self.root = root
+        
+        self.layout = QVBoxLayout()
+        self.UIComponents()
+        self.setLayout(self.layout)
+        
+    def UIComponents(self):
+        """ Create the UI widgets. """
+        self.palette_label = QLabel("Default color palette")
+        self.layout.addWidget(self.palette_label)
+        
+        self._make_palette()
+        
+        self.presets_label = QLabel("Defined presets")
+        self.layout.addWidget(self.presets_label)
+        
+        self._make_presets()
+        
+        self.save_button = QPushButton("Save changes")
+        self.save_button.clicked.connect(self._get_user_input)
+        self.layout.addWidget(self.save_button)
+        
+    def _get_user_input(self):
+        # get the palette colors
+        self.info['Colors'] = [ w.styleSheet().split(" ")[-1] for w in self.palette.buttons if w.styleSheet().split(" ")[-1] != "#FFFFFF"]
+        
+        # get the presets
+        self.info['Presets'] = []
+        for p in self.presets.presets:
+            label = p["label"].text()
+            name = p["name"].text()
+            color = p["color"].styleSheet().split(" ")[-1]
+            if color == None:
+                color = "#FFFFFF"
+            if label != "":
+                self.info["Presets"].append([label, name, color])
+        
+        self._save_styles() 
+    
+    def _make_presets(self, number=10):
+        self.presets = QWidget(self)
+        self.presets.layout = QGridLayout()
+        self.presets.presets = []
+        
+        # make the labels
+        columns = ["Subgroup label", "Display name", "Color"]
+        for i, c in enumerate(columns):
+            label = QLabel(c)
+            self.presets.layout.addWidget(label, 0, i)
+        
+        for n in range(number):
+            preset_widgets = {
+              "label":QLineEdit(),
+              "name":QLineEdit(),
+              "color":QPushButton(),
+              }
+            preset_widgets['color'].setObjectName(f"Preset_{n}")
+            preset_widgets['color'].clicked.connect(self._set_color)
+            
+            if n < len(self.info["Presets"]):
+                preset_widgets['label'].setText(self.info["Presets"][n][0])
+                preset_widgets['name'].setText(self.info["Presets"][n][1])
+                preset_widgets['color'].setStyleSheet(f"background-color: {self.info['Presets'][n][2]}")
+            else:
+                preset_widgets['color'].setStyleSheet("background-color: #FFFFFF")
+            
+            for i, w in enumerate(preset_widgets.values()):
+                self.presets.layout.addWidget(w, n+1, i)
+                
+            self.presets.presets.append(preset_widgets)
+            
+        self.presets.setLayout(self.presets.layout)  
+        self.layout.addWidget(self.presets)         
+        
+    def _make_palette(self, columns=5, rows=2):
+        self.palette = QWidget(self)
+        self.palette.layout = QGridLayout()
+        self.palette.buttons = []
+        i = 0
+        for r in range(rows):
+            for c in range(columns):
+                button = QPushButton()
+                self.palette.layout.addWidget(button, r, c)
+                if i < len(self.info["Colors"]):
+                    button.setStyleSheet(f"background-color: {self.info['Colors'][i]}")
+                else:
+                    button.setStyleSheet("background-color: #FFFFFF")
+                button.setObjectName(f"Palette_{i}")
+                button.clicked.connect(self._set_color)
+                self.palette.buttons.append(button)
+                i += 1
+        
+        self.palette.setLayout(self.palette.layout)
+        self.layout.addWidget(self.palette)
+        
+    def _set_color(self):
+        
+        p, idx = self.sender().objectName().split("_")
+        idx = int(idx)
+        if p == "Palette":
+            w = self.palette.buttons[idx]
+        elif p == "Preset":
+            w = self.presets.presets[idx]['color']
+            
+        color = self._open_color_dialog()
+        w.setStyleSheet(f"background-color: {color}")
+                
+    def _open_color_dialog(self):
+        
+        color = QColorDialog.getColor()
+        if color.isValid():
+            return color.name()
+        
+    def _read_styles(self):
+        with open(self.style_file, "r") as f:
+            self.info = json.load(f)
+        
+        
+        # set the global variables to be used by the plotting functions
+        global COLORS
+        COLORS = self.info['Colors']
+        global SUBGROUP_NAME_MAPPING 
+        SUBGROUP_NAME_MAPPING = {x[0] : x[1] for x in self.info['Presets']}
+        global SET_COLORS
+        SET_COLORS = {x[0] : x[2] for x in self.info['Presets']}
+        
+        
+    def _save_styles(self):
+        with open(self.style_file, "w") as f:
+            json.dump(self.info, f, indent=4)
+        print("Styles saved to ", self.style_file)
+        
+        self._read_styles()        
+        # Re-plot
+        self.root.run_background()
+        self.root.UIComponents()
+        
 
   
 if __name__ == '__main__':

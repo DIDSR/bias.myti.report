@@ -13,7 +13,7 @@ from src.plot_formatting import *
  
 def figure_plotting(
     data, x_col, s_col, hue_col, study_type, ylim=(0,1), y_label=None, x_label=None, style_col=None, 
-    style_dict={}, color_dict={}, mean_col='Mean', lower_CI_col="lower_CI", upper_CI_col="upper_CI", plot_section=[]):  
+    style_dict={}, color_dict={}, mean_col='Mean', lower_CI_col="lower_CI", upper_CI_col="upper_CI", plot_section=[], name_map={}):  
     """
     Function to generate subplots with input plot sections and parameters.
 
@@ -47,6 +47,8 @@ def figure_plotting(
         name for column that contains upper bound of confidence interval
     plot_section
         list that has all the sub-sections for plotting (including legends section)
+    name_map
+        Maps subgroup labels to display names in the plot legend.
     
     """
     fig = plt.figure(figsize = (text_width, text_width*FIGURE_RATIO))
@@ -77,7 +79,6 @@ def figure_plotting(
         labels[0] = "B"
         ax.set_xticklabels(labels)
         
-        name_map = SUBGROUP_NAME_MAPPING
         for h in data[hue_col].unique().tolist():
             if h not in name_map:
                 name_map[h] = h
@@ -121,7 +122,6 @@ def figure_plotting(
             ax.set_title(None)
             ax.set_ylim(0,1)
             ax.set_xlim(0,1)
-            name_map = SUBGROUP_NAME_MAPPING
             for h in data[hue_col].unique().tolist():
                 if h not in name_map:
                     name_map[h] = h
@@ -190,7 +190,7 @@ def calculate_CI(df, mean_col='Mean', std_col='Std', confidence_level=0.95, samp
     df['upper_CI'] = df[mean_col] + z*(df[std_col] / (sample_size**(0.5)) )
     return df
 
-def bias_plots_generation(variables, csv_path, exp_type, study_type):
+def bias_plots_generation(variables, csv_path, exp_type, study_type, colors:list, set_colors:dict, name_mapping:dict):
     """
     Function to load inputs from the user, generate report figures and descriptions.
 
@@ -204,6 +204,12 @@ def bias_plots_generation(variables, csv_path, exp_type, study_type):
         string to indicate the bias amplification type
     study_type
         string to indicate the study type
+    colors
+        Color palette.
+    set_colors
+        Colors assigned to a specific subgroup.
+    name_mapping
+        Maps subgroup labels to names in the plot legend.
 
     Returns
     =======
@@ -213,8 +219,18 @@ def bias_plots_generation(variables, csv_path, exp_type, study_type):
         list contains report description text corresponding to each metric
     """
     data = pd.read_csv(csv_path)
-    # # get user input positive-associated group and metric value column for plotting         
-    plot_kwargs = dict(style_col=variables.get('Positive-associated Subgroup'), hue_col=variables.get('Subgroup'), mean_col=variables.get('Metric Mean Value'), color_dict=COLORS, style_dict=STYLES)  
+    # import global variables
+    # fill in the missing subgroups
+    i = 0
+    for sub in data[variables.get('Subgroup')].unique():
+        if sub not in set_colors:
+            set_colors[sub] = colors[i]
+            i += 1
+    style_dict = {s:STYLES[i] for i, s in enumerate( data[variables.get('Subgroup')].unique() )}
+        
+        
+    # # get user input positive-associated group and metric value column for plotting
+    plot_kwargs = dict(style_col=variables.get('Positive-associated Subgroup'), hue_col=variables.get('Subgroup'), mean_col=variables.get('Metric Mean Value'), color_dict=set_colors, style_dict=style_dict, name_map=name_mapping)  
     # # get study type to establish sub-sections
     if study_type == 'Compare Bias Mitigation Methods':
         s_col = variables.get('Mitigation Method')
