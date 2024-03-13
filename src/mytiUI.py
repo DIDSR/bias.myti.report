@@ -740,7 +740,7 @@ class AboutWindow(QMainWindow):
         self.title.setObjectName("title")
         self.main_layout.addWidget(self.title, 0, 0, 1, 1)
         # # github link, version, department
-        link_github = 'https://github.com/DIDSR/myti.report/tree/main'
+        link_github = 'https://github.com/DIDSR/bias.myti.report/tree/main'
         infos = "A visualization tool to facilitate the comparison of user-implemented bias mitigation methods for AI models." + \
         "<br><br>GitHub Page: <a href=\"{0}\">{1}</a>".format(link_github, link_github) + \
         "<br>Version: 1.0" + \

@@ -33,31 +33,75 @@
             
   <section id="bias-myti-report">
 <h1>bias.myti.report<a class="headerlink" href="#bias-myti-report" title="Link to this heading">¶</a></h1>
-<p>Bias.myti.report is a bias visualization tool designed to facilitate the systematic comparison of bias mitigation methods through the creation of multiple models with a range of AI biases. The tool provides the guidance on how to implement two approaches, namely quantitative misrepresentation and inductive transfer learning, for such bias amplification. Additional controls over the degree to which bias is amplified can be taken in both approaches. The tool can be readily incorporated into the AI development pipeline so that the bias mitigation methods can be evaluated under specific user cases.</p>
+<p>Bias.myti.report facilitates the systematic comparison of bias mitigation methods through the creation of multiple models with different degrees of bias. Bias.myti.report has two main components:</p>
+<ol class="arabic simple">
+<li><p><a class="reference internal" href="#implementation-instructions-for-two-bias-amplification-approaches">Implementation instructions for two bias amplification approaches</a> (quantitative misrepresentation and indutive transfer learning)</p></li>
+<li><p>A <a class="reference internal" href="#visualization-gui">visualization GUI</a> to assist with the interpretation of results.</p></li>
+</ol>
 </section>
 <section id="getting-started">
 <h1>Getting Started<a class="headerlink" href="#getting-started" title="Link to this heading">¶</a></h1>
+<p>This repository contains two example notebooks in the <a class="reference external" href="https://github.com/DIDSR/bias.myti.report/tree/main/example">examples folder</a> that demonstrate how to amplify bias using data from the MIDRC open-A1 repository. Additionally, the <a class="reference external" href="https://github.com/DIDSR/bias.myti.report/tree/main/example">examples folder</a> contains several example csv files, containing example inputs in to the visualization GUI. To implement the amplification approaches using your own data and/or models, see the implementation instructions in the next section.</p>
+</section>
 <section id="bias-amplification">
-<h2>Bias Amplification<a class="headerlink" href="#bias-amplification" title="Link to this heading">¶</a></h2>
-<p>To apply bias amplification, a data set with both class and subgroup attribute information is required. Please follow steps below for implementation:</p>
-<p><strong>1. Quantitative Misrepresentation</strong></p>
-<p><strong>Step 1.</strong> Partition your own data set into training, validation and test sets.</p>
-<p><strong>Step 2.</strong> Create a list of new training sets with a range of disease prevalence difference between subgroups.</p>
-<p><strong>Step 3.</strong> Train your customized models with sampled training sets from <strong>Step 1</strong>.</p>
-<p><strong>Step 4.</strong> Deploy your models on the test set.</p>
-<p><strong>Step 5.</strong> Calculate metrics to measure subgroup bias (subgroup predicted prevalence, sensitivity, etc.)</p>
-<p><strong>2. Inductive Transfer Learning</strong></p>
-<p><strong>Step 1.</strong> Partition your own data set into training, validation and test sets.</p>
-<p><strong>Step 2.</strong> Train your customized model to classify subgroup attributes.</p>
-<p><strong>Step 3.</strong> Fine-tune the result model from <strong>Step 2</strong> with different number of freezing layers for target task classification.</p>
-<p><strong>Step 4.</strong> Deploy your final models on the test set.</p>
-<p><strong>Step 5.</strong> Calculate metrics to measure subgroup bias (subgroup predicted prevalence, sensitivity, etc.)</p>
-<p>Demonstrations for both approaches can be found in two separate example Jupyter notebooks included in the <a class="reference external" href="https://github.com/DIDSR/myti.report/tree/main/example">examples folder</a>.</p>
+<span id="implementation-instructions-for-two-bias-amplification-approaches"></span><h1>Bias Amplification<a class="headerlink" href="#bias-amplification" title="Link to this heading">¶</a></h1>
+<p>Each of the bias amplification approaches outlined in this section amplify bias by promoting the use of subgroup information during classification through the development of a “learning shortcut”. Both of these approaches are described in terms of the amplification of bias between two distinct subgroups for a binary classification model, and can amplify bias to varying degrees.</p>
+<section id="quantitative-misrepresentation">
+<h2>Quantitative Misrepresentation<a class="headerlink" href="#quantitative-misrepresentation" title="Link to this heading">¶</a></h2>
+<p>This approach amplifies bias by manipulating the disease prevalence between subgroups in the <em>training</em> data. An example implementation is included in the <a class="reference external" href="https://github.com/DIDSR/bias.myti.report/tree/main/example">examples folder</a>. To apply this approach to your own model and/or data, follow the steps below:</p>
+<ol class="arabic simple">
+<li><p>Partition your data into training, validation and test sets, each equally stratified by both subgroup and class.</p></li>
+<li><p>Sample the training data into a series of new training sets with varying subgroup disease prevalence. The number of patients within each subgroup should always remain equal and the overall disease prevalence fixed at 50%, however the prevalence within each subgroup will differ. For example, if training a model to classify patients as positive or negative and amplifying the bias between subgroups A and B, one sampled training set may have the following distributions:</p></li>
+</ol>
+<blockquote>
+<div><table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td></td>
+<td><p>Subgroup A</p></td>
+<td><p>Subgroup B</p></td>
+<td><p>Total</p></td>
+</tr>
+<tr class="row-even"><td><p>Positive</p></td>
+<td><p>10%</p></td>
+<td><p>40%</p></td>
+<td><p>50%</p></td>
+</tr>
+<tr class="row-odd"><td><p>Negative</p></td>
+<td><p>40%</p></td>
+<td><p>10%</p></td>
+<td><p>50%</p></td>
+</tr>
+<tr class="row-even"><td><p>Total</p></td>
+<td><p>50%</p></td>
+<td><p>50%</p></td>
+<td><p>100%</p></td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<ol class="arabic simple" start="3">
+<li><p>Train a collection of models using the training sets with different prevalences as sampled in step 2.</p></li>
+<li><p>Deploy your models on the equally stratified test set from step 1.</p></li>
+<li><p>Calculated performance metrics (e.g., sensitivity, AUROC) for each subgroup as well as the test set overall.</p></li>
+<li><p>Load the calculated performance values into the <a class="reference external" href="https://github.com/DIDSR/bias.myti.report/tree/main/src/mytiGUI.py">included GUI</a>.</p></li>
+</ol>
+</section>
+<section id="inductive-transfer-learning">
+<h2>Inductive Transfer Learning<a class="headerlink" href="#inductive-transfer-learning" title="Link to this heading">¶</a></h2>
+<p>This approach amplifies bias by training the model in two steps. The model learns the image characteristics associated with subgroup in the first, and is forced to use them to determine class in the second. An example implementation is included in the <a class="reference external" href="https://github.com/DIDSR/bias.myti.report/tree/main/example">examples folder</a>. To apply this approach to your own model and/or data, follow the steps below:</p>
+<ol class="arabic simple">
+<li><p>Partition your data into training, validation and test sets, each equally stratified by both subgroup and class.</p></li>
+<li><p>Without freezing any of the model’s layers, train the model to classify sample <strong>subgroup</strong>.</p></li>
+<li><p>Using the trained model created in step 2, finetune the model to classify sample class. Varying degrees of bias can be created by freezing different numbers of layers in this step; bias amplification increases with more layers frozen.</p></li>
+<li><p>Deploy your models on the equally stratified test set from step 1.</p></li>
+<li><p>Calculated performance metrics (e.g., sensitivity, AUROC) for each subgroup as well as the test set overall.</p></li>
+<li><p>Load the calculated performance values into the <a class="reference external" href="https://github.com/DIDSR/bias.myti.report/tree/main/src/mytiGUI.py">included GUI</a>.</p></li>
+</ol>
+</section>
 </section>
 <section id="bias-visualization">
-<h2>Bias Visualization<a class="headerlink" href="#bias-visualization" title="Link to this heading">¶</a></h2>
-<p>To visualize bias using bias.myti.report GUI tool, an <strong>input csv</strong> which contains results from bias amplification (and mitigation) experiments is required. To make a comparison between bias mitigation methods, users have to implement mitigation algorithms by their choice and aggregate the results into one single csv file.</p>
-</section>
+<span id="visualization-gui"></span><h1>Bias Visualization<a class="headerlink" href="#bias-visualization" title="Link to this heading">¶</a></h1>
+<p>This repository includes a GUI created to assist with the visualization and interpretation of the results created using quantitative misrepresentation and inductive transfer learning. To make a comparison between bias mitigation methods, users have to implement mitigation algorithms by their choice and aggregate the results into one single csv file, an example of the expected file structure is included in the <a class="reference external" href="https://github.com/DIDSR/bias.myti.report/tree/main/example">examples folder</a>.</p>
 </section>
 <section id="terminology">
 <h1>Terminology<a class="headerlink" href="#terminology" title="Link to this heading">¶</a></h1>
