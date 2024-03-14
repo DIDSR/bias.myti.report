@@ -6,10 +6,10 @@
 DATA_DIR="/gpfs_projects/ravi.samala/DATA/MIDRC3/20221010_open_A1_CRDX_unzip"
 
 ## 2) The tsv file with case information
-CASE_TSV="data/20221010_open_A1_all_Cases.tsv"
+CASE_TSV="/gpfs_projects/alexis.burgon/bias.myti.report_testing_files/20221010_open_A1_all_Cases.tsv"
 
 ## 3) The tsv file with series information
-SERIES_TSV="data/20221010_open_A1_all_Imaging_Series.tsv"
+SERIES_TSV="/gpfs_projects/alexis.burgon/bias.myti.report_testing_files/20221010_open_A1_all_Imaging_Series.tsv"
 
 # The following 2 variables denote where the outputs should be saved
 ## 1) The summary json file that will be created
