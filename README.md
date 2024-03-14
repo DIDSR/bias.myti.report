@@ -77,7 +77,7 @@ Click the 'Next Page' button on bottom left after all steps are finished and nav
 ---
 
 ## Example Outputs
-![Example Output](example/example_bias_mitigation_comparison.png)
+![Example Output](assets/example_bias_mitigation_comparison.png)
 
 <p style="text-align: center;">  Example figure showing bias mitigation comparison when sex-related bias has been amplified by quantitative misrepresentation. Each subplot shows the predicted disease prevalence within each patient subgroup. </p>
 
