@@ -3,7 +3,7 @@ bias.myti.report
 
 Bias.myti.report facilitates the systematic comparison of bias mitigation methods through the creation of multiple models with different degrees of bias. Bias.myti.report has two main components:
 
-1. `Implementation instructions for two bias amplification approaches`_ (quantitative misrepresentation and indutive transfer learning)
+1. `Implementation instructions for two bias amplification approaches`_ (quantitative misrepresentation and inductive transfer learning)
 2. A `visualization GUI`_ to assist with the interpretation of results.
 
 
@@ -69,10 +69,27 @@ This repository includes a GUI created to assist with the visualization and inte
 
 Terminology
 ===========
-* ``model bias``: A systematic difference in performance between subgroups.
-* ``bias amplification``: A process to increase the performance difference between subgroups.
-* ``quantitative misrepresentation``: A bias amplification approach that applies a data selection process in the training set so that the disease prevalence between subgroups are different.
-* ``inductive transfer learning``: A bias amplification approach that applies a two-step transfer learning scheme, where AI model is trained to classify subgroup attributes during the first step. In the second step, the model is fine-tuned to perform clinical tasks.
+
+**Class**
+	The sample characteristic by which the model is classifying samples. For example, in the example notebooks included in this repository, the model is tasked with determining patient COVID status, so the two potential sample classes are COVID positive and COVID negative.
+
+**Subgroup**
+	A subset of samples grouped by a shared characteristic not associated with the classification task. For example, in the example notebooks included in this repository, the samples are divided into subgroups based on patient sex, an attribute which is not associated with the classification task of COVID status.
+
+**Model bias**
+	A systematic difference in performance between subgroups.
+ 
+**Bias amplification**
+  A process which deliberately increases the model bias between specified subgroups.
+  
+**Learning shortcut**
+  The usage of characteristics characteristics unrelated to the sample's class during classification. These characteristics are often common amoungst samples within a specific class in the development data, but not throughout the entire intended population, resulting in decreased performance or model bias when the model is deployed on a larger population.
+
+**Quantitative misrepresentation**
+  A bias amplification approach that applies a data selection process to the selection of model development data sets such that the disease prevalence between subgroups is different, which promotes the development of learning shortcuts.
+
+**Inductive transfer learning**
+  A bias amplification approach that applies a two-step transfer learning process. The AI model is first trained to classify samples by subgroup, then finetuned to classify samples by class. This process promotes the usage of subgroup-related characteristics during class classification, promoting the development of learning shortcuts.
 
 Function and Class Documentation
 ================================

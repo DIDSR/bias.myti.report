@@ -35,7 +35,7 @@
 <h1>bias.myti.report<a class="headerlink" href="#bias-myti-report" title="Link to this heading">¶</a></h1>
 <p>Bias.myti.report facilitates the systematic comparison of bias mitigation methods through the creation of multiple models with different degrees of bias. Bias.myti.report has two main components:</p>
 <ol class="arabic simple">
-<li><p><a class="reference internal" href="#implementation-instructions-for-two-bias-amplification-approaches">Implementation instructions for two bias amplification approaches</a> (quantitative misrepresentation and indutive transfer learning)</p></li>
+<li><p><a class="reference internal" href="#implementation-instructions-for-two-bias-amplification-approaches">Implementation instructions for two bias amplification approaches</a> (quantitative misrepresentation and inductive transfer learning)</p></li>
 <li><p>A <a class="reference internal" href="#visualization-gui">visualization GUI</a> to assist with the interpretation of results.</p></li>
 </ol>
 </section>
@@ -105,12 +105,22 @@
 </section>
 <section id="terminology">
 <h1>Terminology<a class="headerlink" href="#terminology" title="Link to this heading">¶</a></h1>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">model</span> <span class="pre">bias</span></code>: A systematic difference in performance between subgroups.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">bias</span> <span class="pre">amplification</span></code>: A process to increase the performance difference between subgroups.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">quantitative</span> <span class="pre">misrepresentation</span></code>: A bias amplification approach that applies a data selection process in the training set so that the disease prevalence between subgroups are different.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">inductive</span> <span class="pre">transfer</span> <span class="pre">learning</span></code>: A bias amplification approach that applies a two-step transfer learning scheme, where AI model is trained to classify subgroup attributes during the first step. In the second step, the model is fine-tuned to perform clinical tasks.</p></li>
-</ul>
+<dl class="simple">
+<dt><strong>Class</strong></dt><dd><p>The sample characteristic by which the model is classifying samples. For example, in the example notebooks included in this repository, the model is tasked with determining patient COVID status, so the two potential sample classes are COVID positive and COVID negative.</p>
+</dd>
+<dt><strong>Subgroup</strong></dt><dd><p>A subset of samples grouped by a shared characteristic not associated with the classification task. For example, in the example notebooks included in this repository, the samples are divided into subgroups based on patient sex, an attribute which is not associated with the classification task of COVID status.</p>
+</dd>
+<dt><strong>Model bias</strong></dt><dd><p>A systematic difference in performance between subgroups.</p>
+</dd>
+<dt><strong>Bias amplification</strong></dt><dd><p>A process which deliberately increases the model bias between specified subgroups.</p>
+</dd>
+<dt><strong>Learning shortcut</strong></dt><dd><p>The usage of characteristics characteristics unrelated to the sample’s class during classification. These characteristics are often common amoungst samples within a specific class in the development data, but not throughout the entire intended population, resulting in decreased performance or model bias when the model is deployed on a larger population.</p>
+</dd>
+<dt><strong>Quantitative misrepresentation</strong></dt><dd><p>A bias amplification approach that applies a data selection process to the selection of model development data sets such that the disease prevalence between subgroups is different, which promotes the development of learning shortcuts.</p>
+</dd>
+<dt><strong>Inductive transfer learning</strong></dt><dd><p>A bias amplification approach that applies a two-step transfer learning process. The AI model is first trained to classify samples by subgroup, then finetuned to classify samples by class. This process promotes the usage of subgroup-related characteristics during class classification, promoting the development of learning shortcuts.</p>
+</dd>
+</dl>
 </section>
 <section id="function-and-class-documentation">
 <h1>Function and Class Documentation<a class="headerlink" href="#function-and-class-documentation" title="Link to this heading">¶</a></h1>
