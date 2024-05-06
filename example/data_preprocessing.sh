@@ -18,8 +18,10 @@ SUMMARY_JSON="data/open_A1_summary.json"
 ## 2) The directory in which the converted jpeg images will be saved
 JPEG_DIR="data/open_A1_jpegs"
 
-# ============================================================================================
+# The following variable denote the location where the tool repository is stored.
 MAIN_DIR=$(dirname $(dirname $(realpath $0)))
+
+# ============================================================================================
 
 echo "Beginning data summarization (this may take a while)"
 python ${MAIN_DIR}/src/utils/data_summarize.py \
