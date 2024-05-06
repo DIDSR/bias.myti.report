@@ -30,7 +30,7 @@ With increasing utilization of AI in clinical practice, it is critical to unders
 # Getting Started
 
 ## Bias Amplification
-Examples showing instructions on how to implement the two bias amplification approaches can be found in [example for quantitative misrepresention](https://github.com/DIDSR/myti.report/blob/main/example/Bias%20amplification%20(quantitative%20misrepresentation)%20example.ipynb) and [example for inductive transfer learning](https://github.com/DIDSR/myti.report/blob/main/example/Bias%20amplification%20(inductive%20transfer%20learning)%20example.ipynb).
+Examples showing instructions on how to implement the two bias amplification approaches can be found in [example for quantitative misrepresention](https://github.com/DIDSR/myti.report/blob/main/example/Bias%20amplification%20(quantitative%20misrepresentation)%20example.ipynb) (/example/Bias amplification (quantitative misrepresentation) example.ipynb) and [example for inductive transfer learning](https://github.com/DIDSR/myti.report/blob/main/example/Bias%20amplification%20(inductive%20transfer%20learning)%20example.ipynb) (/example/Bias amplification (inductive transfer learning) example.ipynb).
 
 ## Quick Guide for bias.myti.report GUI
 To visualize the bias by bias.myti.report GUI, run the following code:
@@ -86,7 +86,9 @@ Click the 'Next Page' button on bottom left after all steps are finished and nav
 For more detailed information, view the [bias.myti.report documentation](https://didsr.github.io/myti.report/).
 
 ## System Requirements
-The tool is developed and tested with ```Ubuntu 22.04.3 LTS``` and ```python 3.10.12```.
+The tool is developed and tested with ```Ubuntu 22.04.3 LTS``` and ```python 3.10.12```. 
+
+The tool is tested with *NVIDIA Tesla V100 SXM2 32 GB*, with ```NVIDIA Driver Version 550.67``` and ```CUDA version 12.4```.
 
 Python package requirements can be found in [requirements.txt](requirements.txt).
 
