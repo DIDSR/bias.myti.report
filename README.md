@@ -35,7 +35,8 @@ Examples showing instructions on how to implement the two bias amplification app
 ## Quick Guide for bias.myti.report GUI
 To visualize the bias by bias.myti.report GUI, run the following code:
 ```
-python src/mytiUI.py
+cd src/
+python mytiUI.py
 ```
 Here is a quick guidance on how to use the tool.
 ### Page 1 (Input page)
