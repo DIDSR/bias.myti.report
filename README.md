@@ -93,6 +93,16 @@ The tool is tested with *NVIDIA Tesla V100 SXM2 32 GB*, with ```NVIDIA Driver Ve
 
 Python package requirements can be found in [requirements.txt](requirements.txt).
 
+## Potential Issue & Solution
+If the user encounters the following error when trying to launch the GUI during first time:
+```
+qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found.
+```
+The solution is to install the dependency by running:
+```
+apt-get install libxcb-cursor0
+```
+
 ## Data
 The imaging and associated clinical data downloaded from MIDRC (The Medical Imaging and Data Resource Center) and used for research in this repository was made possible by the National Institute of Biomedical Imaging and Bioengineering (NIBIB) of the National Institutes of Health under contract 75N92020C00021. The content is solely the responsibility of the authors and does not necessarily represent the official views of the National Institutes of Health.
 
