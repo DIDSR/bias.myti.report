@@ -28,6 +28,7 @@ With increasing utilization of AI in clinical practice, it is critical to unders
 - **Inductive transfer learning:** a two-step transfer learning approach where the AI is trained to classify patient attributes during the first step. The AI is then fine-tuned to perform clinical tasks during the second step.
 
 # Getting Started
+For detailed information, view the [bias.myti.report documentation](https://didsr.github.io/bias.myti.report/).
 
 ## Bias Amplification
 Examples showing instructions on how to implement the two bias amplification approaches can be found in [example for quantitative misrepresention](https://github.com/DIDSR/myti.report/blob/main/example/Bias%20amplification%20(quantitative%20misrepresentation)%20example.ipynb) *(/example/Bias amplification (quantitative misrepresentation) example.ipynb)* and [example for inductive transfer learning](https://github.com/DIDSR/myti.report/blob/main/example/Bias%20amplification%20(inductive%20transfer%20learning)%20example.ipynb) *(/example/Bias amplification (inductive transfer learning) example.ipynb)*.
@@ -84,7 +85,7 @@ Click the 'Next Page' button on bottom left after all steps are finished and nav
 
 ---
 
-For more detailed information, view the [bias.myti.report documentation](https://didsr.github.io/myti.report/).
+For more detailed information, view the [bias.myti.report documentation](https://didsr.github.io/bias.myti.report/).
 
 ## System Requirements
 The tool is developed and tested with ```Ubuntu 22.04.3 LTS``` and ```python 3.10.12```. 
