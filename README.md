@@ -19,6 +19,7 @@ This repository contains the implementation of two AI bias amplification approac
 - Instructions on how to use the GUI tool can be found [here](#Quick-Guide-for-biasmytireport-GUI).
 
 ## Related References
+- A. Burgon, Y. Zhang, N. Petrick, B. Sahiner, K. H. Cha, R. K. Samala, "Bias amplification to facilitate the systematic evaluation of bias mitigation methods", in *IEEE Journal of Biomedical and Health Informatics* (2024) doi:[10.1109/JBHI.2024.3491946](https://doi.org/10.1109/JBHI.2024.3491946)
 - A. Burgon, Y. Zhang, B. Sahiner, N. Petrick, K. H. Cha, R. K. Samala*, “Manipulation of sources of bias in AI device development”, Proc. of SPIE (2024)
 - Y. Zhang, A. Burgon, N. Petrick, B. Sahiner, G. Pennello, R. K. Samala*, “Evaluation of AI bias mitigation algorithms by systematically promoting sources of bias”, RSNA Program Book (2023)
 
