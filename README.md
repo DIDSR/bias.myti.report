@@ -20,8 +20,8 @@ This repository contains the implementation of two AI bias amplification approac
 
 ## Related References
 - A. Burgon, Y. Zhang, N. Petrick, B. Sahiner, K. H. Cha, R. K. Samala, "Bias amplification to facilitate the systematic evaluation of bias mitigation methods", in *IEEE Journal of Biomedical and Health Informatics* (2024) doi:[10.1109/JBHI.2024.3491946](https://doi.org/10.1109/JBHI.2024.3491946)
-- A. Burgon, Y. Zhang, B. Sahiner, N. Petrick, K. H. Cha, R. K. Samala*, “Manipulation of sources of bias in AI device development”, Proc. of SPIE (2024)
-- Y. Zhang, A. Burgon, N. Petrick, B. Sahiner, G. Pennello, R. K. Samala*, “Evaluation of AI bias mitigation algorithms by systematically promoting sources of bias”, RSNA Program Book (2023)
+- A. Burgon, Y. Zhang, B. Sahiner, N. Petrick, K. H. Cha, R. K. Samala*, “Manipulation of sources of bias in AI device development”, In Medical Imaging 2024: Computer-Aided Diagnosis, vol. 12927, pp. 351-356. SPIE, 2024. doi: [10.1117/12.3008267](https://doi.org/10.1117/12.3008267)
+- Y. Zhang, A. Burgon, N. Petrick, B. Sahiner, G. Pennello, R. K. Samala*, “Evaluation of AI bias mitigation algorithms by systematically promoting sources of bias”, RSNA Program Book, T6-SSPH08-1 (2023). [Program Book](https://www.rsna.org/-/media/files/rsna/annual-meeting/future-and-past-meetings/rsna-2023-meeting-program.pdf?rev=f377d87de0f94ec3b91cd698f411ac88&hash=827EB62A53E5756DBFF10B5A53DA8050)
 
 # Introduction
 With increasing utilization of AI in clinical practice, it is critical to understand and control AI model bias to ensure health equities. Numerous methods have been developed to mitigate bias, however, there is a lack of consistent way to systematically evaluate the effectiveness and potential trade-off of these mitigation methods. To facilitate such evaluation, we presented two bias amplification approaches by promoting the spurious correlation between AI outputs and patient attributes.
