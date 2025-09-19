@@ -24,6 +24,12 @@ This repository contains the implementation of two AI bias amplification approac
 - A. Burgon, Y. Zhang, B. Sahiner, N. Petrick, K. H. Cha, R. K. Samala, “Manipulation of sources of bias in AI device development”, In Medical Imaging 2024: Computer-Aided Diagnosis, vol. 12927, pp. 351-356. SPIE, 2024. doi: [10.1117/12.3008267](https://doi.org/10.1117/12.3008267)
 - Y. Zhang, A. Burgon, N. Petrick, B. Sahiner, G. Pennello, R. K. Samala, “Evaluation of AI bias mitigation algorithms by systematically promoting sources of bias”, RSNA Program Book, T6-SSPH08-1 (2023). [Program Book](https://www.rsna.org/-/media/files/rsna/annual-meeting/future-and-past-meetings/rsna-2023-meeting-program.pdf?rev=f377d87de0f94ec3b91cd698f411ac88&hash=827EB62A53E5756DBFF10B5A53DA8050)
 
+### Tool Reference 
+- RST Reference Number: RST24AI14.01
+- Date of Publication: 09/19/2025
+- Recommended Citation: U.S. Food and Drug Administration. (2025). bias.myti.report (RST24AI14.01). [https://cdrh-rst.fda.gov/biasmytireport](https://cdrh-rst.fda.gov/biasmytireport)
+
+
 # Introduction
 With increasing utilization of AI in clinical practice, it is critical to understand and control AI model bias to ensure health equities. Numerous methods have been developed to mitigate bias, however, there is a lack of consistent way to systematically evaluate the effectiveness and potential trade-off of these mitigation methods. To facilitate such evaluation, we presented two bias amplification approaches by promoting the spurious correlation between AI outputs and patient attributes.
 - **Quantitative misrepresentation:** a manipulation of data selection to the training set such that the disease prevalence is varied between different patient subgroups.
@@ -115,8 +121,4 @@ The enclosed tool is part of the [Catalog of Regulatory Science Tools](https://c
 
 For more information about the Catalog of Regulatory Science Tools, email [RST_CDRH@fda.hhs.gov](mailto:RST_CDRH@fda.hhs.gov).
 
-### Tool Reference 
-- RST Reference Number: RST24AI14.01
-- Date of Publication: 09/19/2025
-- Recommended Citation: U.S. Food and Drug Administration. (2025). bias.myti.report (RST24AI14.01). [https://cdrh-rst.fda.gov/biasmytireport](https://cdrh-rst.fda.gov/biasmytireport)
 
